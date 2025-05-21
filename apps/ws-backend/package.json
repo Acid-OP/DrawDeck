@@ -1,21 +1,20 @@
 {
   "name": "ws-backend",
-  "version": "1.0.0",
-  "main": "index.js",
+  "module": "index.ts",
+  "type": "module",
+  "private": true,
   "scripts": {
-    "build": "tsc -b",
-    "start": "node ./dist/index.js",
-    "dev": "npm run build && npm run start"
-  },
-  "dependencies": {
-    "ws": "^8.18.1"
+    "dev" : "pnpm run build && node ./dist/index.js",
+    "build": "tsc -b"
   },
   "devDependencies": {
-    "@repo/typescript-config": "workspace:*",
-    "@types/ws": "^8.18.1"
+    "@types/bun": "latest"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "description": ""
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "@types/ws": "^8.18.1",
+    "ws": "^8.18.2"
+  }
 }
