@@ -16,6 +16,7 @@
   "devDependencies": {
     "@repo/typescript-config": "workspace:*",
     "@types/bcrypt": "^5.0.2",
+    "@repo/backend-common" : "workspace:*",
     "@types/express": "^5.0.1",
     "@types/jsonwebtoken": "^9.0.9"
   },
