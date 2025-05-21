@@ -36,6 +36,9 @@ importers:
       '@repo/backend-common':
         specifier: workspace:*
         version: link:../../packages/backend-common
+      '@repo/common':
+        specifier: workspace:*
+        version: link:../../packages/common
       '@repo/typescript-config':
         specifier: workspace:*
         version: link:../../packages/typescript-config
@@ -116,6 +119,16 @@ importers:
       '@types/node':
         specifier: ^22.14.0
         version: 22.14.1
+    devDependencies:
+      '@repo/typescript-config':
+        specifier: workspace:*
+        version: link:../typescript-config
+
+  packages/common:
+    dependencies:
+      zod:
+        specifier: ^3.25.17
+        version: 3.25.17
     devDependencies:
       '@repo/typescript-config':
         specifier: workspace:*
