@@ -1,6 +1,6 @@
 import {WebSocketServer} from "ws";
 import jwt, { type JwtPayload } from "jsonwebtoken";
-import {JWT_SECRET} from "@repo/backend-common/config"
+import {JWT_SECRET} from '@repo/backend-common'
 const wss = new WebSocketServer({ port:8080 });
 console.log("dajghafhdfguifil")
 wss.on('connection',function connection(ws , request) {

@@ -4,8 +4,9 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "dev": "pnpm run build && node ./dist/index.js",
-    "build": "tsc -b"
+    "dev": "pnpm run build && pnpm run start",
+    "build": "tsc -b",
+    "start": "node ./dist/index.js"
   },
   "devDependencies": {
     "@types/bun": "latest"

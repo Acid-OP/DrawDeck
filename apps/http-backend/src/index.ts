@@ -1,13 +1,8 @@
 import  express  from "express";
-import {z} from "zod";
-import { Jwt } from "jsonwebtoken";
-import bcrypt from "bcrypt";
-import { error } from "zod/v4/locales/ar.js";
 import { middelware } from "./middelware";
 import {signupSchema} from "@repo/common/types";
 const app = express();
 app.use(express.json());
-
 
 
 app.post("/api/v1/signup" , (req,res)=> {
@@ -21,7 +16,7 @@ app.post("/api/v1/signup" , (req,res)=> {
 
 app.post("api/v1/signin")
 
-app.post("/api/v1/room" , middelware , (req ,res) => {
+app.post("/api/v1/room" , (req ,res) => {
 
 })
 
