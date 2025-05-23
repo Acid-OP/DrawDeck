@@ -1,17 +1,37 @@
 import  express  from "express";
 import { middelware } from "./middelware";
-import {signupSchema} from "@repo/common/types";
+import {CreateUserSchema} from "@repo/common/types";
+import {prismaClient} from "@repo/db/client";
 const app = express();
 app.use(express.json());
 
 
-app.post("/api/v1/signup" , (req,res)=> {
+app.post("/api/v1/signup" , async (req,res)=> {
 
-    const data = signupSchema.safeParse(req.body);
-    if(!data.success) {
-        res.status(400).json({message : "Invalid input " , error:data.error});
+    const parsedData = CreateUserSchema.safeParse(req.body);
+    if(!parsedData.success) {
+        res.json({
+            message : "Incorrect inputs"
+        })
+        return;
     }
-    return;
+    try{
+        prismaClient.user.create({
+        data: {
+            email : parsedData.data.username,
+            password: parsedData.data.password,
+            name : parsedData.data.name
+        }
+    })
+    res.json({
+        userId : "123"
+    }) 
+    }catch(e){
+        res.status(411).json({
+            message: "User already exists with this email"
+        })
+    }
+  
 })
 
 app.post("api/v1/signin" , (req,res)=>{

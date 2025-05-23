@@ -11,6 +11,7 @@
     "bcrypt": "^6.0.0",
     "express": "^5.1.0",
     "jsonwebtoken": "^9.0.2",
+    "@repo/db": "workspace:*",
     "zod": "^3.25.17"
   },
   "devDependencies": {
