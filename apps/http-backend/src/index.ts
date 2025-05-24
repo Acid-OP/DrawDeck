@@ -1,8 +1,9 @@
 import  express  from "express";
 import { middelware } from "./middelware";
-import {CreateUserSchema, SigninSchema} from "@repo/common/types";
+import {CreateRoomSchema, CreateUserSchema, SigninSchema} from "@repo/common/types";
 import {prismaClient} from "@repo/db/client";
 import { JWT_SECRET } from "@repo/backend-common";
+import jwt from "jsonwebtoken";
 const app = express();
 app.use(express.json());
 
@@ -62,11 +63,40 @@ app.post("api/v1/signin" , async (req,res)=>{
     }
     const token = jwt.sign({
         userId : user.id
-    }, JWT_SECRET)
+    }, JWT_SECRET);
+
+    res.json({
+        token
+    })
 })
 
-app.post("/api/v1/room" , (req ,res) => {
+app.post("/api/v1/room" ,middelware, async (req ,res) => {
+    const parsedData = CreateRoomSchema.safeParse(req.body);
+    if(!parsedData.success){
+        res.json({
+            message : "Incorrect inputs"
+        })
+        return;
+    }
+    // @ts-ignore TODO
+    const userId = req.userId;
 
+    try{
+            const room = await prismaClient.room.create({
+        data : {
+            slug : parsedData.data.name,
+            adminId: userId
+        }
+    })
+
+    res.json({
+        roomId : room.id
+    })
+    }catch(e){
+        res.status(411).json({
+            message: " Room already exist with this name"
+        })
+    }
 })
 
 app.listen(3002);
