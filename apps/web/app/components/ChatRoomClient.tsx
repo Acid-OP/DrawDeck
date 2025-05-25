@@ -19,7 +19,7 @@ export function ChatRoomClient({
         if(socket && !loading){
             socket.send(JSON.stringify({
                 type:"join_room",
-                roomId : id
+                roomId : Number(id)
             }));
 
             socket.onmessage = (event) => {
@@ -29,11 +29,15 @@ export function ChatRoomClient({
                 }
             }
         }
+
+        // return () =>{
+        //     socket?.close()
+        // }
     }, [socket,loading ,id])
 
     return (
         <div>
-            {messages.map(m => <div>{m.message}</div>)}
+        {chats.map(m => <div>{m.message}</div>)}
 
         <input type="text" value={currentMessage} onChange={e => {
             setCurrentMessage(e.target.value);
@@ -41,8 +45,8 @@ export function ChatRoomClient({
 
         <button onClick={() => {
             socket?.send(JSON.stringify({
-                type: ":chat",
-                roomId : id,
+                type: "chat",
+                roomId : Number(id),
                 message : currentMessage
             }))
             setCurrentMessage("");
