@@ -38,7 +38,7 @@ app.post("/signup" , async (req,res)=> {
   
 })
 
-app.post("api/v1/signin" , async (req,res)=>{
+app.post("/signin" , async (req,res)=>{
     const parsedData = SigninSchema.safeParse(req.body);
     if(!parsedData.success){
         res.json({
@@ -70,7 +70,7 @@ app.post("api/v1/signin" , async (req,res)=>{
     })
 })
 
-app.post("/api/v1/room" ,middelware, async (req ,res) => {
+app.post("/room" ,middelware, async (req ,res) => {
     const parsedData = CreateRoomSchema.safeParse(req.body);
     if(!parsedData.success){
         res.json({
@@ -99,4 +99,20 @@ app.post("/api/v1/room" ,middelware, async (req ,res) => {
     }
 })
 
+app.get("/chats/:roomId" , async(req,res)=>{
+    const roomId = Number(req.params.roomId);
+    const messages = await prismaClient.chat.findMany({
+        where: {
+            roomId: roomId
+        },
+        orderBy:{
+            id: "desc"
+        },
+        take:50
+    });
+
+    res.json({
+        messages
+    })
+})
 app.listen(3002);

@@ -2,7 +2,7 @@ import {WebSocketServer} from "ws";
 import jwt, { type JwtPayload } from "jsonwebtoken";
 import {JWT_SECRET} from '@repo/backend-common'
 import WebSocket from "ws";
-
+import {prismaClient} from "@repo/db/client";
 const wss = new WebSocketServer({ port:8080 });
 
 interface User {
@@ -14,17 +14,18 @@ interface User {
 const users: User[] = [];
 
 function checkUser(token:string): string |  null {
-    const decoded = jwt.verify(token , JWT_SECRET);
-
-    if(typeof decoded == "string"){
-        return null
-    }
-
-    if(!decoded || !decoded.userId){
+    try{
+        const decoded = jwt.verify(token , JWT_SECRET);
+        if(typeof decoded == "string"){
+            return null
+        }
+        if(!decoded || !decoded.userId){
+            return null;
+        }
+    return decoded.userId;
+    }catch(e){
         return null;
     }
-
-    return decoded.userId;
 }
 wss.on('connection',function connection(ws , request) {
     const url = request.url;
@@ -47,7 +48,7 @@ wss.on('connection',function connection(ws , request) {
         ws
     })
 
-    ws.on('message' , function message(data){
+    ws.on('message' , async function message(data){
         const parsedData = JSON.parse(data as unknown as string);
 
         if(parsedData.type == "join_room"){
@@ -66,6 +67,14 @@ wss.on('connection',function connection(ws , request) {
         if(parsedData.type == "chat"){
             const roomId = parsedData.roomId;
             const message = parsedData.message;
+
+            await prismaClient.chat.create({
+                data : {
+                    roomId,
+                    message,
+                    userId
+                }
+            });
 
             users.forEach(user =>{
                 if(user.rooms.includes(roomId)){
