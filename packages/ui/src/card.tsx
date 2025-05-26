@@ -7,9 +7,9 @@ export function Card({
   href,
 }: {
   className?: string;
-  title: string;
-  children: React.ReactNode;
-  href: string;
+  title?: string;
+  children?: React.ReactNode;
+  href?: string;
 }): JSX.Element {
   return (
     <a
