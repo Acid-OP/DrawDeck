@@ -4,9 +4,11 @@ import {CreateRoomSchema, CreateUserSchema, SigninSchema} from "@repo/common/typ
 import {prismaClient} from "@repo/db/client";
 import { JWT_SECRET } from "@repo/backend-common";
 import jwt from "jsonwebtoken";
+import cors from "cors";
+
 const app = express();
 app.use(express.json());
-
+app.use(cors());
 
 app.post("/signup" , async (req,res)=> {
 
