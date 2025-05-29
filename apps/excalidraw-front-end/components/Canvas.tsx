@@ -1,6 +1,5 @@
 "use client"
 
-import { initDraw } from "@/app/draw";
 import { useEffect, useRef, useState } from "react";
 import { IconButton } from "./IconButton";
 import { Circle, Pencil, RectangleHorizontalIcon } from "lucide-react";
