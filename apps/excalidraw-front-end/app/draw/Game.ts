@@ -7,6 +7,7 @@ type Shape = {
     y: number;
     width: number;
     height: number;
+    radius : number;
 } | {
     type: "circle";
     centerX: number;
@@ -21,7 +22,19 @@ type Shape = {
 } | {
     type: "pencil",
     points: { x: number; y: number }[];
-}
+} | {
+    type : "arrow";
+    startX: number;
+    startY: number; 
+    endX: number; 
+    endY: number 
+} | {
+      type: "text";
+      x: number;
+      y: number;
+      text: string;
+    };
+
 
 export class Game {
 
@@ -90,11 +103,12 @@ export class Game {
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
         this.ctx.fillStyle = "rgba(0, 0, 0)";
         this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
-
         this.existingShapes.forEach((shape) => {
             if (shape.type === "rect") {
                 this.ctx.strokeStyle = "rgba(255, 255, 255)";
-                this.ctx.strokeRect(shape.x, shape.y, shape.width, shape.height);
+                this.ctx.beginPath();
+                this.ctx.roundRect(shape.x, shape.y, shape.width, shape.height, 16);
+                this.ctx.stroke();
             } else if (shape.type === "circle") {
                 this.ctx.beginPath();
                 this.ctx.arc(shape.centerX, shape.centerY, Math.abs(shape.radius), 0, Math.PI * 2);
@@ -110,6 +124,13 @@ export class Game {
                 this.ctx.closePath();
             } else if (shape.type === "pencil") {
                 this.drawPencilPath(shape.points);
+            } else if (shape.type === "arrow") {
+                this.ctx.strokeStyle = "rgba(255, 255, 255)";
+                this.drawArrow(this.ctx, shape.startX, shape.startY, shape.endX, shape.endY);
+            } else if (shape.type === "text") {
+                this.ctx.fillStyle = "rgba(255, 255, 255)";
+                this.ctx.font = "16px Arial";  // You can adjust font size and family here
+                this.ctx.fillText(shape.text, shape.x, shape.y);
             }
         });
     }
@@ -119,13 +140,10 @@ export class Game {
 
         this.ctx.beginPath();
         this.ctx.moveTo(points[0].x, points[0].y);
-        console.log("Start Pencil Path:", points[0]);
 
         for (let i = 1; i < points.length; i++) {
             this.ctx.lineTo(points[i].x, points[i].y);
-            console.log("Drawing to:", points[i]);
         }
-
         this.ctx.strokeStyle = "rgba(255, 255, 255)";
         this.ctx.stroke();
         this.ctx.closePath();
@@ -144,6 +162,25 @@ export class Game {
             this.endY = pos.y;
         }
     }
+    drawArrow(ctx: CanvasRenderingContext2D, fromX: number, fromY: number, toX: number, toY: number) {
+        const headLength = 10;
+        const angle = Math.atan2(toY - fromY, toX - fromX);
+
+        ctx.beginPath();
+        ctx.moveTo(fromX, fromY);
+        ctx.lineTo(toX, toY); // main line
+
+        // left side of arrowhead
+        ctx.lineTo(toX - headLength * Math.cos(angle - Math.PI / 6),
+            toY - headLength * Math.sin(angle - Math.PI / 6));
+
+        // right side of arrowhead
+        ctx.moveTo(toX, toY);
+        ctx.lineTo(toX - headLength * Math.cos(angle + Math.PI / 6),
+            toY - headLength * Math.sin(angle + Math.PI / 6));
+
+        ctx.stroke();
+    }
 
     mouseUpHandler = (e: MouseEvent) => {
         const pos = this.getMousePos(e);
@@ -159,6 +196,7 @@ export class Game {
                 y: this.startY,
                 width: pos.x - this.startX,
                 height: pos.y - this.startY,
+                radius : 10
             };
         } else if (this.selectedTool === "circle") {
             if (this.startX === null || this.startY === null) return;
@@ -185,6 +223,22 @@ export class Game {
             shape = {
                 type: "pencil",
                 points: this.pencilPoints,
+            };
+        } else if (this.selectedTool === "arrow") {
+            if (this.startX === null || this.startY === null) return;
+            shape = {
+                type: "arrow",
+                startX: this.startX,
+                startY: this.startY,
+                endX: pos.x,
+                endY: pos.y
+            };
+        } else if (this.selectedTool === "text") {
+            shape = {
+                type: "text",
+                x: pos.x,
+                y: pos.y,
+                text: "Sample Text", // temporary placeholder text, replace later
             };
         }
 
@@ -217,7 +271,6 @@ export class Game {
             this.drawPencilPath(this.pencilPoints);
         } else {
             if (this.startX === null || this.startY === null) return;
-
             const width = pos.x - this.startX;
             const height = pos.y - this.startY;
             this.clearCanvas();
@@ -225,7 +278,10 @@ export class Game {
             this.ctx.strokeStyle = "rgba(255, 255, 255)";
 
             if (this.selectedTool === "rect") {
-                this.ctx.strokeRect(this.startX, this.startY, width, height);
+                this.ctx.beginPath();
+                this.ctx.roundRect(this.startX, this.startY, width, height, 10);
+                this.ctx.stroke();
+
             } else if (this.selectedTool === "circle") {
                 const radius = Math.max(width, height) / 2;
                 const centerX = this.startX + radius;
@@ -242,6 +298,15 @@ export class Game {
                 this.ctx.closePath();
                 this.endX = pos.x;
                 this.endY = pos.y;
+            } else if (this.selectedTool === "arrow") {
+                this.drawArrow(this.ctx, this.startX, this.startY, pos.x, pos.y);
+                this.endX = pos.x;
+                this.endY = pos.y;
+            } else if (this.selectedTool === "text") {
+                this.clearCanvas();
+                this.ctx.fillStyle = "rgba(255, 255, 255)";
+                this.ctx.font = "16px Arial";
+                this.ctx.fillText("Sample Text", pos.x, pos.y);
             }
         }
     }
