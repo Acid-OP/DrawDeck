@@ -101,7 +101,7 @@ export class Game {
 
     clearCanvas() {
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-        this.ctx.fillStyle = "rgba(0, 0, 0)";
+        this.ctx.fillStyle = "rgba(18,18,18,255)";
         this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
         this.existingShapes.forEach((shape) => {
             if (shape.type === "rect") {

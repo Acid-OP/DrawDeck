@@ -23,7 +23,7 @@ export function RoomCanvas({roomId}: {roomId:string}){
         </div>
     }
 
-    return <div>
+    return <div className="bg-[#121212]">
         <Canvas roomId={roomId} socket={socket}/>
     </div>
 }

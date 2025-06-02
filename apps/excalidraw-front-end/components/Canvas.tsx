@@ -2,10 +2,11 @@
 
 import { useEffect, useRef, useState } from "react";
 import { IconButton } from "./IconButton";
-import { Circle, LineChartIcon, LucideSquareArrowRight, Pencil, RectangleHorizontalIcon, Text } from "lucide-react";
-import { Game } from "@/app/draw/Game";
 
-export type Tool = "circle" | "rect" | "pencil" | "line" | "arrow" | "text";
+import { Game } from "@/app/draw/Game";
+import { ShareButton } from "./ShareButton";
+import { TopBar } from "./TopBar";
+export type Tool = "select" | "hand" | "rect" | "diamond" | "circle" | "arrow" | "line" | "pencil" | "text" | "eraser";
 export function Canvas({roomId , socket}:{roomId:string , socket:WebSocket}){
     
     const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -28,31 +29,40 @@ export function Canvas({roomId , socket}:{roomId:string , socket:WebSocket}){
 
     }, [canvasRef]);
 
-    return <div style={{
-        height : "100vh",
-        overflow : "hidden"
-    }}>
-        <canvas ref={canvasRef} width={window.innerWidth} height={window.innerHeight}></canvas>
-        <TopBar setSelectedTool={setSelectedTool} selectedTool={selectedTool} />
+return (
+  <div className="w-screen h-screen bg-[#121212] overflow-hidden relative">
+    <canvas
+      ref={canvasRef}
+      width={window.innerWidth}
+      height={window.innerHeight}
+      style={{ backgroundColor: "#121212" }}
+    />
+    <div className="absolute top-4 left-0 w-full flex justify-between items-center px-6">
+      <Menu />
+      <TopBar setSelectedTool={setSelectedTool} selectedTool={selectedTool} />
+      <ShareButton />
     </div>
+  </div>
+);
+
 }
 
-function TopBar({selectedTool , setSelectedTool}:{
-    selectedTool: Tool ,
-    setSelectedTool: (s:Tool) => void
-}){
-    return <div style={{
-        position: "fixed",
-        top : 10,
-        left: 10
-    }}>
-        <div className="flex gap-t">
-        <IconButton activated={selectedTool === "pencil"} icon={<Pencil/>} onClick={()=> {setSelectedTool("pencil")}}></IconButton>
-        <IconButton activated={selectedTool === "rect"} icon={<RectangleHorizontalIcon />} onClick={()=> {setSelectedTool("rect")}}></IconButton>
-        <IconButton activated={selectedTool === "circle"} icon={<Circle />} onClick={()=> {setSelectedTool("circle")}}></IconButton>
-        <IconButton activated={selectedTool === "line"} icon={<LineChartIcon />} onClick={()=> {setSelectedTool("line")}}></IconButton>
-        <IconButton activated={selectedTool === "arrow"} icon={<LucideSquareArrowRight />} onClick={()=> {setSelectedTool("arrow")}}></IconButton>
-        <IconButton activated={selectedTool === "text"} icon={<Text/>} onClick={()=> {setSelectedTool("text")}}></IconButton>
-        </div>
+function Menu() {
+  return (
+    <div className="bg-[#232329] p-3 rounded-xl">
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="19"
+        height="19"
+        viewBox="0 0 24 24"
+        fill="#5f5f64"
+        className="color-[#5f5f64]"
+      >
+        <path d="M 2 5 L 2 7 L 22 7 L 22 5 L 2 5 z M 2 11 L 2 13 L 22 13 L 22 11 L 2 11 z M 2 17 L 2 19 L 22 19 L 22 17 L 2 17 z" />
+      </svg>
     </div>
+  );
 }
+
+
+
