@@ -17,8 +17,9 @@ export function IconButton({ icon, onClick, activated }: IconButtonProps) {
 
   return (
     <div
-      className={`m-2 pointer rounded-sm p-3 hover:bg-gray flex items-center justify-center relative ${
-        activated ? "bg-[#403e6a]" : ""
+      className={`m-2 pointer  p-3 rounded-lg hover:bg-white/5
+ flex items-center justify-center relative  ${
+        activated ? "bg-[#403e6a] rounded-lg" : ""
       }`}
       onClick={onClick}
     >
