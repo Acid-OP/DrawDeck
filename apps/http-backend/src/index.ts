@@ -2,7 +2,7 @@ import  express  from "express";
 import { middelware } from "./middelware";
 import {CreateRoomSchema, CreateUserSchema, SigninSchema} from "@repo/common/types";
 import {prismaClient} from "@repo/db/client";
-import { JWT_SECRET } from "@repo/backend-common";
+import { JWT_SECRET } from "@repo/backend-common/index";
 import jwt from "jsonwebtoken";
 import cors from "cors";
 
