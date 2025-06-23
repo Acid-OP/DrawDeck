@@ -8,6 +8,24 @@ type Shape = {
     width: number;
     height: number;
     radius : number;
+} |{
+    type : "diamond";
+    top: {
+        x: number;
+        y: number;
+    };
+    right: {
+        x: number;
+        y: number;
+    };
+    bottom: {
+        x: number;
+        y: number;
+    };
+    left: {
+        x: number;
+        y: number;
+    };
 } | {
     type: "circle";
     centerX: number;
@@ -49,7 +67,6 @@ export class Game {
     private endY: number | null = null;
     private selectedTool: Tool = "circle";
     private pencilPoints: { x: number; y: number }[] = [];
-
     socket: WebSocket;
 
     constructor(canvas: HTMLCanvasElement, roomId: string, socket: WebSocket) {
@@ -71,6 +88,24 @@ export class Game {
             y: e.clientY - rect.top,
         };
     }
+    drawDiamond(
+        top: { x: number; y: number },
+        right: { x: number; y: number },
+        bottom: { x: number; y: number },
+        left: { x: number; y: number },
+        radius: number = 10) {
+            this.ctx.beginPath();
+            this.ctx.moveTo(top.x, top.y);
+            this.ctx.quadraticCurveTo(top.x, top.y, top.x, top.y);
+            this.ctx.lineTo(right.x , right.y);
+            this.ctx.quadraticCurveTo(right.x, right.y, right.x, right.y);
+            this.ctx.lineTo(bottom.x, bottom.y);
+            this.ctx.quadraticCurveTo(bottom.x, bottom.y, bottom.x, bottom.y);
+            this.ctx.lineTo(left.x, left.y);
+            this.ctx.quadraticCurveTo(left.x, left.y, left.x, left.y );
+            this.ctx.lineTo(top.x, top.y);
+            this.ctx.stroke();
+}
 
     destroy() {
         this.canvas.removeEventListener("mousedown", this.mouseDownHandler);
@@ -109,6 +144,8 @@ export class Game {
                 this.ctx.beginPath();
                 this.ctx.roundRect(shape.x, shape.y, shape.width, shape.height, 16);
                 this.ctx.stroke();
+            } else if (shape.type === "diamond") {
+                this.drawDiamond(shape.top, shape.right, shape.bottom, shape.left);
             } else if (shape.type === "circle") {
                 this.ctx.beginPath();
                 this.ctx.arc(shape.centerX, shape.centerY, Math.abs(shape.radius), 0, Math.PI * 2);
@@ -129,7 +166,7 @@ export class Game {
                 this.drawArrow(this.ctx, shape.startX, shape.startY, shape.endX, shape.endY);
             } else if (shape.type === "text") {
                 this.ctx.fillStyle = "rgba(255, 255, 255)";
-                this.ctx.font = "16px Arial";  // You can adjust font size and family here
+                this.ctx.font = "16px Arial";  
                 this.ctx.fillText(shape.text, shape.x, shape.y);
             }
         });
@@ -162,25 +199,33 @@ export class Game {
             this.endY = pos.y;
         }
     }
-    drawArrow(ctx: CanvasRenderingContext2D, fromX: number, fromY: number, toX: number, toY: number) {
+    drawArrow(
+        ctx: CanvasRenderingContext2D,
+        startX: number,
+        startY: number,
+        endX: number,
+        endY: number
+    ) {
         const headLength = 10;
-        const angle = Math.atan2(toY - fromY, toX - fromX);
-
+        const angle = Math.atan2(endY - startY, endX - startX);
+        const arrowTipX = endX;
+        const arrowTipY = endY;
+        const leftX = arrowTipX - headLength * Math.cos(angle - Math.PI / 6);
+        const leftY = arrowTipY - headLength * Math.sin(angle - Math.PI / 6);
+        const rightX = arrowTipX - headLength * Math.cos(angle + Math.PI / 6);
+        const rightY = arrowTipY - headLength * Math.sin(angle + Math.PI / 6);
         ctx.beginPath();
-        ctx.moveTo(fromX, fromY);
-        ctx.lineTo(toX, toY); // main line
-
-        // left side of arrowhead
-        ctx.lineTo(toX - headLength * Math.cos(angle - Math.PI / 6),
-            toY - headLength * Math.sin(angle - Math.PI / 6));
-
-        // right side of arrowhead
-        ctx.moveTo(toX, toY);
-        ctx.lineTo(toX - headLength * Math.cos(angle + Math.PI / 6),
-            toY - headLength * Math.sin(angle + Math.PI / 6));
-
+        // Main arrow line
+        ctx.moveTo(startX, startY);
+        ctx.lineTo(arrowTipX, arrowTipY);
+        // Left side of arrowhead
+        ctx.lineTo(leftX, leftY);
+        // Return to tip for right side
+        ctx.moveTo(arrowTipX, arrowTipY);
+        ctx.lineTo(rightX, rightY);
         ctx.stroke();
     }
+
 
     mouseUpHandler = (e: MouseEvent) => {
         const pos = this.getMousePos(e);
@@ -197,6 +242,19 @@ export class Game {
                 width: pos.x - this.startX,
                 height: pos.y - this.startY,
                 radius : 10
+            };
+        } else if (this.selectedTool === "diamond") {
+            if (this.startX === null || this.startY === null) return;
+            const width = pos.x - this.startX;
+            const height = pos.y - this.startY;
+            const cx = this.startX + width / 2;
+            const cy = this.startY + height / 2;
+            shape = {
+                type: "diamond",
+                top: { x: cx, y: cy - height / 2 },
+                right: { x: cx + width / 2, y: cy },
+                bottom: { x: cx, y: cy + height / 2 },
+                left: { x: cx - width / 2, y: cy },
             };
         } else if (this.selectedTool === "circle") {
             if (this.startX === null || this.startY === null) return;
@@ -274,14 +332,21 @@ export class Game {
             const width = pos.x - this.startX;
             const height = pos.y - this.startY;
             this.clearCanvas();
-
             this.ctx.strokeStyle = "rgba(255, 255, 255)";
-
+            const cx = this.startX + width / 2;
+            const cy = this.startY + height / 2;
+            const top = { x: cx, y: cy - height / 2 };
+            const right = { x: cx + width / 2, y: cy };
+            const bottom = { x: cx, y: cy + height / 2 };
+            const left = { x: cx - width / 2, y: cy };
+            const radius = 10;
             if (this.selectedTool === "rect") {
                 this.ctx.beginPath();
                 this.ctx.roundRect(this.startX, this.startY, width, height, 10);
                 this.ctx.stroke();
 
+            } else if(this.selectedTool === "diamond") {
+                this.drawDiamond(top, right, bottom, left, 10);
             } else if (this.selectedTool === "circle") {
                 const radius = Math.max(width, height) / 2;
                 const centerX = this.startX + radius;
