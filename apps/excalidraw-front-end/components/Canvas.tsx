@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-
 import { Game } from "@/app/draw/Game";
 import { ShareButton } from "./ShareButton";
 import { TopBar } from "./TopBar";
@@ -32,7 +31,6 @@ export function Canvas({
   const [inputBox, setInputBox] = useState<{ x: number; y: number } | null>(
     null
   );
-  const justBlurredRef = useRef(false);
 
   useEffect(() => {
     game?.setTool(selectedTool);
@@ -41,12 +39,10 @@ export function Canvas({
   useEffect(() => {
     if (canvasRef.current) {
       const g = new Game(canvasRef.current, roomId, socket);
-
       g.onTextInsert = (x, y) => {
-        if (justBlurredRef.current) return;
+        if ((window as any).justBlurredTextInput) return;
         setInputBox({ x, y });
       };
-
       setGame(g);
 
       return () => {

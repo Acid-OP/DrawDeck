@@ -62,6 +62,32 @@ export class Game {
   private pencilPoints: { x: number; y: number }[] = [];
   public onTextInsert?: (x: number, y: number) => void;
   socket: WebSocket;
+  private isPointNearLineSegment(
+  px: number, py: number,
+  x1: number, y1: number,
+  x2: number, y2: number,
+  tol: number
+): boolean {
+  const ABx = x2 - x1;
+  const ABy = y2 - y1;
+  const APx = px - x1;
+  const APy = py - y1;
+
+  const ab2 = ABx * ABx + ABy * ABy;
+  if (ab2 === 0) return false;
+
+  let t = (APx * ABx + APy * ABy) / ab2;
+  t = Math.max(0, Math.min(1, t));
+
+  const closestX = x1 + t * ABx;
+  const closestY = y1 + t * ABy;
+
+  const dx = px - closestX;
+  const dy = py - closestY;
+  const dist = Math.sqrt(dx * dx + dy * dy);
+
+  return dist <= tol;
+}
 
   constructor(canvas: HTMLCanvasElement, roomId: string, socket: WebSocket) {
     this.canvas = canvas;
@@ -74,6 +100,55 @@ export class Game {
     this.initHandlers();
     this.initMouseHandlers();
   }
+
+
+isPointInsideShape(x: number, y: number, shape: Shape): boolean {
+  const tol = 10; // tolerance margin
+
+  switch (shape.type) {
+    case "rect": {
+      const withinX = x >= shape.x - tol && x <= shape.x + shape.width + tol;
+      const withinY = y >= shape.y - tol && y <= shape.y + shape.height + tol;
+      return withinX && withinY;
+    }
+
+    case "diamond": {
+      const xs = [shape.top.x, shape.right.x, shape.bottom.x, shape.left.x];
+      const ys = [shape.top.y, shape.right.y, shape.bottom.y, shape.left.y];
+      const minX = Math.min(...xs);
+      const maxX = Math.max(...xs);
+      const minY = Math.min(...ys);
+      const maxY = Math.max(...ys);
+      return x >= minX - tol && x <= maxX + tol && y >= minY - tol && y <= maxY + tol;
+    }
+
+    case "line":
+    case "arrow": {
+      const x1 = shape.startX;
+      const y1 = shape.startY;
+      const x2 = shape.endX;
+      const y2 = shape.endY;
+
+      return this.isPointNearLineSegment(x, y, x1, y1, x2, y2, tol);
+    }
+
+    case "pencil": {
+      const points = shape.points;
+      for (let i = 0; i < points.length - 1; i++) {
+        const p1 = points[i];
+        const p2 = points[i + 1];
+        if (this.isPointNearLineSegment(x, y, p1.x, p1.y, p2.x, p2.y, tol)) {
+          return true;
+        }
+      }
+      return false;
+    }
+
+    default:
+      return false;
+  }
+}
+
 
   addTextShape(x: number, y: number, text: string) {
     const shape = {
@@ -221,6 +296,19 @@ export class Game {
 
     if (this.selectedTool === "pencil") {
       this.pencilPoints = [pos];
+    } else if (this.selectedTool === "eraser") {
+      const pos = this.getMousePos(e);
+      let erased = false;
+      for (let i = this.existingShapes.length - 1; i >= 0; i--) {
+        if (this.isPointInsideShape(pos.x, pos.y, this.existingShapes[i])) {
+          this.existingShapes.splice(i, 1);
+          erased = true;
+          break;
+      }
+    }
+
+    if(erased == true) this.clearCanvas();
+    return; 
     } else {
       this.startX = pos.x;
       this.startY = pos.y;
