@@ -61,13 +61,125 @@ export class Game {
   private selectedTool: Tool = "circle";
   private pencilPoints: { x: number; y: number }[] = [];
   public onTextInsert?: (x: number, y: number) => void;
+  public onToolChange?: (tool: Tool) => void;
+  private selectedShapeIndex: number | null = null;
   socket: WebSocket;
-  private isPointNearLineSegment(
-  px: number, py: number,
-  x1: number, y1: number,
-  x2: number, y2: number,
-  tol: number
-): boolean {
+  private drawHandle(x: number,y: number,filled: boolean,r = 6,color = "#a855f7") {
+  this.ctx.beginPath();
+  this.ctx.arc(x, y, r, 0, Math.PI * 2);
+  if (filled) {
+    this.ctx.fillStyle = color;
+    this.ctx.fill();
+  } else {
+    this.ctx.strokeStyle = color;
+    this.ctx.lineWidth = 1.5;
+    this.ctx.stroke();
+  }
+  this.ctx.closePath();
+  }
+  private drawLineHandles(shape: Extract<Shape, { type: "line" | "arrow" }>) {
+    const { startX, startY, endX, endY } = shape;
+    const r = 6;
+
+    const dx = endX - startX;
+    const dy = endY - startY;
+    const len = Math.sqrt(dx * dx + dy * dy);
+    if (len === 0) return;
+
+    const ux = dx / len;
+    const uy = dy / len;
+
+    // Move handles outward from line tips
+    const handleStartX = startX - ux * r;
+    const handleStartY = startY - uy * r;
+    const handleEndX = endX + ux * r;
+    const handleEndY = endY + uy * r;
+
+    const midX = (startX + endX) / 2;
+    const midY = (startY + endY) / 2;
+
+    // Draw handles only at offset positions
+    this.drawHandle(handleStartX, handleStartY, false, r); // start (hollow)
+    this.drawHandle(handleEndX, handleEndY, false, r);     // end (hollow)
+    this.drawHandle(midX, midY, true, r);                  // middle (filled)
+  }
+
+  private drawSelectionBox(shape: Shape) {
+    this.ctx.save();
+    this.ctx.strokeStyle = "#a85ff7"; 
+    this.ctx.lineWidth = 1.5;
+    this.ctx.setLineDash([]);
+    const pad = 8;
+    if (shape.type === "rect") {
+      this.ctx.strokeRect(
+        shape.x - pad,
+        shape.y - pad,
+        shape.width + pad * 2,
+        shape.height + pad * 2
+      );
+      return;
+    }
+    if (shape.type === "circle") {
+      const r = Math.abs(shape.radius);
+      this.ctx.beginPath();
+      this.ctx.arc(shape.centerX, shape.centerY, r + pad, 0, Math.PI * 2);
+      this.ctx.stroke();
+      return;
+    }
+    if (shape.type === "diamond") {
+      const xs = [shape.top.x, shape.right.x, shape.bottom.x, shape.left.x];
+      const ys = [shape.top.y, shape.right.y, shape.bottom.y, shape.left.y];
+      const minX = Math.min(...xs) - pad;
+      const maxX = Math.max(...xs) + pad;
+      const minY = Math.min(...ys) - pad;
+      const maxY = Math.max(...ys) + pad;
+      this.ctx.strokeRect(minX, minY, maxX - minX, maxY - minY);
+      return;
+    }
+    if (shape.type === "line" || shape.type === "arrow") {
+      const { startX, startY, endX, endY } = shape;
+      const r = 6;// handle radius
+      // direction vector & length
+      const dx = endX - startX;
+      const dy = endY - startY;
+      const len = Math.sqrt(dx * dx + dy * dy);
+      if (len === 0) return;  
+      // // unit vector pointing from start → end
+      const ux = dx / len;
+      const uy = dy / len;
+      // offset handles *outside* the tips
+      const handleStartX = startX - ux * r;
+      const handleStartY = startY - uy * r;
+      const handleEndX   = endX   + ux * r;
+      const handleEndY   = endY   + uy * r;
+
+      // middle stays on the segment centre
+      const midX = (startX + endX) / 2;
+      const midY = (startY + endY) / 2;
+
+      // draw (start / end hollow, middle filled)
+      this.drawHandle(handleStartX, handleStartY, false, r);
+      this.drawHandle(handleEndX,   handleEndY,   false, r);
+      this.drawHandle(midX,         midY,         true , r);
+      return;
+    }
+
+    if (shape.type === "text") {
+    const width = this.ctx.measureText(shape.text).width;
+    const height = 20;
+    this.ctx.strokeRect(
+      shape.x - pad / 2,
+      shape.y - height + pad / 2,
+      width + pad,
+      height + pad
+      );
+      return;
+    }
+
+  this.ctx.restore();
+}
+
+  private isPointNearLineSegment(px: number, py: number,x1: number, y1: number,x2: number, y2: number,tol: number): boolean {
   const ABx = x2 - x1;
   const ABy = y2 - y1;
   const APx = px - x1;
@@ -88,7 +200,6 @@ export class Game {
 
   return dist <= tol;
 }
-
   constructor(canvas: HTMLCanvasElement, roomId: string, socket: WebSocket) {
     this.canvas = canvas;
     this.ctx = canvas.getContext("2d")!;
@@ -103,53 +214,42 @@ export class Game {
 
 
 isPointInsideShape(x: number, y: number, shape: Shape): boolean {
-  const tol = 10; // tolerance margin
-
+  const tol = 10;
   switch (shape.type) {
-    case "rect": {
-      const withinX = x >= shape.x - tol && x <= shape.x + shape.width + tol;
-      const withinY = y >= shape.y - tol && y <= shape.y + shape.height + tol;
-      return withinX && withinY;
-    }
-
-    case "diamond": {
-      const xs = [shape.top.x, shape.right.x, shape.bottom.x, shape.left.x];
-      const ys = [shape.top.y, shape.right.y, shape.bottom.y, shape.left.y];
-      const minX = Math.min(...xs);
-      const maxX = Math.max(...xs);
-      const minY = Math.min(...ys);
-      const maxY = Math.max(...ys);
-      return x >= minX - tol && x <= maxX + tol && y >= minY - tol && y <= maxY + tol;
-    }
-
     case "line":
     case "arrow": {
-      const x1 = shape.startX;
-      const y1 = shape.startY;
-      const x2 = shape.endX;
-      const y2 = shape.endY;
-
-      return this.isPointNearLineSegment(x, y, x1, y1, x2, y2, tol);
+      return this.isPointNearLineSegment(x, y, shape.startX, shape.startY, shape.endX, shape.endY, tol);
     }
-
     case "pencil": {
-      const points = shape.points;
-      for (let i = 0; i < points.length - 1; i++) {
-        const p1 = points[i];
-        const p2 = points[i + 1];
-        if (this.isPointNearLineSegment(x, y, p1.x, p1.y, p2.x, p2.y, tol)) {
+      for (let i = 0; i < shape.points.length - 1; i++) {
+        if (this.isPointNearLineSegment(x, y, shape.points[i].x, shape.points[i].y, shape.points[i + 1].x, shape.points[i + 1].y, tol)) {
           return true;
         }
       }
       return false;
     }
-
+    case "diamond": {
+      const xs = [shape.top.x, shape.right.x, shape.bottom.x, shape.left.x];
+      const ys = [shape.top.y, shape.right.y, shape.bottom.y, shape.left.y];
+      const minX = Math.min(...xs) - tol;
+      const maxX = Math.max(...xs) + tol;
+      const minY = Math.min(...ys) - tol;
+      const maxY = Math.max(...ys) + tol;
+      return x >= minX && x <= maxX && y >= minY && y <= maxY;
+    }
+    case "rect": {
+      return (
+        x >= shape.x - tol &&
+        x <= shape.x + shape.width + tol &&
+        y >= shape.y - tol &&
+        y <= shape.y + shape.height + tol
+      );
+    }
     default:
       return false;
+    }
   }
-}
-
-
+  
   addTextShape(x: number, y: number, text: string) {
     const shape = {
       type: "text" as const,
@@ -250,30 +350,29 @@ isPointInsideShape(x: number, y: number, shape: Shape): boolean {
         this.ctx.strokeStyle = "rgba(255, 255, 255)";
         this.ctx.stroke();
         this.ctx.closePath();
-      } else if (shape.type === "line") {
-        this.ctx.beginPath();
-        this.ctx.moveTo(shape.startX, shape.startY);
-        this.ctx.lineTo(shape.endX, shape.endY);
-        this.ctx.strokeStyle = "rgba(255, 255, 255)";
-        this.ctx.stroke();
-        this.ctx.closePath();
       } else if (shape.type === "pencil") {
         this.drawPencilPath(shape.points);
-      } else if (shape.type === "arrow") {
-        this.ctx.strokeStyle = "rgba(255, 255, 255)";
-        this.drawArrow(
-          this.ctx,
-          shape.startX,
-          shape.startY,
-          shape.endX,
-          shape.endY
-        );
+      } else if (shape.type === "line" || shape.type === "arrow") {
+        // draw the actual segment/arrow
+        this.ctx.strokeStyle = "rgba(255,255,255)";
+        this.drawArrow(this.ctx, shape.startX, shape.startY, shape.endX, shape.endY);
+
+        // if selected, draw handles exactly on the tips
+        if (
+          this.selectedTool === "select" &&
+          this.selectedShapeIndex === this.existingShapes.indexOf(shape)
+        ) {
+          this.drawLineHandles(shape);
+        }
       } else if (shape.type === "text") {
         this.ctx.fillStyle = "rgba(255, 255, 255)";
         this.ctx.font = "16px Arial";
         this.ctx.fillText(shape.text, shape.x, shape.y);
       }
-    });
+      if (this.selectedTool === "select" && this.selectedShapeIndex === this.existingShapes.indexOf(shape)) {
+        this.drawSelectionBox(shape);
+      }
+    });    
   }
 
   drawPencilPath(points: { x: number; y: number }[]) {
@@ -291,30 +390,43 @@ isPointInsideShape(x: number, y: number, shape: Shape): boolean {
   }
 
   mouseDownHandler = (e: MouseEvent) => {
-    this.clicked = true;
     const pos = this.getMousePos(e);
 
-    if (this.selectedTool === "pencil") {
-      this.pencilPoints = [pos];
-    } else if (this.selectedTool === "eraser") {
-      const pos = this.getMousePos(e);
-      let erased = false;
+    if (this.selectedTool === "select") {
+      for (let i = this.existingShapes.length - 1; i >= 0; i--) {
+        if (this.isPointInsideShape(pos.x, pos.y, this.existingShapes[i])) {
+          this.selectedShapeIndex = i;
+          this.clearCanvas();
+          return;
+        }
+      }
+      this.selectedShapeIndex = null;
+      this.clearCanvas();
+      return;
+    }
+
+    if (this.selectedTool === "eraser") {
       for (let i = this.existingShapes.length - 1; i >= 0; i--) {
         if (this.isPointInsideShape(pos.x, pos.y, this.existingShapes[i])) {
           this.existingShapes.splice(i, 1);
-          erased = true;
-          break;
+          this.clearCanvas();
+          return;
+        }
       }
+      return;
     }
 
-    if(erased == true) this.clearCanvas();
-    return; 
-    } else {
-      this.startX = pos.x;
-      this.startY = pos.y;
-      this.endX = pos.x;
-      this.endY = pos.y;
+    if (this.selectedTool === "pencil") {
+      this.clicked = true;
+      this.pencilPoints = [pos];
+      return;
     }
+
+    this.clicked = true;
+    this.startX = pos.x;
+    this.startY = pos.y;
+    this.endX = pos.x;
+    this.endY = pos.y;
   };
 
   drawArrow(
@@ -387,8 +499,7 @@ isPointInsideShape(x: number, y: number, shape: Shape): boolean {
         this.startY === null ||
         this.endX === null ||
         this.endY === null
-      )
-        return;
+      ) return;
       shape = {
         type: "line",
         startX: this.startX,
@@ -396,6 +507,7 @@ isPointInsideShape(x: number, y: number, shape: Shape): boolean {
         endX: this.endX,
         endY: this.endY,
       };
+      if (this.onToolChange) this.onToolChange("select");
     } else if (this.selectedTool === "pencil") {
       this.pencilPoints.push(pos);
       shape = {
@@ -411,6 +523,7 @@ isPointInsideShape(x: number, y: number, shape: Shape): boolean {
         endX: pos.x,
         endY: pos.y,
       };
+      if (this.onToolChange) this.onToolChange("select");
     } else if (this.selectedTool === "text") {
         if ((window as any).justBlurredTextInput) return;
         setTimeout(() => {

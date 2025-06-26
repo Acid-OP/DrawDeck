@@ -7,8 +7,8 @@ import { TopBar } from "./TopBar";
 import { Menu } from "./Menu";
 
 export type Tool =
-  | "select"
   | "hand"
+  | "select"
   | "rect"
   | "diamond"
   | "circle"
@@ -27,7 +27,7 @@ export function Canvas({
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [game, setGame] = useState<Game>();
-  const [selectedTool, setSelectedTool] = useState<Tool>("circle");
+  const [selectedTool, setSelectedTool] = useState<Tool>("hand");
   const [inputBox, setInputBox] = useState<{ x: number; y: number } | null>(
     null
   );
@@ -39,6 +39,7 @@ export function Canvas({
   useEffect(() => {
     if (canvasRef.current) {
       const g = new Game(canvasRef.current, roomId, socket);
+      g.onToolChange = (tool) => setSelectedTool(tool);
       g.onTextInsert = (x, y) => {
         if ((window as any).justBlurredTextInput) return;
         setInputBox({ x, y });
