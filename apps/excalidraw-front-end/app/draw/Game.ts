@@ -17,11 +17,11 @@ type Shape =
       bottom: { x: number; y: number };
       left: { x: number; y: number };
     }
-  | {
-      type: "circle";
+  | { type: "circle"; 
       centerX: number;
-      centerY: number;
-      radius: number;
+      centerY: number; 
+      rx: number; 
+      ry: number 
     }
   | {
       type: "line";
@@ -63,139 +63,175 @@ export class Game {
   public onTextInsert?: (x: number, y: number) => void;
   public onToolChange?: (tool: Tool) => void;
   private selectedShapeIndex: number | null = null;
+  private hoveredForErase: number[] = [];
   socket: WebSocket;
 
-// ─── Rounded Square Handle ─────────────────────────────
-private drawHandleBox(
-  cx: number,
-  cy: number,
-  size = 10,
-  color = "#9b7bff"
-) {
-  const half = size / 2;
-  this.ctx.beginPath();
-  this.ctx.roundRect(cx - half, cy - half, size, size, 3);
-  this.ctx.strokeStyle = color;
-  this.ctx.lineWidth = 1.5;
-  this.ctx.stroke();
-  this.ctx.closePath();
-}
-
-// ─── Circle Handle for Line/Arrow ──────────────────────
-private drawCircleHandle(
-  cx: number,
-  cy: number,
-  filled: boolean,
-  r = 6,
-  color = "#9b7bff"
-) {
-  this.ctx.beginPath();
-  this.ctx.arc(cx, cy, r, 0, Math.PI * 2);
-  filled ? (this.ctx.fillStyle = color, this.ctx.fill()) :
-           (this.ctx.strokeStyle = color, this.ctx.lineWidth = 1.5, this.ctx.stroke());
-  this.ctx.closePath();
-}
-
-// ─── Line & Arrow Selection Handles ─────────────────────
-private drawLineHandles(shape: Extract<Shape, { type: "line" | "arrow" }>) {
-  const { startX, startY, endX, endY } = shape;
-  const r = 6;
-  const dx = endX - startX;
-  const dy = endY - startY;
-  const len = Math.hypot(dx, dy);
-  if (len === 0) return;
-
-  const ux = dx / len, uy = dy / len;
-  const startCx = startX - ux * r, startCy = startY - uy * r;
-  const endCx   = endX   + ux * r, endCy   = endY   + uy * r;
-  const midCx   = (startX + endX) / 2, midCy = (startY + endY) / 2;
-
-  this.drawCircleHandle(startCx, startCy, false, r);
-  this.drawCircleHandle(endCx,   endCy,   false, r);
-  this.drawCircleHandle(midCx,   midCy,   true , r);
-}
-
-// ─── Line Connecting Selection Box to Handle ────────────
-private drawConnectorLineToHandle(
-  fromX: number,
-  fromY: number,
-  toX: number,
-  toY: number,
-  stopDistance = 5
-) {
-  const dx = toX - fromX;
-  const dy = toY - fromY;
-  const len = Math.hypot(dx, dy);
-  if (len === 0) return;
-
-  const ux = dx / len;
-  const uy = dy / len;
-
-  const endX = toX - ux * stopDistance;
-  const endY = toY - uy * stopDistance;
-
-  this.ctx.beginPath();
-  this.ctx.moveTo(fromX, fromY);
-  this.ctx.lineTo(endX, endY);
-  this.ctx.stroke();
-}
-
-// ─── Selection Box with External Handles ────────────────
-private drawSelectionBox(shape: Shape) {
-  this.ctx.save();
-  this.ctx.strokeStyle = "#9b7bff";
-  this.ctx.lineWidth = 1.5;
-  this.ctx.setLineDash([]);
-
-  const pad = 8;
-  const handleSize = 10;
-  const stopDist = handleSize / 2;
-
-  if (shape.type === "rect") {
-    const x = shape.x - pad;
-    const y = shape.y - pad;
-    const w = shape.width + pad * 2;
-    const h = shape.height + pad * 2;
-
-    this.ctx.strokeRect(x, y, w, h);
-
-    const handles = [
-      { x: x,     y: y },
-      { x: x + w, y: y },
-      { x: x + w, y: y + h },
-      { x: x,     y: y + h },
-    ];
-
-    for (const { x: hx, y: hy } of handles) {
-      const fromX = hx === x ? x : x + w;
-      const fromY = hy === y ? y : y + h;
-      this.drawConnectorLineToHandle(fromX, fromY, hx, hy, stopDist);
-      this.drawHandleBox(hx, hy);
-    }
-
-    this.ctx.restore();
-    return;
+  // ─── Rounded Square Handle ─────────────────────────────
+  private drawHandleBox(
+    cx: number,
+    cy: number,
+    size = 10,
+    color = "#9b7bff"
+  ) {
+    const half = size / 2;
+    this.ctx.beginPath();
+    this.ctx.roundRect(cx - half, cy - half, size, size, 3);
+    this.ctx.strokeStyle = color;
+    this.ctx.lineWidth = 1.5;
+    this.ctx.stroke();
+    this.ctx.closePath();
   }
 
-  if (shape.type === "circle") {
-    const r = Math.abs(shape.radius);
-    const x = shape.centerX;
-    const y = shape.centerY;
-    const outerR = r + pad;
+  // ─── Circle Handle for Line/Arrow ──────────────────────
+  private drawCircleHandle(
+    cx: number,
+    cy: number,
+    filled: boolean,
+    r = 6,
+    color = "#9b7bff"
+  ) {
+    this.ctx.beginPath();
+    this.ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    filled ? (this.ctx.fillStyle = color, this.ctx.fill()) :(this.ctx.strokeStyle = color, this.ctx.lineWidth = 1.5, this.ctx.stroke());
+    this.ctx.closePath();
+  }
+
+  // ─── Line & Arrow Selection Handles ─────────────────────
+  private drawLineHandles(shape: Extract<Shape, { type: "line" | "arrow" }>) {
+    const { startX, startY, endX, endY } = shape;
+    const r = 6;
+    const dx = endX - startX;
+    const dy = endY - startY;
+    const len = Math.hypot(dx, dy);
+    if (len === 0) return;
+
+    const ux = dx / len, uy = dy / len;
+    const startCx = startX - ux * r, startCy = startY - uy * r;
+    const endCx   = endX   + ux * r, endCy   = endY   + uy * r;
+    const midCx   = (startX + endX) / 2, midCy = (startY + endY) / 2;
+
+    this.drawCircleHandle(startCx, startCy, false, r);
+    this.drawCircleHandle(endCx,   endCy,   false, r);
+    this.drawCircleHandle(midCx,   midCy,   true , r);
+  }
+
+  // ─── Line Connecting Selection Box to Handle ────────────
+  private drawConnectorLineToHandle(
+    fromX: number,
+    fromY: number,
+    toX: number,
+    toY: number,
+    stopDistance = 5
+  ) {
+    const dx = toX - fromX;
+    const dy = toY - fromY;
+    const len = Math.hypot(dx, dy);
+    if (len === 0) return;
+
+    const ux = dx / len;
+    const uy = dy / len;
+
+    const endX = toX - ux * stopDistance;
+    const endY = toY - uy * stopDistance;
 
     this.ctx.beginPath();
-    this.ctx.arc(x, y, outerR, 0, Math.PI * 2);
+    this.ctx.moveTo(fromX, fromY);
+    this.ctx.lineTo(endX, endY);
     this.ctx.stroke();
+  }
 
-    const handles = [
-      { x: x,         y: y - outerR },
-      { x: x + outerR, y: y },
-      { x: x,         y: y + outerR },
-      { x: x - outerR, y: y },
-    ];
+  // ─── Selection Box with External Handles ────────────────
+  private drawSelectionBox(shape: Shape) {
+    this.ctx.save();
+    this.ctx.strokeStyle = "#9b7bff";  
+    this.ctx.lineWidth = 1.5;
+    this.ctx.setLineDash([]);
 
-    for (const { x: hx, y: hy } of handles) {
-      this.drawConnectorLineToHandle(x, y, hx, hy, stopDist);
+    const pad = 8;
+    const handleSize = 10;
+    const stopDist = handleSize / 2;
+
+    // ───────── RECT ─────────
+    if (shape.type === "rect") {
+      const x = shape.x - pad;
+      const y = shape.y - pad;
+      const w = shape.width + pad * 2;
+      const h = shape.height + pad * 2;
+
+      this.ctx.strokeRect(x, y, w, h);
+
+      const handles = [
+        { x: x,     y: y },
+        { x: x + w, y: y },
+        { x: x + w, y: y + h },
+        { x: x,     y: y + h },
+      ];
+
+      for (const { x: hx, y: hy } of handles) {
+        const fromX = hx === x ? x : x + w;
+        const fromY = hy === y ? y : y + h;
+        this.drawConnectorLineToHandle(fromX, fromY, hx, hy, stopDist);
+        this.drawHandleBox(hx, hy);
+      }
+
+      this.ctx.restore();
+      return;
+    }
+
+    // ───────── CIRCLE (Ellipse) ─────────
+    if (shape.type === "circle") {
+      const x = shape.centerX - shape.rx - pad;
+      const y = shape.centerY - shape.ry - pad;
+      const w = shape.rx * 2 + pad * 2;
+      const h = shape.ry * 2 + pad * 2;
+
+      this.ctx.strokeRect(x, y, w, h);
+
+      const centerX = x + w / 2;
+      const centerY = y + h / 2;
+
+      const handles = [
+      { x: x,     y: y },         // top-left
+      { x: x + w, y: y },         // top-right
+      { x: x + w, y: y + h },     // bottom-right
+      { x: x,     y: y + h },     // bottom-left
+      ];
+      for (const { x: hx, y: hy } of handles) {
+        const fromX = hx < centerX ? x : x + w;
+        const fromY = hy < centerY ? y : y + h;
+        this.drawConnectorLineToHandle(fromX, fromY, hx, hy, stopDist);
+        this.drawHandleBox(hx, hy);
+      }
+      this.ctx.restore();
+      return;
+    }
+    // ───────── DIAMOND ─────────
+    if (shape.type === "diamond") {
+      const xs = [shape.top.x, shape.right.x, shape.bottom.x, shape.left.x];
+      const ys = [shape.top.y, shape.right.y, shape.bottom.y, shape.left.y];
+      const minX = Math.min(...xs) - pad;
+      const maxX = Math.max(...xs) + pad;
+      const minY = Math.min(...ys) - pad;
+      const maxY = Math.max(...ys) + pad;
+
+      this.ctx.strokeRect(minX, minY, maxX - minX, maxY - minY);
+
+      const centerX = (minX + maxX) / 2;
+      const centerY = (minY + maxY) / 2;
+
+      const corners = [
+        { x: minX, y: minY },
+        { x: maxX, y: minY },
+        { x: maxX, y: maxY },
+        { x: minX, y: maxY },
+      ];
+
+      for (const { x: hx, y: hy } of corners) {
+        this.drawConnectorLineToHandle(
+        hx < centerX ? minX : maxX,
+        hy < centerY ? minY : maxY,
+        hx, hy, stopDist
+      );
       this.drawHandleBox(hx, hy);
     }
 
@@ -203,73 +239,78 @@ private drawSelectionBox(shape: Shape) {
     return;
   }
 
-  if (shape.type === "diamond") {
-    const xs = [shape.top.x, shape.right.x, shape.bottom.x, shape.left.x];
-    const ys = [shape.top.y, shape.right.y, shape.bottom.y, shape.left.y];
-    const minX = Math.min(...xs) - pad;
-    const maxX = Math.max(...xs) + pad;
-    const minY = Math.min(...ys) - pad;
-    const maxY = Math.max(...ys) + pad;
+  // ───────── TEXT ─────────
+    if (shape.type === "text") {
+      const width = this.ctx.measureText(shape.text).width;
+      const height = 20;
+      const x = shape.x - pad / 2;
+      const y = shape.y - height + pad / 2;
+      const w = width + pad;
+      const h = height + pad;
 
-    this.ctx.strokeRect(minX, minY, maxX - minX, maxY - minY);
+      this.ctx.strokeRect(x, y, w, h);
 
-    const centerX = (minX + maxX) / 2;
-    const centerY = (minY + maxY) / 2;
+      const corners = [
+        { x: x,     y: y },
+        { x: x + w, y: y },
+        { x: x + w, y: y + h },
+        { x: x,     y: y + h },
+      ];
 
-    const corners = [
-      { x: minX, y: minY },
-      { x: maxX, y: minY },
-      { x: maxX, y: maxY },
-      { x: minX, y: maxY },
-    ];
+      for (const { x: hx, y: hy } of corners) {
+        const fromX = hx < x + w / 2 ? x : x + w;
+        const fromY = hy < y + h / 2 ? y : y + h;
+        this.drawConnectorLineToHandle(fromX, fromY, hx, hy, stopDist);
+        this.drawHandleBox(hx, hy);
+      }
 
-    for (const { x: hx, y: hy } of corners) {
-      const fromX = hx < centerX ? minX : maxX;
-      const fromY = hy < centerY ? minY : maxY;
-      this.drawConnectorLineToHandle(fromX, fromY, hx, hy, stopDist);
-      this.drawHandleBox(hx, hy);
+      this.ctx.restore();
+      return;
+    }
+
+    // ───────── PENCIL ─────────
+    if (shape.type === "pencil") {
+      const xs = shape.points.map(p => p.x);
+      const ys = shape.points.map(p => p.y);
+      const minX = Math.min(...xs) - pad;
+      const maxX = Math.max(...xs) + pad;
+      const minY = Math.min(...ys) - pad;
+      const maxY = Math.max(...ys) + pad;
+
+      this.ctx.strokeRect(minX, minY, maxX - minX, maxY - minY);
+
+      const centerX = (minX + maxX) / 2;
+      const centerY = (minY + maxY) / 2;
+
+      const corners = [
+        { x: minX, y: minY },
+        { x: maxX, y: minY },
+        { x: maxX, y: maxY },
+        { x: minX, y: maxY },
+      ];
+
+      for (const { x: hx, y: hy } of corners) {
+        this.drawConnectorLineToHandle(
+          hx < centerX ? minX : maxX,
+          hy < centerY ? minY : maxY,
+          hx, hy, stopDist
+        );
+        this.drawHandleBox(hx, hy);
+      }
+
+      this.ctx.restore();
+      return;
+    }
+
+    // ───────── LINE / ARROW ─────────
+    if (shape.type === "line" || shape.type === "arrow") {
+      this.drawLineHandles(shape); // already has proper circular handles
+      this.ctx.restore();
+      return;
     }
 
     this.ctx.restore();
-    return;
   }
-
-  if (shape.type === "text") {
-    const width = this.ctx.measureText(shape.text).width;
-    const height = 20;
-    const x = shape.x - pad / 2;
-    const y = shape.y - height + pad / 2;
-    const w = width + pad;
-    const h = height + pad;
-
-    this.ctx.strokeRect(x, y, w, h);
-
-    const corners = [
-      { x: x,     y: y },
-      { x: x + w, y: y },
-      { x: x + w, y: y + h },
-      { x: x,     y: y + h },
-    ];
-
-    for (const { x: hx, y: hy } of corners) {
-      const fromX = hx < x + w / 2 ? x : x + w;
-      const fromY = hy < y + h / 2 ? y : y + h;
-      this.drawConnectorLineToHandle(fromX, fromY, hx, hy, stopDist);
-      this.drawHandleBox(hx, hy);
-    }
-
-    this.ctx.restore();
-    return;
-  }
-
-  if (shape.type === "line" || shape.type === "arrow") {
-    this.drawLineHandles(shape);
-    this.ctx.restore();
-    return;
-  }
-
-  this.ctx.restore();
-}
 
   private isPointNearLineSegment(px: number, py: number,x1: number, y1: number,x2: number, y2: number,tol: number): boolean {
   const ABx = x2 - x1;
@@ -310,11 +351,21 @@ isPointInsideShape(x: number, y: number, shape: Shape): boolean {
   switch (shape.type) {
     case "line":
     case "arrow": {
-      return this.isPointNearLineSegment(x, y, shape.startX, shape.startY, shape.endX, shape.endY, tol);
+      return this.isPointNearLineSegment(
+        x, y,
+        shape.startX, shape.startY,
+        shape.endX, shape.endY,
+        tol
+      );
     }
     case "pencil": {
       for (let i = 0; i < shape.points.length - 1; i++) {
-        if (this.isPointNearLineSegment(x, y, shape.points[i].x, shape.points[i].y, shape.points[i + 1].x, shape.points[i + 1].y, tol)) {
+        if (this.isPointNearLineSegment(
+          x, y,
+          shape.points[i].x, shape.points[i].y,
+          shape.points[i + 1].x, shape.points[i + 1].y,
+          tol
+        )) {
           return true;
         }
       }
@@ -337,10 +388,27 @@ isPointInsideShape(x: number, y: number, shape: Shape): boolean {
         y <= shape.y + shape.height + tol
       );
     }
+    case "circle": {
+      const dx = x - shape.centerX;
+      const dy = y - shape.centerY;
+      const norm = (dx * dx) / (shape.rx * shape.rx) + (dy * dy) / (shape.ry * shape.ry);
+      return norm <= 1.1; // small buffer added
+    }
+    case "text": {
+      const width = this.ctx.measureText(shape.text).width;
+      const height = 20;
+      return (
+        x >= shape.x &&
+        x <= shape.x + width &&
+        y <= shape.y &&
+        y >= shape.y - height
+      );
+    }
     default:
       return false;
-    }
   }
+}
+
 
   addTextShape(x: number, y: number, text: string) {
     const shape = {
@@ -422,42 +490,50 @@ isPointInsideShape(x: number, y: number, shape: Shape): boolean {
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
     this.ctx.fillStyle = "rgba(18,18,18,255)";
     this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
-    this.existingShapes.forEach((shape) => {
+    this.existingShapes.forEach((shape , idx) => {
+      /* ── highlight logic ───────────────────────────── */
+      const isHovered =
+      this.selectedTool === "eraser" &&
+      this.hoveredForErase?.includes(idx);
+      // use red-ish highlight while hovering, otherwise normal white
+      const strokeCol = isHovered ? "rgba(255,80,80)" : "rgba(255,255,255)";
+      const fillCol   = isHovered ? "rgba(255,80,80)" : "rgba(255,255,255)";
+
       if (shape.type === "rect") {
-        this.ctx.strokeStyle = "rgba(255, 255, 255)";
+        this.ctx.strokeStyle = strokeCol;
         this.ctx.beginPath();
         this.ctx.roundRect(shape.x, shape.y, shape.width, shape.height, 16);
         this.ctx.stroke();
       } else if (shape.type === "diamond") {
+        this.ctx.strokeStyle = strokeCol;
         this.drawDiamond(shape.top, shape.right, shape.bottom, shape.left);
       } else if (shape.type === "circle") {
+        this.ctx.strokeStyle = strokeCol;
         this.ctx.beginPath();
-        this.ctx.arc(
+        this.ctx.ellipse(
           shape.centerX,
           shape.centerY,
-          Math.abs(shape.radius),
+          Math.abs(shape.rx), 
+          Math.abs(shape.ry), 
+          0,
           0,
           Math.PI * 2
         );
-        this.ctx.strokeStyle = "rgba(255, 255, 255)";
         this.ctx.stroke();
         this.ctx.closePath();
       } else if (shape.type === "pencil") {
+        this.ctx.strokeStyle = strokeCol;
         this.drawPencilPath(shape.points);
       } else if (shape.type === "line" || shape.type === "arrow") {
+        this.ctx.strokeStyle = strokeCol;
         // draw the actual segment/arrow
-        this.ctx.strokeStyle = "rgba(255,255,255)";
         this.drawArrow(this.ctx, shape.startX, shape.startY, shape.endX, shape.endY);
-
-        // if selected, draw handles exactly on the tips
-        if (
-          this.selectedTool === "select" &&
-          this.selectedShapeIndex === this.existingShapes.indexOf(shape)
-        ) {
+        if (this.selectedTool === "select" && this.selectedShapeIndex === this.existingShapes.indexOf(shape)) {
           this.drawLineHandles(shape);
         }
       } else if (shape.type === "text") {
         this.ctx.fillStyle = "rgba(255, 255, 255)";
+        this.ctx.fillStyle = fillCol;             // red or white
         this.ctx.font = "16px Arial";
         this.ctx.fillText(shape.text, shape.x, shape.y);
       }
@@ -496,24 +572,22 @@ isPointInsideShape(x: number, y: number, shape: Shape): boolean {
       this.clearCanvas();
       return;
     }
-
     if (this.selectedTool === "eraser") {
-      for (let i = this.existingShapes.length - 1; i >= 0; i--) {
+      this.clicked = true;
+      this.hoveredForErase = [];
+      for (let i = 0; i < this.existingShapes.length; i++) {
         if (this.isPointInsideShape(pos.x, pos.y, this.existingShapes[i])) {
-          this.existingShapes.splice(i, 1);
-          this.clearCanvas();
-          return;
+          this.hoveredForErase.push(i);
         }
       }
+      this.clearCanvas();
       return;
     }
-
     if (this.selectedTool === "pencil") {
       this.clicked = true;
       this.pencilPoints = [pos];
       return;
     }
-
     this.clicked = true;
     this.startX = pos.x;
     this.startY = pos.y;
@@ -548,9 +622,16 @@ isPointInsideShape(x: number, y: number, shape: Shape): boolean {
   mouseUpHandler = (e: MouseEvent) => {
     const pos = this.getMousePos(e);
     this.clicked = false;
-
+    if (this.selectedTool === "eraser" && this.hoveredForErase.length) {
+      // remove in reverse order so indices stay valid
+      this.hoveredForErase
+        .sort((a, b) => b - a)
+        .forEach(idx => this.existingShapes.splice(idx, 1));
+      this.hoveredForErase = [];
+      this.clearCanvas();
+      return;
+    }
     let shape: Shape | null = null;
-
     if (this.selectedTool === "rect") {
       if (this.startX === null || this.startY === null) return;
       shape = {
@@ -576,14 +657,17 @@ isPointInsideShape(x: number, y: number, shape: Shape): boolean {
       };
     } else if (this.selectedTool === "circle") {
       if (this.startX === null || this.startY === null) return;
-      const width = pos.x - this.startX;
-      const height = pos.y - this.startY;
-      const radius = Math.max(width, height) / 2;
+      const rx = Math.abs((pos.x - this.startX) / 2);
+      const ry = Math.abs((pos.y - this.startY) / 2);
+      const cx = this.startX + (pos.x - this.startX) / 2;
+      const cy = this.startY + (pos.y - this.startY) / 2;
+
       shape = {
-        type: "circle",
-        radius: radius,
-        centerX: this.startX + radius,
-        centerY: this.startY + radius,
+        type: "circle",  
+        rx,          
+        ry,            
+        centerX: cx,
+        centerY: cy,
       };
     } else if (this.selectedTool === "line") {
       if (
@@ -599,6 +683,7 @@ isPointInsideShape(x: number, y: number, shape: Shape): boolean {
         endX: this.endX,
         endY: this.endY,
       };
+
       if (this.onToolChange) this.onToolChange("select");
     } else if (this.selectedTool === "pencil") {
       this.pencilPoints.push(pos);
@@ -615,42 +700,46 @@ isPointInsideShape(x: number, y: number, shape: Shape): boolean {
         endX: pos.x,
         endY: pos.y,
       };
+
       if (this.onToolChange) this.onToolChange("select");
     } else if (this.selectedTool === "text") {
-        if ((window as any).justBlurredTextInput) return;
-        setTimeout(() => {
-            if (this.onTextInsert) {
-                this.onTextInsert(pos.x, pos.y);
-            }
-        }, 0);
-        return;}
-
-
-    if (!shape) return;
-
-    this.existingShapes.push(shape);
-    this.socket.send(
-      JSON.stringify({
-        type: "chat",
-        message: JSON.stringify({ shape }),
-        roomId: this.roomId,
-      })
-    );
-
-    this.clearCanvas();
-
-    this.startX = null;
-    this.startY = null;
-    this.endX = null;
-    this.endY = null;
-    this.pencilPoints = [];
-  };
+      if ((window as any).justBlurredTextInput) return;
+      setTimeout(() => {
+        if (this.onTextInsert) {
+          this.onTextInsert(pos.x, pos.y);
+        }
+      }, 0);
+      return;}
+      if (!shape) return;
+      this.existingShapes.push(shape);
+      this.socket.send(
+        JSON.stringify({
+          type: "chat",
+          message: JSON.stringify({ shape }),
+          roomId: this.roomId,
+        })
+      );
+      this.clearCanvas();
+      this.startX = null;
+      this.startY = null;
+      this.endX = null;
+      this.endY = null;
+      this.pencilPoints = [];
+    };
 
   mouseMoveHandler = (e: MouseEvent) => {
-    if (!this.clicked) return;
-
     const pos = this.getMousePos(e);
-
+    if (this.selectedTool === "eraser") {
+    if (!this.clicked) return; // only track while button is down
+    for (let i = 0; i < this.existingShapes.length; i++) {
+      if (this.isPointInsideShape(pos.x, pos.y, this.existingShapes[i]) && !this.hoveredForErase.includes(i)) {
+        this.hoveredForErase.push(i);
+      }
+    }
+    this.clearCanvas(); // redraw with red strokes
+    return;
+  }
+    if (!this.clicked) return;
     if (this.selectedTool === "pencil") {
       this.pencilPoints.push(pos);
       this.clearCanvas();
@@ -675,11 +764,13 @@ isPointInsideShape(x: number, y: number, shape: Shape): boolean {
       } else if (this.selectedTool === "diamond") {
         this.drawDiamond(top, right, bottom, left, 10);
       } else if (this.selectedTool === "circle") {
-        const radius = Math.max(width, height) / 2;
-        const centerX = this.startX + radius;
-        const centerY = this.startY + radius;
+      // ― live ellipse preview ―
+        const rx = Math.abs((pos.x - this.startX) / 2);
+        const ry = Math.abs((pos.y - this.startY) / 2);
+        const cx = this.startX + (pos.x - this.startX) / 2;
+        const cy = this.startY + (pos.y - this.startY) / 2;
         this.ctx.beginPath();
-        this.ctx.arc(centerX, centerY, Math.abs(radius), 0, Math.PI * 2);
+        this.ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
         this.ctx.stroke();
         this.ctx.closePath();
       } else if (this.selectedTool === "line") {
