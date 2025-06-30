@@ -64,117 +64,209 @@ export class Game {
   public onToolChange?: (tool: Tool) => void;
   private selectedShapeIndex: number | null = null;
   socket: WebSocket;
-  private drawHandle(x: number,y: number,filled: boolean,r = 6,color = "#a855f7") {
+
+// ─── Rounded Square Handle ─────────────────────────────
+private drawHandleBox(
+  cx: number,
+  cy: number,
+  size = 10,
+  color = "#9b7bff"
+) {
+  const half = size / 2;
   this.ctx.beginPath();
-  this.ctx.arc(x, y, r, 0, Math.PI * 2);
-  if (filled) {
-    this.ctx.fillStyle = color;
-    this.ctx.fill();
-  } else {
-    this.ctx.strokeStyle = color;
-    this.ctx.lineWidth = 1.5;
-    this.ctx.stroke();
-  }
+  this.ctx.roundRect(cx - half, cy - half, size, size, 3);
+  this.ctx.strokeStyle = color;
+  this.ctx.lineWidth = 1.5;
+  this.ctx.stroke();
   this.ctx.closePath();
+}
+
+// ─── Circle Handle for Line/Arrow ──────────────────────
+private drawCircleHandle(
+  cx: number,
+  cy: number,
+  filled: boolean,
+  r = 6,
+  color = "#9b7bff"
+) {
+  this.ctx.beginPath();
+  this.ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  filled ? (this.ctx.fillStyle = color, this.ctx.fill()) :
+           (this.ctx.strokeStyle = color, this.ctx.lineWidth = 1.5, this.ctx.stroke());
+  this.ctx.closePath();
+}
+
+// ─── Line & Arrow Selection Handles ─────────────────────
+private drawLineHandles(shape: Extract<Shape, { type: "line" | "arrow" }>) {
+  const { startX, startY, endX, endY } = shape;
+  const r = 6;
+  const dx = endX - startX;
+  const dy = endY - startY;
+  const len = Math.hypot(dx, dy);
+  if (len === 0) return;
+
+  const ux = dx / len, uy = dy / len;
+  const startCx = startX - ux * r, startCy = startY - uy * r;
+  const endCx   = endX   + ux * r, endCy   = endY   + uy * r;
+  const midCx   = (startX + endX) / 2, midCy = (startY + endY) / 2;
+
+  this.drawCircleHandle(startCx, startCy, false, r);
+  this.drawCircleHandle(endCx,   endCy,   false, r);
+  this.drawCircleHandle(midCx,   midCy,   true , r);
+}
+
+// ─── Line Connecting Selection Box to Handle ────────────
+private drawConnectorLineToHandle(
+  fromX: number,
+  fromY: number,
+  toX: number,
+  toY: number,
+  stopDistance = 5
+) {
+  const dx = toX - fromX;
+  const dy = toY - fromY;
+  const len = Math.hypot(dx, dy);
+  if (len === 0) return;
+
+  const ux = dx / len;
+  const uy = dy / len;
+
+  const endX = toX - ux * stopDistance;
+  const endY = toY - uy * stopDistance;
+
+  this.ctx.beginPath();
+  this.ctx.moveTo(fromX, fromY);
+  this.ctx.lineTo(endX, endY);
+  this.ctx.stroke();
+}
+
+// ─── Selection Box with External Handles ────────────────
+private drawSelectionBox(shape: Shape) {
+  this.ctx.save();
+  this.ctx.strokeStyle = "#9b7bff";
+  this.ctx.lineWidth = 1.5;
+  this.ctx.setLineDash([]);
+
+  const pad = 8;
+  const handleSize = 10;
+  const stopDist = handleSize / 2;
+
+  if (shape.type === "rect") {
+    const x = shape.x - pad;
+    const y = shape.y - pad;
+    const w = shape.width + pad * 2;
+    const h = shape.height + pad * 2;
+
+    this.ctx.strokeRect(x, y, w, h);
+
+    const handles = [
+      { x: x,     y: y },
+      { x: x + w, y: y },
+      { x: x + w, y: y + h },
+      { x: x,     y: y + h },
+    ];
+
+    for (const { x: hx, y: hy } of handles) {
+      const fromX = hx === x ? x : x + w;
+      const fromY = hy === y ? y : y + h;
+      this.drawConnectorLineToHandle(fromX, fromY, hx, hy, stopDist);
+      this.drawHandleBox(hx, hy);
+    }
+
+    this.ctx.restore();
+    return;
   }
-  private drawLineHandles(shape: Extract<Shape, { type: "line" | "arrow" }>) {
-    const { startX, startY, endX, endY } = shape;
-    const r = 6;
 
-    const dx = endX - startX;
-    const dy = endY - startY;
-    const len = Math.sqrt(dx * dx + dy * dy);
-    if (len === 0) return;
+  if (shape.type === "circle") {
+    const r = Math.abs(shape.radius);
+    const x = shape.centerX;
+    const y = shape.centerY;
+    const outerR = r + pad;
 
-    const ux = dx / len;
-    const uy = dy / len;
+    this.ctx.beginPath();
+    this.ctx.arc(x, y, outerR, 0, Math.PI * 2);
+    this.ctx.stroke();
 
-    // Move handles outward from line tips
-    const handleStartX = startX - ux * r;
-    const handleStartY = startY - uy * r;
-    const handleEndX = endX + ux * r;
-    const handleEndY = endY + uy * r;
+    const handles = [
+      { x: x,         y: y - outerR },
+      { x: x + outerR, y: y },
+      { x: x,         y: y + outerR },
+      { x: x - outerR, y: y },
+    ];
 
-    const midX = (startX + endX) / 2;
-    const midY = (startY + endY) / 2;
+    for (const { x: hx, y: hy } of handles) {
+      this.drawConnectorLineToHandle(x, y, hx, hy, stopDist);
+      this.drawHandleBox(hx, hy);
+    }
 
-    // Draw handles only at offset positions
-    this.drawHandle(handleStartX, handleStartY, false, r); // start (hollow)
-    this.drawHandle(handleEndX, handleEndY, false, r);     // end (hollow)
-    this.drawHandle(midX, midY, true, r);                  // middle (filled)
+    this.ctx.restore();
+    return;
   }
 
-  private drawSelectionBox(shape: Shape) {
-    this.ctx.save();
-    this.ctx.strokeStyle = "#a85ff7"; 
-    this.ctx.lineWidth = 1.5;
-    this.ctx.setLineDash([]);
-    const pad = 8;
-    if (shape.type === "rect") {
-      this.ctx.strokeRect(
-        shape.x - pad,
-        shape.y - pad,
-        shape.width + pad * 2,
-        shape.height + pad * 2
-      );
-      return;
-    }
-    if (shape.type === "circle") {
-      const r = Math.abs(shape.radius);
-      this.ctx.beginPath();
-      this.ctx.arc(shape.centerX, shape.centerY, r + pad, 0, Math.PI * 2);
-      this.ctx.stroke();
-      return;
-    }
-    if (shape.type === "diamond") {
-      const xs = [shape.top.x, shape.right.x, shape.bottom.x, shape.left.x];
-      const ys = [shape.top.y, shape.right.y, shape.bottom.y, shape.left.y];
-      const minX = Math.min(...xs) - pad;
-      const maxX = Math.max(...xs) + pad;
-      const minY = Math.min(...ys) - pad;
-      const maxY = Math.max(...ys) + pad;
-      this.ctx.strokeRect(minX, minY, maxX - minX, maxY - minY);
-      return;
-    }
-    if (shape.type === "line" || shape.type === "arrow") {
-      const { startX, startY, endX, endY } = shape;
-      const r = 6;// handle radius
-      // direction vector & length
-      const dx = endX - startX;
-      const dy = endY - startY;
-      const len = Math.sqrt(dx * dx + dy * dy);
-      if (len === 0) return;  
-      // // unit vector pointing from start → end
-      const ux = dx / len;
-      const uy = dy / len;
-      // offset handles *outside* the tips
-      const handleStartX = startX - ux * r;
-      const handleStartY = startY - uy * r;
-      const handleEndX   = endX   + ux * r;
-      const handleEndY   = endY   + uy * r;
+  if (shape.type === "diamond") {
+    const xs = [shape.top.x, shape.right.x, shape.bottom.x, shape.left.x];
+    const ys = [shape.top.y, shape.right.y, shape.bottom.y, shape.left.y];
+    const minX = Math.min(...xs) - pad;
+    const maxX = Math.max(...xs) + pad;
+    const minY = Math.min(...ys) - pad;
+    const maxY = Math.max(...ys) + pad;
 
-      // middle stays on the segment centre
-      const midX = (startX + endX) / 2;
-      const midY = (startY + endY) / 2;
+    this.ctx.strokeRect(minX, minY, maxX - minX, maxY - minY);
 
-      // draw (start / end hollow, middle filled)
-      this.drawHandle(handleStartX, handleStartY, false, r);
-      this.drawHandle(handleEndX,   handleEndY,   false, r);
-      this.drawHandle(midX,         midY,         true , r);
-      return;
+    const centerX = (minX + maxX) / 2;
+    const centerY = (minY + maxY) / 2;
+
+    const corners = [
+      { x: minX, y: minY },
+      { x: maxX, y: minY },
+      { x: maxX, y: maxY },
+      { x: minX, y: maxY },
+    ];
+
+    for (const { x: hx, y: hy } of corners) {
+      const fromX = hx < centerX ? minX : maxX;
+      const fromY = hy < centerY ? minY : maxY;
+      this.drawConnectorLineToHandle(fromX, fromY, hx, hy, stopDist);
+      this.drawHandleBox(hx, hy);
     }
 
-    if (shape.type === "text") {
+    this.ctx.restore();
+    return;
+  }
+
+  if (shape.type === "text") {
     const width = this.ctx.measureText(shape.text).width;
     const height = 20;
-    this.ctx.strokeRect(
-      shape.x - pad / 2,
-      shape.y - height + pad / 2,
-      width + pad,
-      height + pad
-      );
-      return;
+    const x = shape.x - pad / 2;
+    const y = shape.y - height + pad / 2;
+    const w = width + pad;
+    const h = height + pad;
+
+    this.ctx.strokeRect(x, y, w, h);
+
+    const corners = [
+      { x: x,     y: y },
+      { x: x + w, y: y },
+      { x: x + w, y: y + h },
+      { x: x,     y: y + h },
+    ];
+
+    for (const { x: hx, y: hy } of corners) {
+      const fromX = hx < x + w / 2 ? x : x + w;
+      const fromY = hy < y + h / 2 ? y : y + h;
+      this.drawConnectorLineToHandle(fromX, fromY, hx, hy, stopDist);
+      this.drawHandleBox(hx, hy);
     }
+
+    this.ctx.restore();
+    return;
+  }
+
+  if (shape.type === "line" || shape.type === "arrow") {
+    this.drawLineHandles(shape);
+    this.ctx.restore();
+    return;
+  }
 
   this.ctx.restore();
 }
@@ -249,7 +341,7 @@ isPointInsideShape(x: number, y: number, shape: Shape): boolean {
       return false;
     }
   }
-  
+
   addTextShape(x: number, y: number, text: string) {
     const shape = {
       type: "text" as const,
