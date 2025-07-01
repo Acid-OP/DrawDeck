@@ -65,7 +65,6 @@ export class Game {
   private selectedShapeIndex: number | null = null;
   private hoveredForErase: number[] = [];
   socket: WebSocket;
-
   // ─── Rounded Square Handle ─────────────────────────────
   private drawHandleBox(
     cx: number,
@@ -151,7 +150,6 @@ export class Game {
     const handleSize = 10;
     const stopDist = handleSize / 2;
 
-    // ───────── RECT ─────────
     if (shape.type === "rect") {
       const x = shape.x - pad;
       const y = shape.y - pad;
@@ -177,8 +175,6 @@ export class Game {
       this.ctx.restore();
       return;
     }
-
-    // ───────── CIRCLE (Ellipse) ─────────
     if (shape.type === "circle") {
       const x = shape.centerX - shape.rx - pad;
       const y = shape.centerY - shape.ry - pad;
@@ -191,10 +187,10 @@ export class Game {
       const centerY = y + h / 2;
 
       const handles = [
-      { x: x,     y: y },         // top-left
-      { x: x + w, y: y },         // top-right
-      { x: x + w, y: y + h },     // bottom-right
-      { x: x,     y: y + h },     // bottom-left
+      { x: x,     y: y },
+      { x: x + w, y: y },
+      { x: x + w, y: y + h },  
+      { x: x,     y: y + h },    
       ];
       for (const { x: hx, y: hy } of handles) {
         const fromX = hx < centerX ? x : x + w;
@@ -205,7 +201,6 @@ export class Game {
       this.ctx.restore();
       return;
     }
-    // ───────── DIAMOND ─────────
     if (shape.type === "diamond") {
       const xs = [shape.top.x, shape.right.x, shape.bottom.x, shape.left.x];
       const ys = [shape.top.y, shape.right.y, shape.bottom.y, shape.left.y];
@@ -239,7 +234,6 @@ export class Game {
     return;
   }
 
-  // ───────── TEXT ─────────
     if (shape.type === "text") {
       const width = this.ctx.measureText(shape.text).width;
       const height = 20;
@@ -268,7 +262,6 @@ export class Game {
       return;
     }
 
-    // ───────── PENCIL ─────────
     if (shape.type === "pencil") {
       const xs = shape.points.map(p => p.x);
       const ys = shape.points.map(p => p.y);
@@ -301,10 +294,9 @@ export class Game {
       this.ctx.restore();
       return;
     }
-
-    // ───────── LINE / ARROW ─────────
+    
     if (shape.type === "line" || shape.type === "arrow") {
-      this.drawLineHandles(shape); // already has proper circular handles
+      this.drawLineHandles(shape); 
       this.ctx.restore();
       return;
     }
@@ -381,18 +373,17 @@ isPointInsideShape(x: number, y: number, shape: Shape): boolean {
       return x >= minX && x <= maxX && y >= minY && y <= maxY;
     }
     case "rect": {
-      return (
-        x >= shape.x - tol &&
-        x <= shape.x + shape.width + tol &&
-        y >= shape.y - tol &&
-        y <= shape.y + shape.height + tol
-      );
+      const x1 = Math.min(shape.x, shape.x + shape.width) - tol;
+      const x2 = Math.max(shape.x, shape.x + shape.width) + tol;
+      const y1 = Math.min(shape.y, shape.y + shape.height) - tol;
+      const y2 = Math.max(shape.y, shape.y + shape.height) + tol;
+      return x >= x1 && x <= x2 && y >= y1 && y <= y2;
     }
     case "circle": {
       const dx = x - shape.centerX;
       const dy = y - shape.centerY;
       const norm = (dx * dx) / (shape.rx * shape.rx) + (dy * dy) / (shape.ry * shape.ry);
-      return norm <= 1.1; // small buffer added
+      return norm <= 1.1;
     }
     case "text": {
       const width = this.ctx.measureText(shape.text).width;
@@ -406,9 +397,8 @@ isPointInsideShape(x: number, y: number, shape: Shape): boolean {
     }
     default:
       return false;
+    }
   }
-}
-
 
   addTextShape(x: number, y: number, text: string) {
     const shape = {
@@ -491,14 +481,11 @@ isPointInsideShape(x: number, y: number, shape: Shape): boolean {
     this.ctx.fillStyle = "rgba(18,18,18,255)";
     this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
     this.existingShapes.forEach((shape , idx) => {
-      /* ── highlight logic ───────────────────────────── */
       const isHovered =
       this.selectedTool === "eraser" &&
       this.hoveredForErase?.includes(idx);
-      // use red-ish highlight while hovering, otherwise normal white
       const strokeCol = isHovered ? "rgba(255,80,80)" : "rgba(255,255,255)";
       const fillCol   = isHovered ? "rgba(255,80,80)" : "rgba(255,255,255)";
-
       if (shape.type === "rect") {
         this.ctx.strokeStyle = strokeCol;
         this.ctx.beginPath();
@@ -524,16 +511,22 @@ isPointInsideShape(x: number, y: number, shape: Shape): boolean {
       } else if (shape.type === "pencil") {
         this.ctx.strokeStyle = strokeCol;
         this.drawPencilPath(shape.points);
-      } else if (shape.type === "line" || shape.type === "arrow") {
-        this.ctx.strokeStyle = strokeCol;
-        // draw the actual segment/arrow
+      } else if (shape.type === "line" || shape.type === "arrow") {this.ctx.strokeStyle = strokeCol;
+        this.ctx.beginPath();
+        this.ctx.moveTo(shape.startX, shape.startY);
+        this.ctx.lineTo(shape.endX, shape.endY);
+        this.ctx.stroke();
+        this.ctx.closePath();
         this.drawArrow(this.ctx, shape.startX, shape.startY, shape.endX, shape.endY);
-        if (this.selectedTool === "select" && this.selectedShapeIndex === this.existingShapes.indexOf(shape)) {
+        if (
+          this.selectedTool === "select" &&
+          this.selectedShapeIndex === this.existingShapes.indexOf(shape)
+        ) {
           this.drawLineHandles(shape);
         }
       } else if (shape.type === "text") {
         this.ctx.fillStyle = "rgba(255, 255, 255)";
-        this.ctx.fillStyle = fillCol;             // red or white
+        this.ctx.fillStyle = fillCol; 
         this.ctx.font = "16px Arial";
         this.ctx.fillText(shape.text, shape.x, shape.y);
       }
@@ -559,7 +552,6 @@ isPointInsideShape(x: number, y: number, shape: Shape): boolean {
 
   mouseDownHandler = (e: MouseEvent) => {
     const pos = this.getMousePos(e);
-
     if (this.selectedTool === "select") {
       for (let i = this.existingShapes.length - 1; i >= 0; i--) {
         if (this.isPointInsideShape(pos.x, pos.y, this.existingShapes[i])) {
@@ -685,6 +677,7 @@ isPointInsideShape(x: number, y: number, shape: Shape): boolean {
       };
 
       if (this.onToolChange) this.onToolChange("select");
+      this.selectedShapeIndex = this.existingShapes.length;
     } else if (this.selectedTool === "pencil") {
       this.pencilPoints.push(pos);
       shape = {
@@ -702,6 +695,7 @@ isPointInsideShape(x: number, y: number, shape: Shape): boolean {
       };
 
       if (this.onToolChange) this.onToolChange("select");
+      this.selectedShapeIndex = this.existingShapes.length;
     } else if (this.selectedTool === "text") {
       if ((window as any).justBlurredTextInput) return;
       setTimeout(() => {
@@ -712,6 +706,7 @@ isPointInsideShape(x: number, y: number, shape: Shape): boolean {
       return;}
       if (!shape) return;
       this.existingShapes.push(shape);
+      this.clearCanvas();
       this.socket.send(
         JSON.stringify({
           type: "chat",
@@ -719,7 +714,6 @@ isPointInsideShape(x: number, y: number, shape: Shape): boolean {
           roomId: this.roomId,
         })
       );
-      this.clearCanvas();
       this.startX = null;
       this.startY = null;
       this.endX = null;
