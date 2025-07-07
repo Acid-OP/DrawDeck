@@ -15,24 +15,30 @@ model User {
   name        String
   photo       String?
   rooms       Room[]
-  chats       Chat[]
-
+  shapes      Shape[]
 }
 
 model Room {
   id         Int        @id  @default(autoincrement())
   slug       String     @unique
-  createAt   DateTime   @default(now())
+  createdAt   DateTime   @default(now())
   adminId    String     
   admin      User       @relation(fields: [adminId], references: [id])
-  chats      Chat[]
+  shapes     Shape[]
 }
 
-model Chat {
-  id         Int        @id  @default(autoincrement())
-  roomId     Int
-  message    String  
-  userId     String
-  room       Room       @relation(fields: [roomId], references: [id])
-  user       User       @relation(fields: [userId], references: [id])
+
+model Shape {
+  id        String   @id @default(uuid())          // stable shape id
+  roomId    Int
+  userId    String                                // author
+  type      String                                // "rect" | "circle" | …
+  data      Json                                  // geometry & style
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  room Room @relation(fields: [roomId], references: [id])
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([roomId])
 }

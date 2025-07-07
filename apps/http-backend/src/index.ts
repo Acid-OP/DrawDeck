@@ -5,16 +5,13 @@ import {prismaClient} from "@repo/db/client";
 import { JWT_SECRET } from "@repo/backend-common/index";
 import jwt from "jsonwebtoken";
 import cors from "cors";
-
 const app = express();
 app.use(express.json());
 app.use(cors());
 
 app.post("/signup" , async (req,res)=> {
-
     const parsedData = CreateUserSchema.safeParse(req.body);
     if(!parsedData.success) {
-        console.log(parsedData.error)
         res.json({
             message : "Incorrect inputs"
         })
@@ -24,12 +21,11 @@ app.post("/signup" , async (req,res)=> {
         const user = await prismaClient.user.create({
         data: {
             email : parsedData.data?.username,
-            // TODO hash the pass
             password: parsedData.data.password,
             name : parsedData.data.name
         }
     })
-    res.json({
+    res.status(200).json({
         userId : user.id
     }) 
     }catch(e){
@@ -48,8 +44,6 @@ app.post("/signin" , async (req,res)=>{
         })
         return;
     }
-
-    // Todo : compare the password with the hased pass
     const user = await prismaClient.user.findFirst({
         where: {
             email : parsedData.data.username,
@@ -67,7 +61,7 @@ app.post("/signin" , async (req,res)=>{
         userId : user.id
     }, JWT_SECRET);
 
-    res.json({
+    res.status(200).json({
         token
     })
 })
@@ -80,18 +74,15 @@ app.post("/room" ,middelware, async (req ,res) => {
         })
         return;
     }
-    // @ts-ignore TODO
     const userId = req.userId;
-
     try{
-            const room = await prismaClient.room.create({
+        const room = await prismaClient.room.create({
         data : {
             slug : parsedData.data.name,
             adminId: userId
         }
     })
-
-    res.json({
+    res.status(200).json({
         roomId : room.id
     })
     }catch(e){
@@ -101,28 +92,76 @@ app.post("/room" ,middelware, async (req ,res) => {
     }
 })
 
-app.get("/chats/:roomId" , async(req,res)=>{
-    try{
-    const roomId = Number(req.params.roomId);
-    const messages = await prismaClient.chat.findMany({
-        where: {
-            roomId: roomId
-        },
-        orderBy:{
-            id: "desc"
-        },
-        take:50
+app.post("/shapes/:roomId", middelware, async (req, res) => {
+  const roomId = Number(req.params.roomId);
+  const shapes = req.body.shapes;
+
+  if (!Array.isArray(shapes)) {
+    res.status(400).json({ message: "Shapes must be an array" });
+    return;
+  }
+ try {
+    await Promise.all(
+      shapes.map(s =>
+        prismaClient.shape.create({
+          data: {
+            id: typeof s.id === "string" ? s.id : undefined,
+            roomId,
+            userId: req.userId!,
+            type: s.type,             
+            data: s,                      
+          },
+        }),
+      ),
+    );
+
+    res.status(200).json({ success: true });
+  }catch (e) {
+    console.error(e);
+    res.status(500).json({ message: "Failed to add shapes" });
+  }
+});
+
+app.delete("/shapes/:shapeId", middelware, async (req, res) => {
+  const shapeId = req.params.shapeId; 
+  try {
+    await prismaClient.shape.delete({
+      where: { id: shapeId },
+    });
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "failed to delete shape" });
+  }
+});
+
+app.get("/shapes/:roomId", async (req, res) => {
+  const roomId = Number(req.params.roomId);
+  try {
+    const shapes = await prismaClient.shape.findMany({
+      where: { roomId },
+      orderBy: { createdAt: "asc" },
     });
 
-    res.json({
-        messages
-    })
-    }catch(e){
-        res.json({
-            messsages : []
-        })
-    }
-})
+    const transformedShapes = shapes.map((shape) => {
+      const shapeData =
+        typeof shape.data === "object" && shape.data !== null && !Array.isArray(shape.data)
+        ? (shape.data as Record<string, any>)
+        : {};
+      return {
+        id: shape.id,
+        roomId: shape.roomId,
+        userId: shape.userId,
+        type: shape.type,
+        ...shapeData,
+      };
+    });
+    res.status(200).json({ shapes: transformedShapes });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ message: "Failed to fetch shapes" });
+  }
+});
 
 app.get("/room/:slug" , async (req,res)=> {
     const slug = req.params.slug;
@@ -131,8 +170,11 @@ app.get("/room/:slug" , async (req,res)=> {
             slug
         }
     });
-
-    res.json({
+    if (!room) {
+        res.status(404).json({ message: "Room not found" });
+        return;
+    }
+    res.status(200).json({
         room
     })
 })

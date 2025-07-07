@@ -65,6 +65,56 @@ export class Game {
   private selectedShapeIndex: number | null = null;
   private hoveredForErase: number[] = [];
   socket: WebSocket;
+  private dragMode: "none" | "move" | "resize" = "none";
+  private activeHandle: "tl" | "tr" | "bl" | "br" | null = null;
+  private offsetX = 0;
+  private offsetY = 0;
+  private readonly MAX_CORNER_RADIUS = 10;
+
+  private hitTestShapeHandle(
+  shape: Shape,
+  mx: number,
+  my: number,
+  radius = 8      // hit‑area
+): "tl" | "tr" | "bl" | "br" | null {
+  const sq = (dx:number,dy:number)=>dx*dx+dy*dy;
+  const r2 = radius * radius;
+
+  const test = (hx:number,hy:number,name:"tl"|"tr"|"bl"|"br") =>
+    sq(mx-hx,my-hy)<=r2 ? name : null;
+
+  switch (shape.type) {
+    case "rect": {
+      const {x,y,width,height} = shape;
+      return (
+        test(x,y,"tl")           ||
+        test(x+width,y,"tr")     ||
+        test(x,y+height,"bl")    ||
+        test(x+width,y+height,"br")
+      );
+    }
+    case "circle": {
+      const {centerX,centerY,rx,ry} = shape;
+      return (
+        test(centerX-rx,centerY-ry,"tl") ||
+        test(centerX+rx,centerY-ry,"tr") ||
+        test(centerX-rx,centerY+ry,"bl") ||
+        test(centerX+rx,centerY+ry,"br")
+      );
+    }
+    /* ➕ add other shapes here the same way */
+  }
+  return null;
+}
+
+private cursorForHandle(h:"tl"|"tr"|"bl"|"br"|"move"|"none"){
+  switch(h){
+    case "tl":case "br": return "nwse-resize";
+    case "tr":case "bl": return "nesw-resize";
+    case "move":        return "move";
+    default:            return "default";
+  }
+}
   // ─── Rounded Square Handle ─────────────────────────────
   private drawHandleBox(
     cx: number,
@@ -151,10 +201,15 @@ export class Game {
     const stopDist = handleSize / 2;
 
     if (shape.type === "rect") {
-      const x = shape.x - pad;
-      const y = shape.y - pad;
-      const w = shape.width + pad * 2;
-      const h = shape.height + pad * 2;
+      const x1 = Math.min(shape.x, shape.x + shape.width);
+      const y1 = Math.min(shape.y, shape.y + shape.height);
+      const x2 = Math.max(shape.x, shape.x + shape.width);
+      const y2 = Math.max(shape.y, shape.y + shape.height);
+
+      const x = x1 - pad;
+      const y = y1 - pad;
+      const w = (x2-x1) + pad * 2;
+      const h = (y2-y1) + pad * 2;
 
       this.ctx.strokeRect(x, y, w, h);
 
@@ -488,8 +543,13 @@ isPointInsideShape(x: number, y: number, shape: Shape): boolean {
       const fillCol   = isHovered ? "rgba(255,80,80)" : "rgba(255,255,255)";
       if (shape.type === "rect") {
         this.ctx.strokeStyle = strokeCol;
+        const r = Math.min(
+          this.MAX_CORNER_RADIUS,
+          Math.abs(shape.width) * 0.5,
+          Math.abs(shape.height) * 0.5
+        );
         this.ctx.beginPath();
-        this.ctx.roundRect(shape.x, shape.y, shape.width, shape.height, 16);
+        this.ctx.roundRect(shape.x, shape.y, shape.width, shape.height, r);
         this.ctx.stroke();
       } else if (shape.type === "diamond") {
         this.ctx.strokeStyle = strokeCol;
@@ -552,6 +612,30 @@ isPointInsideShape(x: number, y: number, shape: Shape): boolean {
 
   mouseDownHandler = (e: MouseEvent) => {
     const pos = this.getMousePos(e);
+
+    
+  if (this.selectedTool==="select" && this.selectedShapeIndex!=null){
+    const shape=this.existingShapes[this.selectedShapeIndex];
+
+    // 4‑a try handles first
+    const h = this.hitTestShapeHandle(shape,pos.x,pos.y);
+    if (h){
+      this.dragMode="resize";
+      this.activeHandle=h;
+      e.preventDefault();
+      return;
+    }
+
+    // 4‑b if click inside shape, start move
+    if (this.isPointInsideShape(pos.x,pos.y,shape)){
+      this.dragMode="move";
+      this.offsetX = pos.x;
+      this.offsetY = pos.y;
+      e.preventDefault();
+      return;
+    }
+  }
+
     if (this.selectedTool === "select") {
       for (let i = this.existingShapes.length - 1; i >= 0; i--) {
         if (this.isPointInsideShape(pos.x, pos.y, this.existingShapes[i])) {
@@ -613,6 +697,28 @@ isPointInsideShape(x: number, y: number, shape: Shape): boolean {
 
   mouseUpHandler = (e: MouseEvent) => {
     const pos = this.getMousePos(e);
+    /* ───────── FINISH DRAG ───────── */
+if (this.dragMode !== "none") {
+  this.dragMode = "none";
+  this.activeHandle = null;
+  this.canvas.style.cursor = "default";
+  this.clearCanvas();   // remove live ghost
+
+  // broadcast updated geometry
+  if (this.selectedShapeIndex != null) {
+    const shp = this.existingShapes[this.selectedShapeIndex];
+    this.socket.send(
+      JSON.stringify({
+        type: "chat",
+        message: JSON.stringify({ shape: shp }),
+        roomId: this.roomId,
+      })
+    );
+  }
+  return;               // done handling mouse‑up
+}
+/* ───────── END DRAG ───────── */
+
     this.clicked = false;
     if (this.selectedTool === "eraser" && this.hoveredForErase.length) {
       // remove in reverse order so indices stay valid
@@ -626,13 +732,20 @@ isPointInsideShape(x: number, y: number, shape: Shape): boolean {
     let shape: Shape | null = null;
     if (this.selectedTool === "rect") {
       if (this.startX === null || this.startY === null) return;
+      const width = pos.x - this.startX;
+      const height = pos.y - this.startY;
+      const r = Math.min(
+        this.MAX_CORNER_RADIUS,
+        Math.abs(width) * 0.5,
+        Math.abs(height) * 0.5
+      );
       shape = {
         type: "rect",
         x: this.startX,
         y: this.startY,
         width: pos.x - this.startX,
         height: pos.y - this.startY,
-        radius: 10,
+        radius: r,
       };
     } else if (this.selectedTool === "diamond") {
       if (this.startX === null || this.startY === null) return;
@@ -723,6 +836,53 @@ isPointInsideShape(x: number, y: number, shape: Shape): boolean {
 
   mouseMoveHandler = (e: MouseEvent) => {
     const pos = this.getMousePos(e);
+    /* ───────── DRAG‑TO‑MOVE / RESIZE ───────── */
+if (this.dragMode !== "none" && this.selectedShapeIndex != null) {
+  const p = this.getMousePos(e);
+  const s = this.existingShapes[this.selectedShapeIndex];
+
+  if (this.dragMode === "move") {
+    const dx = p.x - this.offsetX;
+    const dy = p.y - this.offsetY;
+    this.offsetX = p.x;
+    this.offsetY = p.y;
+
+    switch (s.type) {
+      case "rect":   s.x += dx; s.y += dy; break;
+      case "circle": s.centerX += dx; s.centerY += dy; break;
+      case "diamond":
+        s.top.x += dx;    s.top.y += dy;
+        s.right.x += dx;  s.right.y += dy;
+        s.bottom.x += dx; s.bottom.y += dy;
+        s.left.x += dx;   s.left.y += dy;
+        break;
+    }
+  } else if (this.dragMode === "resize" && this.activeHandle) {
+    if (s.type === "rect") {
+      const h = this.activeHandle;           // tl, tr, bl, br
+      if (h === "tl" || h === "bl") {
+        const newW = s.x + s.width - p.x;
+        s.x = p.x;
+        s.width = newW;
+      }
+      if (h === "tl" || h === "tr") {
+        const newH = s.y + s.height - p.y;
+        s.y = p.y;
+        s.height = newH;
+      }
+      if (h === "tr" || h === "br") s.width  = p.x - s.x;
+      if (h === "bl" || h === "br") s.height = p.y - s.y;
+    } else if (s.type === "circle") {
+      s.rx = Math.abs(p.x - s.centerX);
+      s.ry = Math.abs(p.y - s.centerY);
+    }
+  }
+
+  this.clearCanvas();          // redraw in new place/size
+  return;                      // stop the rest of mouse‑move
+}
+/* ───────── END DRAG BLOCK ───────── */
+
     if (this.selectedTool === "eraser") {
     if (!this.clicked) return; // only track while button is down
     for (let i = 0; i < this.existingShapes.length; i++) {
@@ -750,10 +910,14 @@ isPointInsideShape(x: number, y: number, shape: Shape): boolean {
       const right = { x: cx + width / 2, y: cy };
       const bottom = { x: cx, y: cy + height / 2 };
       const left = { x: cx - width / 2, y: cy };
-      const radius = 10;
       if (this.selectedTool === "rect") {
         this.ctx.beginPath();
-        this.ctx.roundRect(this.startX, this.startY, width, height, 10);
+        const r = Math.min(
+          this.MAX_CORNER_RADIUS,
+          Math.abs(width)  * 0.5,
+          Math.abs(height) * 0.5
+        );
+        this.ctx.roundRect(this.startX, this.startY, width, height, r);
         this.ctx.stroke();
       } else if (this.selectedTool === "diamond") {
         this.drawDiamond(top, right, bottom, left, 10);
