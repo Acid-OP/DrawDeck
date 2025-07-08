@@ -22,7 +22,7 @@ export function Canvas({
   roomId,
   socket,
 }: {
-  roomId: string;
+  roomId: number;
   socket: WebSocket;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);

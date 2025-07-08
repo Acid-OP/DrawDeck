@@ -1,58 +1,62 @@
 import { Tool } from "@/components/Canvas";
 import { getExistingShapes } from "./http";
+import axios from "axios";
+import { BACKEND_URL } from "@/config";
 
+type BaseShape = { readonly id: string };
 type Shape =
-  | {
+  |  (BaseShape &{
       type: "rect";
       x: number;
       y: number;
       width: number;
       height: number;
       radius: number;
-    }
-  | {
+    })
+  | (BaseShape &{
       type: "diamond";
       top: { x: number; y: number };
       right: { x: number; y: number };
       bottom: { x: number; y: number };
       left: { x: number; y: number };
-    }
-  | { type: "circle"; 
+    })
+  | (BaseShape &{ 
+    type: "circle"; 
       centerX: number;
       centerY: number; 
       rx: number; 
       ry: number 
-    }
-  | {
+    })
+  | (BaseShape &{
       type: "line";
       startX: number;
       startY: number;
       endX: number;
       endY: number;
-    }
-  | {
+    })
+  | (BaseShape &{
       type: "pencil";
       points: { x: number; y: number }[];
-    }
-  | {
+    })
+  | (BaseShape &{
       type: "arrow";
       startX: number;
       startY: number;
       endX: number;
       endY: number;
-    }
-  | {
+    })
+  | (BaseShape &{
       type: "text";
       x: number;
       y: number;
       text: string;
-    };
+    });
 
 export class Game {
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
   private existingShapes: Shape[];
-  private roomId: string;
+  private roomId: number;
   private clicked: boolean;
   private startX: number | null = null;
   private startY: number | null = null;
@@ -70,6 +74,33 @@ export class Game {
   private offsetX = 0;
   private offsetY = 0;
   private readonly MAX_CORNER_RADIUS = 10;
+  private genId() {
+    return crypto.randomUUID();
+  }
+private pendingWrites: Shape[] = [];
+private flushTimeout: any = null;
+private scheduleWrite(shape: Shape) {
+  this.pendingWrites.push(shape);
+
+  if (this.flushTimeout) clearTimeout(this.flushTimeout);
+
+  this.flushTimeout = setTimeout(() => {
+    this.flushToDB();
+  }, 1000);
+}
+
+private async flushToDB() {
+  const shapes = [...this.pendingWrites];
+  this.pendingWrites = [];
+
+  try {
+    await axios.post(`${BACKEND_URL}/shapes/${this.roomId}`, { shapes }, {
+      headers: { Authorization: localStorage.getItem("token") ?? "" },
+    });
+  } catch (err) {
+    console.error("Flush failed", err);
+  }
+}
 
   private hitTestShapeHandle(
   shape: Shape,
@@ -102,7 +133,6 @@ export class Game {
         test(centerX+rx,centerY+ry,"br")
       );
     }
-    /* ➕ add other shapes here the same way */
   }
   return null;
 }
@@ -380,7 +410,7 @@ private cursorForHandle(h:"tl"|"tr"|"bl"|"br"|"move"|"none"){
 
   return dist <= tol;
 }
-  constructor(canvas: HTMLCanvasElement, roomId: string, socket: WebSocket) {
+  constructor(canvas: HTMLCanvasElement, roomId: number, socket: WebSocket) {
     this.canvas = canvas;
     this.ctx = canvas.getContext("2d")!;
     this.existingShapes = [];
@@ -457,6 +487,7 @@ isPointInsideShape(x: number, y: number, shape: Shape): boolean {
 
   addTextShape(x: number, y: number, text: string) {
     const shape = {
+      id: this.genId(),
       type: "text" as const,
       x,
       y,
@@ -467,12 +498,12 @@ isPointInsideShape(x: number, y: number, shape: Shape): boolean {
 
     this.socket.send(
       JSON.stringify({
-        type: "chat",
-        message: JSON.stringify({ shape }),
-        roomId: this.roomId,
+        type: "shape:add",
+        roomId: this.roomId.toString(),
+        shape,
       })
     );
-
+    this.scheduleWrite(shape);
     this.clearCanvas();
   }
 
@@ -508,27 +539,57 @@ isPointInsideShape(x: number, y: number, shape: Shape): boolean {
     this.canvas.removeEventListener("mousedown", this.mouseDownHandler);
     this.canvas.removeEventListener("mouseup", this.mouseUpHandler);
     this.canvas.removeEventListener("mousemove", this.mouseMoveHandler);
+    if (this.flushTimeout) {
+  clearTimeout(this.flushTimeout);
+  this.flushToDB();
+}
+
   }
 
   setTool(tool: Tool) {
     this.selectedTool = tool;
   }
 
-  async init() {
-    this.existingShapes = await getExistingShapes(this.roomId);
-    this.clearCanvas();
-  }
+ async init() {
+  const shapes = await getExistingShapes(this.roomId);
+  const seenIds = new Set(this.existingShapes.map(s => s.id));
+
+  shapes.forEach(shape => {
+    if (!seenIds.has(shape.id)) {
+      this.existingShapes.push(shape);
+    }
+  });
+
+  this.clearCanvas();
+}
+
 
   initHandlers() {
     this.socket.onmessage = (event) => {
-      const message = JSON.parse(event.data);
+  const msg = JSON.parse(event.data);
 
-      if (message.type === "chat") {
-        const parsedShape = JSON.parse(message.message);
-        this.existingShapes.push(parsedShape.shape);
+  if (msg.roomId !== this.roomId.toString()) return;
+
+  switch (msg.type) {
+    case "shape:add": {
+      const existing = this.existingShapes.find(s => s.id === msg.shape.id);
+      if (!existing) {
+        this.existingShapes.push(msg.shape);
         this.clearCanvas();
       }
-    };
+      break;
+    }
+    case "shape:delete": {
+      const idx = this.existingShapes.findIndex(s => s.id === msg.shapeId);
+      if (idx !== -1) {
+        this.existingShapes.splice(idx, 1);
+        this.clearCanvas();
+      }
+      break;
+    }
+  }
+};
+
   }
 
   clearCanvas() {
@@ -695,41 +756,66 @@ isPointInsideShape(x: number, y: number, shape: Shape): boolean {
     ctx.stroke();
   }
 
-  mouseUpHandler = (e: MouseEvent) => {
+  mouseUpHandler = async (e: MouseEvent) => {
     const pos = this.getMousePos(e);
-    /* ───────── FINISH DRAG ───────── */
-if (this.dragMode !== "none") {
-  this.dragMode = "none";
-  this.activeHandle = null;
-  this.canvas.style.cursor = "default";
-  this.clearCanvas();   // remove live ghost
+    if (this.dragMode !== "none") {
+      this.dragMode = "none";
+      this.activeHandle = null;
+      this.canvas.style.cursor = "default";
+      this.clearCanvas();  
 
-  // broadcast updated geometry
-  if (this.selectedShapeIndex != null) {
-    const shp = this.existingShapes[this.selectedShapeIndex];
+    if (this.selectedShapeIndex != null) {
+      const shape = this.existingShapes[this.selectedShapeIndex];
+      this.socket.send(
+        JSON.stringify({
+          type: "shape:add",
+          roomId: this.roomId.toString(),
+          shape,
+        })
+      );
+    }
+    return;
+  }
+  this.clicked = false;
+  if (this.selectedTool === "eraser" && this.hoveredForErase.length) {
+  const doomedIds = this.hoveredForErase.map(i => this.existingShapes[i].id);
+  doomedIds.forEach(id =>
     this.socket.send(
       JSON.stringify({
-        type: "chat",
-        message: JSON.stringify({ shape: shp }),
-        roomId: this.roomId,
-      })
-    );
-  }
-  return;               // done handling mouse‑up
+        type: "shape:delete",
+        roomId: this.roomId.toString(),   // ← always send string over WS
+        shapeId: id,
+      }),
+    ),
+  );
+  const token = localStorage.getItem("token");
+if (!token) {
+  console.warn("No token found. Skipping deletion requests.");
+  return;
 }
-/* ───────── END DRAG ───────── */
+if (doomedIds.length === 0) return;
 
-    this.clicked = false;
-    if (this.selectedTool === "eraser" && this.hoveredForErase.length) {
-      // remove in reverse order so indices stay valid
-      this.hoveredForErase
-        .sort((a, b) => b - a)
-        .forEach(idx => this.existingShapes.splice(idx, 1));
-      this.hoveredForErase = [];
-      this.clearCanvas();
-      return;
-    }
+try {
+  await axios.delete(`${BACKEND_URL}/shapes/${doomedIds.join(",")}`, {
+    headers: {
+      Authorization: localStorage.getItem("token") ?? "",
+    },
+  });
+  console.log("🗑️ Shapes deleted");
+} catch (err) {
+  console.error("❌ Error deleting shapes:", err);
+}
+
+
+
+
+    this.hoveredForErase.sort((a, b) => b - a).forEach(i => this.existingShapes.splice(i, 1));
+    this.hoveredForErase = [];
+    this.clearCanvas();
+    return;
+  }
     let shape: Shape | null = null;
+
     if (this.selectedTool === "rect") {
       if (this.startX === null || this.startY === null) return;
       const width = pos.x - this.startX;
@@ -740,6 +826,7 @@ if (this.dragMode !== "none") {
         Math.abs(height) * 0.5
       );
       shape = {
+        id: this.genId(),
         type: "rect",
         x: this.startX,
         y: this.startY,
@@ -754,6 +841,7 @@ if (this.dragMode !== "none") {
       const cx = this.startX + width / 2;
       const cy = this.startY + height / 2;
       shape = {
+        id: this.genId(),
         type: "diamond",
         top: { x: cx, y: cy - height / 2 },
         right: { x: cx + width / 2, y: cy },
@@ -768,6 +856,7 @@ if (this.dragMode !== "none") {
       const cy = this.startY + (pos.y - this.startY) / 2;
 
       shape = {
+        id: this.genId(),
         type: "circle",  
         rx,          
         ry,            
@@ -782,6 +871,7 @@ if (this.dragMode !== "none") {
         this.endY === null
       ) return;
       shape = {
+        id: this.genId(),
         type: "line",
         startX: this.startX,
         startY: this.startY,
@@ -794,12 +884,14 @@ if (this.dragMode !== "none") {
     } else if (this.selectedTool === "pencil") {
       this.pencilPoints.push(pos);
       shape = {
+        id: this.genId(),
         type: "pencil",
         points: this.pencilPoints,
       };
     } else if (this.selectedTool === "arrow") {
       if (this.startX === null || this.startY === null || (pos.x === this.startX && pos.y === this.startY)) return;
       shape = {
+        id: this.genId(),
         type: "arrow",
         startX: this.startX,
         startY: this.startY,
@@ -822,11 +914,13 @@ if (this.dragMode !== "none") {
       this.clearCanvas();
       this.socket.send(
         JSON.stringify({
-          type: "chat",
-          message: JSON.stringify({ shape }),
-          roomId: this.roomId,
+          type: "shape:add",
+          roomId: this.roomId.toString(),
+          shape,
         })
       );
+      this.scheduleWrite(shape);
+      
       this.startX = null;
       this.startY = null;
       this.endX = null;
@@ -837,12 +931,11 @@ if (this.dragMode !== "none") {
   mouseMoveHandler = (e: MouseEvent) => {
     const pos = this.getMousePos(e);
     /* ───────── DRAG‑TO‑MOVE / RESIZE ───────── */
-if (this.dragMode !== "none" && this.selectedShapeIndex != null) {
-  const p = this.getMousePos(e);
-  const s = this.existingShapes[this.selectedShapeIndex];
-
-  if (this.dragMode === "move") {
-    const dx = p.x - this.offsetX;
+    if (this.dragMode !== "none" && this.selectedShapeIndex != null) {
+      const p = this.getMousePos(e);
+      const s = this.existingShapes[this.selectedShapeIndex];
+      if (this.dragMode === "move") {
+        const dx = p.x - this.offsetX;
     const dy = p.y - this.offsetY;
     this.offsetX = p.x;
     this.offsetY = p.y;
@@ -859,7 +952,7 @@ if (this.dragMode !== "none" && this.selectedShapeIndex != null) {
     }
   } else if (this.dragMode === "resize" && this.activeHandle) {
     if (s.type === "rect") {
-      const h = this.activeHandle;           // tl, tr, bl, br
+      const h = this.activeHandle;          
       if (h === "tl" || h === "bl") {
         const newW = s.x + s.width - p.x;
         s.x = p.x;
@@ -877,14 +970,21 @@ if (this.dragMode !== "none" && this.selectedShapeIndex != null) {
       s.ry = Math.abs(p.y - s.centerY);
     }
   }
+  this.socket.send(JSON.stringify({
+  type: "shape:add",
+  roomId: this.roomId.toString(),
+  shape: s
+}));
+this.scheduleWrite(s);
 
-  this.clearCanvas();          // redraw in new place/size
-  return;                      // stop the rest of mouse‑move
+
+  this.clearCanvas(); 
+  return;              
 }
 /* ───────── END DRAG BLOCK ───────── */
 
     if (this.selectedTool === "eraser") {
-    if (!this.clicked) return; // only track while button is down
+    if (!this.clicked) return;
     for (let i = 0; i < this.existingShapes.length; i++) {
       if (this.isPointInsideShape(pos.x, pos.y, this.existingShapes[i]) && !this.hoveredForErase.includes(i)) {
         this.hoveredForErase.push(i);

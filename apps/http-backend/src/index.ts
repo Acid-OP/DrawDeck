@@ -100,38 +100,84 @@ app.post("/shapes/:roomId", middelware, async (req, res) => {
     res.status(400).json({ message: "Shapes must be an array" });
     return;
   }
- try {
+
+  try {
     await Promise.all(
-      shapes.map(s =>
-        prismaClient.shape.create({
-          data: {
-            id: typeof s.id === "string" ? s.id : undefined,
+      shapes.map((s) => {
+        const { id, type, ...rest } = s;
+        return prismaClient.shape.upsert({
+          where: { id },
+          update: {
+            data: rest,
+            updatedAt: new Date(),
+          },
+          create: {
+            id,
             roomId,
             userId: req.userId!,
-            type: s.type,             
-            data: s,                      
+            type,
+            data: rest,
           },
-        }),
-      ),
+        });
+      })
     );
 
     res.status(200).json({ success: true });
-  }catch (e) {
-    console.error(e);
+  } catch (e) {
+    console.error("❌ Failed to save shapes", e);
     res.status(500).json({ message: "Failed to add shapes" });
   }
 });
 
+
 app.delete("/shapes/:shapeId", middelware, async (req, res) => {
-  const shapeId = req.params.shapeId; 
+  const shapeIdParam = req.params.shapeId;
+  if (!shapeIdParam) {
+    res.status(400).json({ message: "No shape ID provided" });
+    return;
+  }
+
+  // Allow single or comma-separated multiple IDs
+  const shapeIds = shapeIdParam.split(",");
+
   try {
-    await prismaClient.shape.delete({
-      where: { id: shapeId },
+    await prismaClient.shape.deleteMany({
+      where: {
+        id: {
+          in: shapeIds,
+        },
+      },
     });
     res.json({ success: true });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "failed to delete shape" });
+    console.error("❌ Failed to delete shape(s):", err);
+    res.status(500).json({ message: "Failed to delete shape(s)" });
+  }
+});
+
+
+
+app.post("/shapes/delete", middelware, async (req, res) => {
+  const { shapeIds } = req.body;
+
+  if (!Array.isArray(shapeIds) || shapeIds.length === 0) {
+    res.status(400).json({ message: "shapeIds must be a non-empty array" });
+    return;
+  }
+
+  try {
+    await prismaClient.shape.deleteMany({
+      where: {
+        id: {
+          in: shapeIds,
+        },
+      },
+    });
+
+    res.status(200).json({ success: true });
+  } catch (err) {
+    console.error("❌ Batch delete failed", err);
+    res.status(500).json({ message: "Failed to delete shapes" });
   }
 });
 

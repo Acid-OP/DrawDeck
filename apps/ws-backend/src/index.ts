@@ -3,7 +3,11 @@ import jwt, { type JwtPayload } from "jsonwebtoken";
 import {JWT_SECRET} from '@repo/backend-common/index'
 import WebSocket from "ws";
 import {prismaClient} from "@repo/db/client";
-const wss = new WebSocketServer({ port:8080 });
+const wss = new WebSocketServer({ port: 8080 });
+
+wss.on("listening", () => {
+  console.log("✅ WebSocket server is listening on ws://localhost:8080");
+});
 
 interface ClientInfo {
   ws: WebSocket;
@@ -62,15 +66,23 @@ wss.on('connection',function connection(ws , request) {
       case "shape:add": {
         const { roomId, shape } = payload;
         try {
-          await prismaClient.shape.create({
-            data: {
-              id: typeof shape.id === "string" ? shape.id : undefined,
-              roomId: Number(roomId),
-              userId,
-              type: shape.type,
-              data: shape, 
-            },
-          });
+await prismaClient.shape.upsert({
+  where: { id: shape.id },
+  create: {
+    id: shape.id,
+    roomId: Number(roomId),
+    userId,
+    type: shape.type,
+    data: shape,
+  },
+  update: {
+    roomId: Number(roomId),
+    userId,
+    type: shape.type,
+    data: shape,
+  },
+});
+
 
           broadcastToRoom(String(roomId), {
             type: "shape:add",

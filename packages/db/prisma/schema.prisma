@@ -27,7 +27,6 @@ model Room {
   shapes     Shape[]
 }
 
-
 model Shape {
   id        String   @id @default(uuid())          // stable shape id
   roomId    Int

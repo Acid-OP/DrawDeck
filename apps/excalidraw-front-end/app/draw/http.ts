@@ -1,14 +1,14 @@
 import { BACKEND_URL } from "@/config";
 import axios from "axios";
 
-
-export async function getExistingShapes(roomId:string){
-    const res = await axios.get(`${BACKEND_URL}/chats/${roomId}`);
-    const messages = res.data?.messages ?? [];
-
-    const shapes = messages.map((x : {message:string}) =>{
-        const messageData = JSON.parse(x.message)
-        return messageData.shape
-    })
-    return shapes;
+export async function getExistingShapes(roomId: number) {
+  const { data } = await axios.get(
+    `${BACKEND_URL}/shapes/${roomId}`,
+    {
+      headers: {
+        Authorization: localStorage.getItem("token") ?? "",
+      },
+    },
+  );
+  return data.shapes as any[];
 }

@@ -1,29 +1,55 @@
-"use client"
-import { WS_URL } from "@/config";
+"use client";
+
 import { useEffect, useState } from "react";
+import axios from "axios";
+import { WS_URL, BACKEND_URL } from "@/config";
 import { Canvas } from "./Canvas";
-export function RoomCanvas({roomId}: {roomId:string}){
-    const [socket , setSocket] = useState<WebSocket | null>(null);
 
-    useEffect(()=> {
-        const ws = new WebSocket(`${WS_URL}?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJjZDg5NjRiNC0wMTkyLTQ3ZDgtODM1Mi1iNmM2OWFjMjdjZjgiLCJpYXQiOjE3NDgzMTA1NTB9.zyNwR7yOUYtpiT5DmrrZhnzqxLAb1YBRibdVn7Tct3w`);
+export function RoomCanvas({ slug }: { slug: string }) {
+  const [roomId, setRoomId] = useState<number | null>(null);
+  const [socket, setSocket] = useState<WebSocket | null>(null);
+  const [token, setToken] = useState<string>("");
 
-        ws.onopen = () => {
-            setSocket(ws);
-            ws.send(JSON.stringify({
-                type: "join_room",
-                roomId
-            }))
-        }
-    },[])
-
-    if(!socket) {
-        return <div>
-            Connecting to the server
-        </div>
+  // Fetch roomId from slug
+  useEffect(() => {
+    async function fetchRoom() {
+      try {
+        const { data } = await axios.get(`${BACKEND_URL}/room/${slug}`);
+        setRoomId(data.room.id);
+      } catch (err) {
+        console.error("Failed to fetch room:", err);
+      }
     }
+    fetchRoom();
+  }, [slug]);
 
-    return <div className="bg-[#121212]">
-        <Canvas roomId={roomId} socket={socket}/>
-    </div>
+  useEffect(() => {
+    const storedToken = localStorage.getItem("token") ?? "";
+    setToken(storedToken);
+  }, []);
+
+  useEffect(() => {
+    if (!roomId || !token) return;
+
+    const ws = new WebSocket(`${WS_URL}?token=${token}`);
+    ws.onopen = () => {
+      ws.send(JSON.stringify({ type: "join_room", roomId }));
+      setSocket(ws);
+    };
+    ws.onerror = (err) => {
+      console.error("❌ WebSocket error:", err);
+    };
+
+    return () => {
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: "leave_room", roomId }));
+        ws.close();
+      }
+    };
+  }, [roomId, token]);
+
+  if (!roomId) return <div className="p-6">Loading room…</div>;
+  if (!socket) return <div className="p-6">Connecting to socket…</div>;
+
+  return <Canvas roomId={roomId} socket={socket} />;
 }
