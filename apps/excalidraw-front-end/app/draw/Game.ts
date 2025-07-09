@@ -70,25 +70,24 @@ export class Game {
   private hoveredForErase: number[] = [];
   socket?: WebSocket | null;
   private dragMode: "none" | "move" | "resize" = "none";
-  private activeHandle: "tl" | "tr" | "bl" | "br" | null = null;
+  private activeHandle: "tl" | "tr" | "bl" | "br" | "start" | "end" | null = null;
   private offsetX = 0;
   private offsetY = 0;
   private readonly MAX_CORNER_RADIUS = 10;
   private isSolo: boolean;
+  private hoveredEndpoint: "start" | "end" | "mid" | null = null;
   private genId() {
     return crypto.randomUUID();
   }
   private localStorageTimeout: any = null;
-private isInit = false;
-
-private scheduleLocalSave() {
-  if (!this.isSolo) return;
-  if (this.localStorageTimeout) clearTimeout(this.localStorageTimeout);
-  this.localStorageTimeout = setTimeout(() => {
-    this.saveToLocalStorage();
-  }, 1000); // 1 second delay
-}
-
+  private isInit = false;
+  private scheduleLocalSave() {
+    if (!this.isSolo) return;
+    if (this.localStorageTimeout) clearTimeout(this.localStorageTimeout);
+    this.localStorageTimeout = setTimeout(() => {
+      this.saveToLocalStorage();
+    }, 1000); // 1 second delay
+  }
   private pendingWrites: Shape[] = [];
   private flushTimeout: any = null;
   private saveToLocalStorage() {
@@ -185,19 +184,29 @@ private scheduleLocalSave() {
   }
 
   // ─── Circle Handle for Line/Arrow ──────────────────────
-  private drawCircleHandle(
-    cx: number,
-    cy: number,
-    filled: boolean,
-    r = 6,
-    color = "#9b7bff"
-  ) {
-    this.ctx.beginPath();
-    this.ctx.arc(cx, cy, r, 0, Math.PI * 2);
-    filled ? (this.ctx.fillStyle = color, this.ctx.fill()) :(this.ctx.strokeStyle = color, this.ctx.lineWidth = 1.5, this.ctx.stroke());
-    this.ctx.closePath();
-  }
+  private drawCircleHandle(x: number,y: number,isMid: boolean,r: number,isHovered: boolean = false) {
+    const ctx = this.ctx;
+    if (isHovered) {
+      ctx.beginPath();
+      ctx.arc(x, y, r + 4, 0, 2 * Math.PI);
+      ctx.strokeStyle = "rgba(98, 80, 223, 0.4)"; // translucent purple outer ring on hover
+      ctx.lineWidth = 6;
+      ctx.stroke();
+    }
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, 2 * Math.PI);
 
+    if (isMid) {
+      ctx.fillStyle = "#6250df"; // filled purple for middle handle
+      ctx.fill();
+    } else {
+      ctx.fillStyle = "transparent"; // hollow for start/end handles
+    }
+
+    ctx.strokeStyle = "#6250df"; // purple border for all
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+  }
   // ─── Line & Arrow Selection Handles ─────────────────────
   private drawLineHandles(shape: Extract<Shape, { type: "line" | "arrow" }>) {
     const { startX, startY, endX, endY } = shape;
@@ -211,10 +220,9 @@ private scheduleLocalSave() {
     const startCx = startX - ux * r, startCy = startY - uy * r;
     const endCx   = endX   + ux * r, endCy   = endY   + uy * r;
     const midCx   = (startX + endX) / 2, midCy = (startY + endY) / 2;
-
-    this.drawCircleHandle(startCx, startCy, false, r);
-    this.drawCircleHandle(endCx,   endCy,   false, r);
-    this.drawCircleHandle(midCx,   midCy,   true , r);
+    this.drawCircleHandle(startCx, startCy, false, r, this.hoveredEndpoint === "start");
+    this.drawCircleHandle(endCx, endCy, false, r, this.hoveredEndpoint === "end");
+    this.drawCircleHandle(midCx, midCy, true, r, this.hoveredEndpoint === "mid");
   }
 
   // ─── Line Connecting Selection Box to Handle ────────────
@@ -440,14 +448,13 @@ private scheduleLocalSave() {
     this.init();
     if (!isSolo && this.socket) this.initHandlers();
     this.initMouseHandlers();
-}
-  
-clearSoloShapes() {
-  if (!this.isSolo) return;
-  this.existingShapes = [];
-  localStorage.removeItem("solo_shapes");
-  this.clearCanvas();
-}
+  }
+  clearSoloShapes() {
+    if (!this.isSolo) return;
+    this.existingShapes = [];
+    localStorage.removeItem("solo_shapes");
+    this.clearCanvas();
+  }
 
   isPointInsideShape(x: number, y: number, shape: Shape): boolean {
     const tol = 10;
@@ -667,13 +674,16 @@ clearSoloShapes() {
       } else if (shape.type === "pencil") {
         this.ctx.strokeStyle = strokeCol;
         this.drawPencilPath(shape.points);
-      } else if (shape.type === "line" || shape.type === "arrow") {this.ctx.strokeStyle = strokeCol;
+      } else if (shape.type === "line" || shape.type === "arrow") {
+        this.ctx.strokeStyle = strokeCol;
         this.ctx.beginPath();
         this.ctx.moveTo(shape.startX, shape.startY);
         this.ctx.lineTo(shape.endX, shape.endY);
         this.ctx.stroke();
         this.ctx.closePath();
-        this.drawArrow(this.ctx, shape.startX, shape.startY, shape.endX, shape.endY);
+        if (shape.type === "arrow") {
+          this.drawArrow(this.ctx, shape.startX, shape.startY, shape.endX, shape.endY);
+        }
         if (
           this.selectedTool === "select" &&
           this.selectedShapeIndex === this.existingShapes.indexOf(shape)
@@ -710,13 +720,35 @@ clearSoloShapes() {
     const pos = this.getMousePos(e);
     if (this.selectedTool==="select" && this.selectedShapeIndex!=null){
       const shape=this.existingShapes[this.selectedShapeIndex];
-      const h = this.hitTestShapeHandle(shape,pos.x,pos.y);
-      if (h){
-        this.dragMode="resize";
-        this.activeHandle=h;
+      if (shape.type === "line" || shape.type === "arrow") {
+      const dist = (x1: number, y1: number, x2: number, y2: number) =>
+        Math.hypot(x2 - x1, y2 - y1);
+      const handleRadius = 8;
+
+      const hoverStart = dist(pos.x, pos.y, shape.startX, shape.startY) < handleRadius;
+      const hoverEnd = dist(pos.x, pos.y, shape.endX, shape.endY) < handleRadius;
+
+      if (hoverStart) {
+        this.dragMode = "resize";
+        this.activeHandle = "start";
+        e.preventDefault();
+        return;
+      } else if (hoverEnd) {
+        this.dragMode = "resize";
+        this.activeHandle = "end";
         e.preventDefault();
         return;
       }
+    } else {
+      // For all other shapes, use the existing hit test handle logic
+      const h = this.hitTestShapeHandle(shape, pos.x, pos.y);
+      if (h) {
+        this.dragMode = "resize";
+        this.activeHandle = h;
+        e.preventDefault();
+        return;
+      }
+    }
 
     // 4‑b if click inside shape, start move
       if (this.isPointInsideShape(pos.x,pos.y,shape)){
@@ -807,6 +839,27 @@ clearSoloShapes() {
       return;
     }
     this.clicked = false;
+    if (this.startX == null || this.startY == null) return;
+
+  if (this.selectedTool === "line" || this.selectedTool === "arrow") {
+    const shape: Shape = {
+      id: this.genId(),
+      type: this.selectedTool,
+      startX: this.startX,
+      startY: this.startY,
+      endX: pos.x,
+      endY: pos.y,
+    };
+
+    this.existingShapes.push(shape);
+    this.selectedShapeIndex = this.existingShapes.length - 1;
+
+    if (this.onToolChange) this.onToolChange("select");
+    this.selectedTool = "select";
+
+    this.clearCanvas();
+    return;
+  }
     if (this.selectedTool === "eraser" && this.hoveredForErase.length) {
       const doomedIds = this.hoveredForErase.map(i => this.existingShapes[i].id);
       if (this.isSolo) {
@@ -895,24 +948,6 @@ clearSoloShapes() {
         centerX: cx,
         centerY: cy,
       };
-    } else if (this.selectedTool === "line") {
-      if (
-        this.startX === null ||
-        this.startY === null ||
-        this.endX === null ||
-        this.endY === null
-      ) return;
-      shape = {
-        id: this.genId(),
-        type: "line",
-        startX: this.startX,
-        startY: this.startY,
-        endX: this.endX,
-        endY: this.endY,
-      };
-
-      if (this.onToolChange) this.onToolChange("select");
-      this.selectedShapeIndex = this.existingShapes.length;
     } else if (this.selectedTool === "pencil") {
       this.pencilPoints.push(pos);
       shape = {
@@ -920,19 +955,6 @@ clearSoloShapes() {
         type: "pencil",
         points: this.pencilPoints,
       };
-    } else if (this.selectedTool === "arrow") {
-      if (this.startX === null || this.startY === null || (pos.x === this.startX && pos.y === this.startY)) return;
-      shape = {
-        id: this.genId(),
-        type: "arrow",
-        startX: this.startX,
-        startY: this.startY,
-        endX: pos.x,
-        endY: pos.y,
-      };
-
-      if (this.onToolChange) this.onToolChange("select");
-      this.selectedShapeIndex = this.existingShapes.length;
     } else if (this.selectedTool === "text") {
       if ((window as any).justBlurredTextInput) return;
       setTimeout(() => {
@@ -964,6 +986,39 @@ clearSoloShapes() {
 
   mouseMoveHandler = (e: MouseEvent) => {
     const pos = this.getMousePos(e);
+    if (this.selectedTool === "select" && this.selectedShapeIndex != null) {
+      const shape = this.existingShapes[this.selectedShapeIndex];
+
+    if (shape.type === "line" || shape.type === "arrow") {
+      const dist = (x1: number, y1: number, x2: number, y2: number) =>
+        Math.hypot(x2 - x1, y2 - y1);
+      const handleRadius = 8;
+      const { startX: x1, startY: y1, endX: x2, endY: y2 } = shape;
+      const mouseX = pos.x;
+      const mouseY = pos.y;
+
+      const hoverStart = dist(mouseX, mouseY, x1, y1) < handleRadius + 2;
+      const hoverEnd = dist(mouseX, mouseY, x2, y2) < handleRadius + 2;
+      const midX = (x1 + x2) / 2;
+      const midY = (y1 + y2) / 2;
+      const hoverMid = dist(mouseX, mouseY, midX, midY) < handleRadius + 2;
+
+      let newHover: "start" | "end" | "mid" | null = null;
+      if (hoverStart) newHover = "start";
+      else if (hoverEnd) newHover = "end";
+      else if (hoverMid) newHover = "mid";
+
+      if (newHover !== this.hoveredEndpoint) {
+        this.hoveredEndpoint = newHover;
+        this.canvas.style.cursor = newHover ? "pointer" : "default";
+        this.clearCanvas(); // trigger redraw with hover
+      }
+    } else {
+      this.hoveredEndpoint = null;
+      this.canvas.style.cursor = "default";
+    }
+  }
+
     /* ───────── DRAG‑TO‑MOVE / RESIZE ───────── */
     if (this.dragMode !== "none" && this.selectedShapeIndex != null) {
       const p = this.getMousePos(e);
@@ -986,6 +1041,23 @@ clearSoloShapes() {
             s.left.x += dx;   
             s.left.y += dy;
             break;
+          case "line":
+          case "arrow":
+            s.startX += dx;
+            s.startY += dy;
+            s.endX += dx;
+            s.endY += dy;
+            break;
+          case "pencil":
+          s.points = s.points.map((pt) => ({
+            x: pt.x + dx,
+            y: pt.y + dy
+          }));
+            break;
+          case "text":
+            s.x += dx;
+            s.y += dy;
+            break;
           }
         } else if (this.dragMode === "resize" && this.activeHandle) {
           if (s.type === "rect") {
@@ -1005,8 +1077,15 @@ clearSoloShapes() {
           } else if (s.type === "circle") {
             s.rx = Math.abs(p.x - s.centerX);
             s.ry = Math.abs(p.y - s.centerY);
+          }else if (s.type === "line" || s.type === "arrow") {
+            if (this.activeHandle === "start") {
+              s.startX = p.x;
+              s.startY = p.y;
+            } else if (this.activeHandle === "end") {
+              s.endX = p.x;
+              s.endY = p.y;
+            }}
           }
-        }
         if (this.socket && this.roomId) {
           this.safeSend(JSON.stringify({
             type: "shape:add",
@@ -1092,5 +1171,5 @@ clearSoloShapes() {
     this.canvas.addEventListener("mousedown", this.mouseDownHandler);
     this.canvas.addEventListener("mouseup", this.mouseUpHandler);
     this.canvas.addEventListener("mousemove", this.mouseMoveHandler);
-  }
+  };
 }
