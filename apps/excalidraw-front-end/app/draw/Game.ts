@@ -56,7 +56,7 @@ export class Game {
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
   private existingShapes: Shape[];
-  private roomId: number;
+  private roomId?: number | null;
   private clicked: boolean;
   private startX: number | null = null;
   private startY: number | null = null;
@@ -68,83 +68,106 @@ export class Game {
   public onToolChange?: (tool: Tool) => void;
   private selectedShapeIndex: number | null = null;
   private hoveredForErase: number[] = [];
-  socket: WebSocket;
+  socket?: WebSocket | null;
   private dragMode: "none" | "move" | "resize" = "none";
   private activeHandle: "tl" | "tr" | "bl" | "br" | null = null;
   private offsetX = 0;
   private offsetY = 0;
   private readonly MAX_CORNER_RADIUS = 10;
+  private isSolo: boolean;
   private genId() {
     return crypto.randomUUID();
   }
-private pendingWrites: Shape[] = [];
-private flushTimeout: any = null;
-private scheduleWrite(shape: Shape) {
-  this.pendingWrites.push(shape);
+  private localStorageTimeout: any = null;
+private isInit = false;
 
-  if (this.flushTimeout) clearTimeout(this.flushTimeout);
-
-  this.flushTimeout = setTimeout(() => {
-    this.flushToDB();
-  }, 1000);
+private scheduleLocalSave() {
+  if (!this.isSolo) return;
+  if (this.localStorageTimeout) clearTimeout(this.localStorageTimeout);
+  this.localStorageTimeout = setTimeout(() => {
+    this.saveToLocalStorage();
+  }, 1000); // 1 second delay
 }
 
-private async flushToDB() {
-  const shapes = [...this.pendingWrites];
-  this.pendingWrites = [];
-
-  try {
-    await axios.post(`${BACKEND_URL}/shapes/${this.roomId}`, { shapes }, {
-      headers: { Authorization: localStorage.getItem("token") ?? "" },
-    });
-  } catch (err) {
-    console.error("Flush failed", err);
+  private pendingWrites: Shape[] = [];
+  private flushTimeout: any = null;
+  private saveToLocalStorage() {
+    if (!this.isSolo) return;
+    try {
+      localStorage.setItem("solo_shapes", JSON.stringify(this.existingShapes));
+    } catch (err) {
+      console.error("Failed to save shapes to localStorage", err);
+    }
   }
-}
+
+  private scheduleWrite(shape: Shape) {
+    if (!this.roomId) return;
+    this.pendingWrites.push(shape);
+    if (this.flushTimeout) clearTimeout(this.flushTimeout);
+    this.flushTimeout = setTimeout(() => {
+      this.flushToDB();
+    }, 1000);
+  }
+  
+  private safeSend(payload: any) {
+    if (this.isSolo || !this.socket || !this.roomId) return;
+    this.socket.send(JSON.stringify(payload));
+  }
+
+
+  private async flushToDB() {
+    if (this.isSolo || !this.roomId) return;
+    const shapes = [...this.pendingWrites];
+    this.pendingWrites = [];
+    try {
+      await axios.post(`${BACKEND_URL}/shapes/${this.roomId}`, { shapes }, {
+        headers: { Authorization: localStorage.getItem("token") ?? "" },
+      });
+    } catch (err) {
+      console.error("Flush failed", err);
+    }
+  }
 
   private hitTestShapeHandle(
-  shape: Shape,
-  mx: number,
-  my: number,
-  radius = 8      // hit‑area
-): "tl" | "tr" | "bl" | "br" | null {
-  const sq = (dx:number,dy:number)=>dx*dx+dy*dy;
-  const r2 = radius * radius;
-
-  const test = (hx:number,hy:number,name:"tl"|"tr"|"bl"|"br") =>
-    sq(mx-hx,my-hy)<=r2 ? name : null;
-
-  switch (shape.type) {
-    case "rect": {
-      const {x,y,width,height} = shape;
-      return (
-        test(x,y,"tl")           ||
-        test(x+width,y,"tr")     ||
-        test(x,y+height,"bl")    ||
-        test(x+width,y+height,"br")
-      );
-    }
-    case "circle": {
-      const {centerX,centerY,rx,ry} = shape;
-      return (
-        test(centerX-rx,centerY-ry,"tl") ||
-        test(centerX+rx,centerY-ry,"tr") ||
-        test(centerX-rx,centerY+ry,"bl") ||
-        test(centerX+rx,centerY+ry,"br")
-      );
+    shape: Shape,
+    mx: number,
+    my: number,
+    radius = 8      // hit‑area
+    ): "tl" | "tr" | "bl" | "br" | null {
+      const sq = (dx:number,dy:number)=>dx*dx+dy*dy;
+      const r2 = radius * radius;
+      const test = (hx:number,hy:number,name:"tl"|"tr"|"bl"|"br") =>
+        sq(mx-hx,my-hy)<=r2 ? name : null;
+      switch (shape.type) {
+        case "rect": {
+          const {x,y,width,height} = shape;
+          return (
+            test(x,y,"tl")           ||
+            test(x+width,y,"tr")     ||
+            test(x,y+height,"bl")    ||
+            test(x+width,y+height,"br")
+          );
+        }
+        case "circle": {
+          const {centerX,centerY,rx,ry} = shape;
+          return (
+            test(centerX-rx,centerY-ry,"tl") ||
+            test(centerX+rx,centerY-ry,"tr") ||
+            test(centerX-rx,centerY+ry,"bl") ||
+            test(centerX+rx,centerY+ry,"br")
+          );
+        }
+      }
+    return null;
+  }
+  private cursorForHandle(h:"tl"|"tr"|"bl"|"br"|"move"|"none"){
+    switch(h){
+      case "tl":case "br": return "nwse-resize";
+      case "tr":case "bl": return "nesw-resize";
+      case "move": return "move";
+      default:return "default";
     }
   }
-  return null;
-}
-
-private cursorForHandle(h:"tl"|"tr"|"bl"|"br"|"move"|"none"){
-  switch(h){
-    case "tl":case "br": return "nwse-resize";
-    case "tr":case "bl": return "nesw-resize";
-    case "move":        return "move";
-    default:            return "default";
-  }
-}
   // ─── Rounded Square Handle ─────────────────────────────
   private drawHandleBox(
     cx: number,
@@ -390,100 +413,103 @@ private cursorForHandle(h:"tl"|"tr"|"bl"|"br"|"move"|"none"){
   }
 
   private isPointNearLineSegment(px: number, py: number,x1: number, y1: number,x2: number, y2: number,tol: number): boolean {
-  const ABx = x2 - x1;
-  const ABy = y2 - y1;
-  const APx = px - x1;
-  const APy = py - y1;
+    const ABx = x2 - x1;
+    const ABy = y2 - y1;
+    const APx = px - x1;
+    const APy = py - y1;
 
-  const ab2 = ABx * ABx + ABy * ABy;
-  if (ab2 === 0) return false;
-
-  let t = (APx * ABx + APy * ABy) / ab2;
-  t = Math.max(0, Math.min(1, t));
-
-  const closestX = x1 + t * ABx;
-  const closestY = y1 + t * ABy;
-
-  const dx = px - closestX;
-  const dy = py - closestY;
-  const dist = Math.sqrt(dx * dx + dy * dy);
-
-  return dist <= tol;
-}
-  constructor(canvas: HTMLCanvasElement, roomId: number, socket: WebSocket) {
+    const ab2 = ABx * ABx + ABy * ABy;
+    if (ab2 === 0) return false;
+    let t = (APx * ABx + APy * ABy) / ab2;
+    t = Math.max(0, Math.min(1, t));
+    const closestX = x1 + t * ABx;
+    const closestY = y1 + t * ABy;
+    const dx = px - closestX;
+    const dy = py - closestY;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    return dist <= tol;
+  }
+  constructor(canvas: HTMLCanvasElement, roomId: number | null, socket: WebSocket | null , isSolo:boolean=false) {
     this.canvas = canvas;
     this.ctx = canvas.getContext("2d")!;
     this.existingShapes = [];
+    this.isSolo = isSolo;
     this.roomId = roomId;
     this.socket = socket;
     this.clicked = false;
     this.init();
-    this.initHandlers();
+    if (!isSolo && this.socket) this.initHandlers();
     this.initMouseHandlers();
-  }
+}
+  
+clearSoloShapes() {
+  if (!this.isSolo) return;
+  this.existingShapes = [];
+  localStorage.removeItem("solo_shapes");
+  this.clearCanvas();
+}
 
-
-isPointInsideShape(x: number, y: number, shape: Shape): boolean {
-  const tol = 10;
-  switch (shape.type) {
-    case "line":
-    case "arrow": {
-      return this.isPointNearLineSegment(
-        x, y,
-        shape.startX, shape.startY,
-        shape.endX, shape.endY,
-        tol
-      );
-    }
-    case "pencil": {
-      for (let i = 0; i < shape.points.length - 1; i++) {
-        if (this.isPointNearLineSegment(
+  isPointInsideShape(x: number, y: number, shape: Shape): boolean {
+    const tol = 10;
+    switch (shape.type) {
+      case "line":
+      case "arrow": {
+        return this.isPointNearLineSegment(
           x, y,
-          shape.points[i].x, shape.points[i].y,
-          shape.points[i + 1].x, shape.points[i + 1].y,
+          shape.startX, shape.startY,
+          shape.endX, shape.endY,
           tol
-        )) {
-          return true;
-        }
+        );
       }
-      return false;
+      case "pencil": {
+        for (let i = 0; i < shape.points.length - 1; i++) {
+          if (this.isPointNearLineSegment(
+            x, y,
+            shape.points[i].x, shape.points[i].y,
+            shape.points[i + 1].x, shape.points[i + 1].y,
+            tol
+          )) {
+            return true;
+          }
+        }
+        return false;
+      }
+      case "diamond": {
+        const xs = [shape.top.x, shape.right.x, shape.bottom.x, shape.left.x];
+        const ys = [shape.top.y, shape.right.y, shape.bottom.y, shape.left.y];
+        const minX = Math.min(...xs) - tol;
+        const maxX = Math.max(...xs) + tol;
+        const minY = Math.min(...ys) - tol;
+        const maxY = Math.max(...ys) + tol;
+        return x >= minX && x <= maxX && y >= minY && y <= maxY;
+      }
+      case "rect": {
+        const x1 = Math.min(shape.x, shape.x + shape.width) - tol;
+        const x2 = Math.max(shape.x, shape.x + shape.width) + tol;
+        const y1 = Math.min(shape.y, shape.y + shape.height) - tol;
+        const y2 = Math.max(shape.y, shape.y + shape.height) + tol;
+        return x >= x1 && x <= x2 && y >= y1 && y <= y2;
+      }
+      case "circle": {
+        const dx = x - shape.centerX;
+        const dy = y - shape.centerY;
+        const norm = (dx * dx) / (shape.rx * shape.rx) + (dy * dy) / (shape.ry * shape.ry);
+        return norm <= 1.1;
+      }
+      case "text": {
+        const width = this.ctx.measureText(shape.text).width;
+        const height = 20;
+        return (
+          x >= shape.x &&
+          x <= shape.x + width &&
+          y <= shape.y &&
+          y >= shape.y - height
+        );
+      }
+      default:
+        return false;
+      }
     }
-    case "diamond": {
-      const xs = [shape.top.x, shape.right.x, shape.bottom.x, shape.left.x];
-      const ys = [shape.top.y, shape.right.y, shape.bottom.y, shape.left.y];
-      const minX = Math.min(...xs) - tol;
-      const maxX = Math.max(...xs) + tol;
-      const minY = Math.min(...ys) - tol;
-      const maxY = Math.max(...ys) + tol;
-      return x >= minX && x <= maxX && y >= minY && y <= maxY;
-    }
-    case "rect": {
-      const x1 = Math.min(shape.x, shape.x + shape.width) - tol;
-      const x2 = Math.max(shape.x, shape.x + shape.width) + tol;
-      const y1 = Math.min(shape.y, shape.y + shape.height) - tol;
-      const y2 = Math.max(shape.y, shape.y + shape.height) + tol;
-      return x >= x1 && x <= x2 && y >= y1 && y <= y2;
-    }
-    case "circle": {
-      const dx = x - shape.centerX;
-      const dy = y - shape.centerY;
-      const norm = (dx * dx) / (shape.rx * shape.rx) + (dy * dy) / (shape.ry * shape.ry);
-      return norm <= 1.1;
-    }
-    case "text": {
-      const width = this.ctx.measureText(shape.text).width;
-      const height = 20;
-      return (
-        x >= shape.x &&
-        x <= shape.x + width &&
-        y <= shape.y &&
-        y >= shape.y - height
-      );
-    }
-    default:
-      return false;
-    }
-  }
 
   addTextShape(x: number, y: number, text: string) {
     const shape = {
@@ -495,15 +521,14 @@ isPointInsideShape(x: number, y: number, shape: Shape): boolean {
     };
 
     this.existingShapes.push(shape);
-
-    this.socket.send(
-      JSON.stringify({
+    if(!this.isSolo){
+      this.safeSend(JSON.stringify({
         type: "shape:add",
-        roomId: this.roomId.toString(),
+        roomId: this.roomId?.toString(),
         shape,
-      })
-    );
+      }));
     this.scheduleWrite(shape);
+    }
     this.clearCanvas();
   }
 
@@ -540,56 +565,66 @@ isPointInsideShape(x: number, y: number, shape: Shape): boolean {
     this.canvas.removeEventListener("mouseup", this.mouseUpHandler);
     this.canvas.removeEventListener("mousemove", this.mouseMoveHandler);
     if (this.flushTimeout) {
-  clearTimeout(this.flushTimeout);
-  this.flushToDB();
-}
-
+      clearTimeout(this.flushTimeout);
+      this.flushToDB();
+    }
   }
-
   setTool(tool: Tool) {
     this.selectedTool = tool;
   }
-
- async init() {
-  const shapes = await getExistingShapes(this.roomId);
-  const seenIds = new Set(this.existingShapes.map(s => s.id));
-
-  shapes.forEach(shape => {
-    if (!seenIds.has(shape.id)) {
-      this.existingShapes.push(shape);
+  
+  async init() {
+    this.isInit = true;
+    if (this.isSolo) {
+      const saved = localStorage.getItem("solo_shapes");
+      if (saved) {
+        try {
+          const shapes: Shape[] = JSON.parse(saved);
+          this.existingShapes = shapes;
+        } catch (e) {
+          console.error("Failed to parse saved solo shapes", e);
+        }
+      }
+      this.clearCanvas();
+      this.isInit = false;
+      return;
     }
-  });
+    if (!this.roomId) return; 
+    const shapes = await getExistingShapes(this.roomId);
+    const seenIds = new Set(this.existingShapes.map(s => s.id));
+    shapes.forEach(shape => {
+      if (!seenIds.has(shape.id)) {
+        this.existingShapes.push(shape);
+      }
+    });
 
-  this.clearCanvas();
-}
-
+    this.clearCanvas();
+  }
 
   initHandlers() {
+    if (!this.socket || !this.roomId) return;
     this.socket.onmessage = (event) => {
-  const msg = JSON.parse(event.data);
-
-  if (msg.roomId !== this.roomId.toString()) return;
-
-  switch (msg.type) {
-    case "shape:add": {
-      const existing = this.existingShapes.find(s => s.id === msg.shape.id);
-      if (!existing) {
-        this.existingShapes.push(msg.shape);
-        this.clearCanvas();
+      const msg = JSON.parse(event.data);
+      if (msg.roomId !== this.roomId?.toString()) return;
+      switch (msg.type) {
+        case "shape:add": {
+          const existing = this.existingShapes.find(s => s.id === msg.shape.id);
+          if (!existing) {
+            this.existingShapes.push(msg.shape);
+            this.clearCanvas();
+          }
+          break;
+        }
+        case "shape:delete": {
+          const idx = this.existingShapes.findIndex(s => s.id === msg.shapeId);
+          if (idx !== -1) {
+            this.existingShapes.splice(idx, 1);
+            this.clearCanvas();
+          }
+          break;
+        }
       }
-      break;
-    }
-    case "shape:delete": {
-      const idx = this.existingShapes.findIndex(s => s.id === msg.shapeId);
-      if (idx !== -1) {
-        this.existingShapes.splice(idx, 1);
-        this.clearCanvas();
-      }
-      break;
-    }
-  }
-};
-
+    };
   }
 
   clearCanvas() {
@@ -673,29 +708,25 @@ isPointInsideShape(x: number, y: number, shape: Shape): boolean {
 
   mouseDownHandler = (e: MouseEvent) => {
     const pos = this.getMousePos(e);
-
-    
-  if (this.selectedTool==="select" && this.selectedShapeIndex!=null){
-    const shape=this.existingShapes[this.selectedShapeIndex];
-
-    // 4‑a try handles first
-    const h = this.hitTestShapeHandle(shape,pos.x,pos.y);
-    if (h){
-      this.dragMode="resize";
-      this.activeHandle=h;
-      e.preventDefault();
-      return;
-    }
+    if (this.selectedTool==="select" && this.selectedShapeIndex!=null){
+      const shape=this.existingShapes[this.selectedShapeIndex];
+      const h = this.hitTestShapeHandle(shape,pos.x,pos.y);
+      if (h){
+        this.dragMode="resize";
+        this.activeHandle=h;
+        e.preventDefault();
+        return;
+      }
 
     // 4‑b if click inside shape, start move
-    if (this.isPointInsideShape(pos.x,pos.y,shape)){
-      this.dragMode="move";
-      this.offsetX = pos.x;
-      this.offsetY = pos.y;
-      e.preventDefault();
-      return;
+      if (this.isPointInsideShape(pos.x,pos.y,shape)){
+        this.dragMode="move";
+        this.offsetX = pos.x;
+        this.offsetY = pos.y;
+        e.preventDefault();
+        return;
+      }
     }
-  }
 
     if (this.selectedTool === "select") {
       for (let i = this.existingShapes.length - 1; i >= 0; i--) {
@@ -763,57 +794,58 @@ isPointInsideShape(x: number, y: number, shape: Shape): boolean {
       this.activeHandle = null;
       this.canvas.style.cursor = "default";
       this.clearCanvas();  
-
-    if (this.selectedShapeIndex != null) {
-      const shape = this.existingShapes[this.selectedShapeIndex];
-      this.socket.send(
-        JSON.stringify({
-          type: "shape:add",
-          roomId: this.roomId.toString(),
-          shape,
-        })
-      );
+      if (this.selectedShapeIndex != null) {
+        const shape = this.existingShapes[this.selectedShapeIndex];
+        this.safeSend(
+          JSON.stringify({
+            type: "shape:add",
+            roomId: this.roomId?.toString(),
+            shape,
+          })
+        );
+      }
+      return;
     }
-    return;
-  }
-  this.clicked = false;
-  if (this.selectedTool === "eraser" && this.hoveredForErase.length) {
-  const doomedIds = this.hoveredForErase.map(i => this.existingShapes[i].id);
-  doomedIds.forEach(id =>
-    this.socket.send(
-      JSON.stringify({
-        type: "shape:delete",
-        roomId: this.roomId.toString(),   // ← always send string over WS
-        shapeId: id,
-      }),
-    ),
-  );
-  const token = localStorage.getItem("token");
-if (!token) {
-  console.warn("No token found. Skipping deletion requests.");
-  return;
-}
-if (doomedIds.length === 0) return;
-
-try {
-  await axios.delete(`${BACKEND_URL}/shapes/${doomedIds.join(",")}`, {
-    headers: {
-      Authorization: localStorage.getItem("token") ?? "",
-    },
-  });
-  console.log("🗑️ Shapes deleted");
-} catch (err) {
-  console.error("❌ Error deleting shapes:", err);
-}
-
-
-
-
-    this.hoveredForErase.sort((a, b) => b - a).forEach(i => this.existingShapes.splice(i, 1));
-    this.hoveredForErase = [];
-    this.clearCanvas();
-    return;
-  }
+    this.clicked = false;
+    if (this.selectedTool === "eraser" && this.hoveredForErase.length) {
+      const doomedIds = this.hoveredForErase.map(i => this.existingShapes[i].id);
+      if (this.isSolo) {
+        this.hoveredForErase.sort((a, b) => b - a).forEach(i => this.existingShapes.splice(i, 1));
+        this.hoveredForErase = [];
+        this.clearCanvas();
+        if (this.isSolo) this.scheduleLocalSave();
+        return;
+      }
+      doomedIds.forEach(id =>
+        this.safeSend(
+          JSON.stringify({
+            type: "shape:delete",
+            roomId: this.roomId?.toString(),
+            shapeId: id,
+          }),
+        ),
+      );
+      const token = localStorage.getItem("token");
+      if (!token) {
+        console.warn("No token found. Skipping deletion requests.");
+        return;
+      }
+      if (doomedIds.length === 0) return;
+      try {
+        await axios.delete(`${BACKEND_URL}/shapes/${doomedIds.join(",")}`, {
+          headers: {
+            Authorization: localStorage.getItem("token") ?? "",
+          },
+        });
+        console.log("🗑️ Shapes deleted");
+      } catch (err) {
+        console.error("❌ Error deleting shapes:", err);
+      }
+      this.hoveredForErase.sort((a, b) => b - a).forEach(i => this.existingShapes.splice(i, 1));
+      this.hoveredForErase = [];
+      this.clearCanvas();
+      return;
+    }
     let shape: Shape | null = null;
 
     if (this.selectedTool === "rect") {
@@ -912,15 +944,17 @@ try {
       if (!shape) return;
       this.existingShapes.push(shape);
       this.clearCanvas();
-      this.socket.send(
-        JSON.stringify({
-          type: "shape:add",
-          roomId: this.roomId.toString(),
-          shape,
-        })
-      );
-      this.scheduleWrite(shape);
-      
+      if (this.isSolo) this.scheduleLocalSave();
+      if (!this.isSolo) {
+        this.safeSend(
+          JSON.stringify({
+            type: "shape:add",
+            roomId: this.roomId?.toString(),
+            shape,
+          })
+        );
+        this.scheduleWrite(shape);
+      }
       this.startX = null;
       this.startY = null;
       this.endX = null;
@@ -936,119 +970,120 @@ try {
       const s = this.existingShapes[this.selectedShapeIndex];
       if (this.dragMode === "move") {
         const dx = p.x - this.offsetX;
-    const dy = p.y - this.offsetY;
-    this.offsetX = p.x;
-    this.offsetY = p.y;
-
-    switch (s.type) {
-      case "rect":   s.x += dx; s.y += dy; break;
-      case "circle": s.centerX += dx; s.centerY += dy; break;
-      case "diamond":
-        s.top.x += dx;    s.top.y += dy;
-        s.right.x += dx;  s.right.y += dy;
-        s.bottom.x += dx; s.bottom.y += dy;
-        s.left.x += dx;   s.left.y += dy;
-        break;
-    }
-  } else if (this.dragMode === "resize" && this.activeHandle) {
-    if (s.type === "rect") {
-      const h = this.activeHandle;          
-      if (h === "tl" || h === "bl") {
-        const newW = s.x + s.width - p.x;
-        s.x = p.x;
-        s.width = newW;
-      }
-      if (h === "tl" || h === "tr") {
-        const newH = s.y + s.height - p.y;
-        s.y = p.y;
-        s.height = newH;
-      }
-      if (h === "tr" || h === "br") s.width  = p.x - s.x;
-      if (h === "bl" || h === "br") s.height = p.y - s.y;
-    } else if (s.type === "circle") {
-      s.rx = Math.abs(p.x - s.centerX);
-      s.ry = Math.abs(p.y - s.centerY);
-    }
-  }
-  this.socket.send(JSON.stringify({
-  type: "shape:add",
-  roomId: this.roomId.toString(),
-  shape: s
-}));
-this.scheduleWrite(s);
-
-
-  this.clearCanvas(); 
-  return;              
-}
-/* ───────── END DRAG BLOCK ───────── */
-
-    if (this.selectedTool === "eraser") {
-    if (!this.clicked) return;
-    for (let i = 0; i < this.existingShapes.length; i++) {
-      if (this.isPointInsideShape(pos.x, pos.y, this.existingShapes[i]) && !this.hoveredForErase.includes(i)) {
-        this.hoveredForErase.push(i);
-      }
-    }
-    this.clearCanvas(); // redraw with red strokes
-    return;
-  }
-    if (!this.clicked) return;
-    if (this.selectedTool === "pencil") {
-      this.pencilPoints.push(pos);
-      this.clearCanvas();
-      this.drawPencilPath(this.pencilPoints);
-    } else {
-      if (this.startX === null || this.startY === null) return;
-      const width = pos.x - this.startX;
-      const height = pos.y - this.startY;
-      this.clearCanvas();
-      this.ctx.strokeStyle = "rgba(255, 255, 255)";
-      const cx = this.startX + width / 2;
-      const cy = this.startY + height / 2;
-      const top = { x: cx, y: cy - height / 2 };
-      const right = { x: cx + width / 2, y: cy };
-      const bottom = { x: cx, y: cy + height / 2 };
-      const left = { x: cx - width / 2, y: cy };
-      if (this.selectedTool === "rect") {
-        this.ctx.beginPath();
-        const r = Math.min(
-          this.MAX_CORNER_RADIUS,
-          Math.abs(width)  * 0.5,
-          Math.abs(height) * 0.5
-        );
-        this.ctx.roundRect(this.startX, this.startY, width, height, r);
-        this.ctx.stroke();
-      } else if (this.selectedTool === "diamond") {
-        this.drawDiamond(top, right, bottom, left, 10);
-      } else if (this.selectedTool === "circle") {
-      // ― live ellipse preview ―
-        const rx = Math.abs((pos.x - this.startX) / 2);
-        const ry = Math.abs((pos.y - this.startY) / 2);
-        const cx = this.startX + (pos.x - this.startX) / 2;
-        const cy = this.startY + (pos.y - this.startY) / 2;
-        this.ctx.beginPath();
-        this.ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
-        this.ctx.stroke();
-        this.ctx.closePath();
-      } else if (this.selectedTool === "line") {
-        this.ctx.beginPath();
-        this.ctx.moveTo(this.startX, this.startY);
-        this.ctx.lineTo(pos.x, pos.y);
-        this.ctx.stroke();
-        this.ctx.closePath();
-        this.endX = pos.x;
-        this.endY = pos.y;
-      } else if (this.selectedTool === "arrow") {
+        const dy = p.y - this.offsetY;
+        this.offsetX = p.x;
+        this.offsetY = p.y;    
+        switch (s.type) {
+          case "rect":   s.x += dx; s.y += dy; break;
+          case "circle": s.centerX += dx; s.centerY += dy; break;
+          case "diamond":
+            s.top.x += dx;    
+            s.top.y += dy;
+            s.right.x += dx;  
+            s.right.y += dy;
+            s.bottom.x += dx; 
+            s.bottom.y += dy;
+            s.left.x += dx;   
+            s.left.y += dy;
+            break;
+          }
+        } else if (this.dragMode === "resize" && this.activeHandle) {
+          if (s.type === "rect") {
+            const h = this.activeHandle;
+            if (h === "tl" || h === "bl") {
+              const newW = s.x + s.width - p.x;
+              s.x = p.x;
+              s.width = newW;
+            }
+            if (h === "tl" || h === "tr") {
+              const newH = s.y + s.height - p.y;
+              s.y = p.y;
+              s.height = newH;
+            }
+            if (h === "tr" || h === "br") s.width  = p.x - s.x;
+            if (h === "bl" || h === "br") s.height = p.y - s.y;
+          } else if (s.type === "circle") {
+            s.rx = Math.abs(p.x - s.centerX);
+            s.ry = Math.abs(p.y - s.centerY);
+          }
+        }
+        if (this.socket && this.roomId) {
+          this.safeSend(JSON.stringify({
+            type: "shape:add",
+            roomId: this.roomId?.toString(),
+            shape: s
+          }));
+        }
+        this.scheduleWrite(s);
         this.clearCanvas(); 
-        this.drawArrow(this.ctx, this.startX, this.startY, pos.x, pos.y);
-        this.endX = pos.x;
-        this.endY = pos.y;
-      } else if (this.selectedTool === "text") {
+        if (this.isSolo) this.scheduleLocalSave();
+        return;
+      }
+      if (this.selectedTool === "eraser") {
+        if (!this.clicked) return;
+        for (let i = 0; i < this.existingShapes.length; i++) {
+          if (this.isPointInsideShape(pos.x, pos.y, this.existingShapes[i]) && !this.hoveredForErase.includes(i)) {
+            this.hoveredForErase.push(i);
+          }
+        }
+        this.clearCanvas(); 
+        return;
+      }
+      if (!this.clicked) return;
+      if (this.selectedTool === "pencil") {
+        this.pencilPoints.push(pos);
         this.clearCanvas();
-        this.ctx.fillStyle = "rgba(255, 255, 255)";
-        this.ctx.font = "16px Arial";
-        this.ctx.fillText("Sample Text", pos.x, pos.y);
+        this.drawPencilPath(this.pencilPoints);
+      } else {
+        if (this.startX === null || this.startY === null) return;
+        const width = pos.x - this.startX;
+        const height = pos.y - this.startY;
+        this.clearCanvas();
+        this.ctx.strokeStyle = "rgba(255, 255, 255)";
+        const cx = this.startX + width / 2;
+        const cy = this.startY + height / 2;
+        const top = { x: cx, y: cy - height / 2 };
+        const right = { x: cx + width / 2, y: cy };
+        const bottom = { x: cx, y: cy + height / 2 };
+        const left = { x: cx - width / 2, y: cy };
+        if (this.selectedTool === "rect") {
+          this.ctx.beginPath();
+          const r = Math.min(
+            this.MAX_CORNER_RADIUS,
+            Math.abs(width)  * 0.5,
+            Math.abs(height) * 0.5
+          );
+          this.ctx.roundRect(this.startX, this.startY, width, height, r);
+          this.ctx.stroke();
+        } else if (this.selectedTool === "diamond") {
+          this.drawDiamond(top, right, bottom, left, 10);
+        } else if (this.selectedTool === "circle") {
+          const rx = Math.abs((pos.x - this.startX) / 2);
+          const ry = Math.abs((pos.y - this.startY) / 2);
+          const cx = this.startX + (pos.x - this.startX) / 2;
+          const cy = this.startY + (pos.y - this.startY) / 2;
+          this.ctx.beginPath();
+          this.ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
+          this.ctx.stroke();
+          this.ctx.closePath();
+      } else if (this.selectedTool === "line") {
+          this.ctx.beginPath();
+          this.ctx.moveTo(this.startX, this.startY);
+          this.ctx.lineTo(pos.x, pos.y);
+          this.ctx.stroke();
+          this.ctx.closePath();
+          this.endX = pos.x;
+          this.endY = pos.y;
+      } else if (this.selectedTool === "arrow") {
+          this.clearCanvas(); 
+          this.drawArrow(this.ctx, this.startX, this.startY, pos.x, pos.y);
+          this.endX = pos.x;
+          this.endY = pos.y;
+      } else if (this.selectedTool === "text") {
+          this.clearCanvas();
+          this.ctx.fillStyle = "rgba(255, 255, 255)";
+          this.ctx.font = "16px Arial";
+          this.ctx.fillText("Sample Text", pos.x, pos.y);
       }
     }
   };
