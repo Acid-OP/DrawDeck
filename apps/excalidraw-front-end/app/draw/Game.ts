@@ -127,38 +127,69 @@ export class Game {
     }
   }
 
-  private hitTestShapeHandle(
-    shape: Shape,
-    mx: number,
-    my: number,
-    radius = 8      // hit‑area
-    ): "tl" | "tr" | "bl" | "br" | null {
-      const sq = (dx:number,dy:number)=>dx*dx+dy*dy;
-      const r2 = radius * radius;
-      const test = (hx:number,hy:number,name:"tl"|"tr"|"bl"|"br") =>
-        sq(mx-hx,my-hy)<=r2 ? name : null;
-      switch (shape.type) {
-        case "rect": {
-          const {x,y,width,height} = shape;
-          return (
-            test(x,y,"tl")           ||
-            test(x+width,y,"tr")     ||
-            test(x,y+height,"bl")    ||
-            test(x+width,y+height,"br")
-          );
-        }
-        case "circle": {
-          const {centerX,centerY,rx,ry} = shape;
-          return (
-            test(centerX-rx,centerY-ry,"tl") ||
-            test(centerX+rx,centerY-ry,"tr") ||
-            test(centerX-rx,centerY+ry,"bl") ||
-            test(centerX+rx,centerY+ry,"br")
-          );
-        }
-      }
+  hitTestShapeHandle(shape: Shape, mouseX: number, mouseY: number): "tl" | "tr" | "bl" | "br" | null {
+  const handleSize = 10;
+  const pad = 10;
+
+  let x: number, y: number, width: number, height: number;
+
+  if (shape.type === "rect") {
+    x = shape.x;
+    y = shape.y;
+    width = shape.width;
+    height = shape.height;
+  } else if (shape.type === "circle") {
+    x = shape.centerX - shape.rx;
+    y = shape.centerY - shape.ry;
+    width = shape.rx * 2;
+    height = shape.ry * 2;
+  } else if (shape.type === "diamond") {
+    const minX = Math.min(shape.top.x, shape.right.x, shape.bottom.x, shape.left.x);
+    const minY = Math.min(shape.top.y, shape.right.y, shape.bottom.y, shape.left.y);
+    const maxX = Math.max(shape.top.x, shape.right.x, shape.bottom.x, shape.left.x);
+    const maxY = Math.max(shape.top.y, shape.right.y, shape.bottom.y, shape.left.y);
+    x = minX;
+    y = minY;
+    width = maxX - minX;
+    height = maxY - minY;
+  } else if (shape.type === "text") {
+    x = shape.x;
+    y = shape.y;
+    width = 100;
+    height = 30;
+  } else if (shape.type === "pencil") {
+    const xs = shape.points.map(p => p.x);
+    const ys = shape.points.map(p => p.y);
+    x = Math.min(...xs);
+    y = Math.min(...ys);
+    width = Math.max(...xs) - x;
+    height = Math.max(...ys) - y;
+  } else {
     return null;
   }
+
+  const handles = {
+    tl: { x: x - pad, y: y - pad },
+    tr: { x: x + width + pad - handleSize, y: y - pad },
+    bl: { x: x - pad, y: y + height + pad - handleSize },
+    br: { x: x + width + pad - handleSize, y: y + height + pad - handleSize },
+  };
+
+  for (const [handle, pt] of Object.entries(handles)) {
+    if (
+      mouseX >= pt.x &&
+      mouseX <= pt.x + handleSize &&
+      mouseY >= pt.y &&
+      mouseY <= pt.y + handleSize
+    ) {
+      return handle as "tl" | "tr" | "bl" | "br";
+    }
+  }
+
+  return null;
+}
+
+
   private cursorForHandle(h:"tl"|"tr"|"bl"|"br"|"move"|"none"){
     switch(h){
       case "tl":case "br": return "nwse-resize";
@@ -261,155 +292,201 @@ export class Game {
     const handleSize = 10;
     const stopDist = handleSize / 2;
 
-    if (shape.type === "rect") {
-      const x1 = Math.min(shape.x, shape.x + shape.width);
-      const y1 = Math.min(shape.y, shape.y + shape.height);
-      const x2 = Math.max(shape.x, shape.x + shape.width);
-      const y2 = Math.max(shape.y, shape.y + shape.height);
+   if (shape.type === "rect") {
+  const x1 = Math.min(shape.x, shape.x + shape.width);
+  const y1 = Math.min(shape.y, shape.y + shape.height);
+  const x2 = Math.max(shape.x, shape.x + shape.width);
+  const y2 = Math.max(shape.y, shape.y + shape.height);
 
-      const x = x1 - pad;
-      const y = y1 - pad;
-      const w = (x2-x1) + pad * 2;
-      const h = (y2-y1) + pad * 2;
+  const x = x1 - pad;
+  const y = y1 - pad;
+  const w = (x2 - x1) + pad * 2;
+  const h = (y2 - y1) + pad * 2;
 
-      this.ctx.strokeRect(x, y, w, h);
+  const inset = handleSize / 2;
 
-      const handles = [
-        { x: x,     y: y },
-        { x: x + w, y: y },
-        { x: x + w, y: y + h },
-        { x: x,     y: y + h },
-      ];
+  // ⬛ Draw 4 trimmed sides (lines not touching center of handles)
+  this.ctx.beginPath();
+  this.ctx.moveTo(x + inset, y);             // Top side
+  this.ctx.lineTo(x + w - inset, y);
 
-      for (const { x: hx, y: hy } of handles) {
-        const fromX = hx === x ? x : x + w;
-        const fromY = hy === y ? y : y + h;
-        this.drawConnectorLineToHandle(fromX, fromY, hx, hy, stopDist);
-        this.drawHandleBox(hx, hy);
-      }
+  this.ctx.moveTo(x + w, y + inset);         // Right side
+  this.ctx.lineTo(x + w, y + h - inset);
 
-      this.ctx.restore();
-      return;
-    }
-    if (shape.type === "circle") {
-      const x = shape.centerX - shape.rx - pad;
-      const y = shape.centerY - shape.ry - pad;
-      const w = shape.rx * 2 + pad * 2;
-      const h = shape.ry * 2 + pad * 2;
+  this.ctx.moveTo(x + w - inset, y + h);     // Bottom side
+  this.ctx.lineTo(x + inset, y + h);
 
-      this.ctx.strokeRect(x, y, w, h);
+  this.ctx.moveTo(x, y + h - inset);         // Left side
+  this.ctx.lineTo(x, y + inset);
 
-      const centerX = x + w / 2;
-      const centerY = y + h / 2;
+  this.ctx.stroke();
 
-      const handles = [
-      { x: x,     y: y },
-      { x: x + w, y: y },
-      { x: x + w, y: y + h },  
-      { x: x,     y: y + h },    
-      ];
-      for (const { x: hx, y: hy } of handles) {
-        const fromX = hx < centerX ? x : x + w;
-        const fromY = hy < centerY ? y : y + h;
-        this.drawConnectorLineToHandle(fromX, fromY, hx, hy, stopDist);
-        this.drawHandleBox(hx, hy);
-      }
-      this.ctx.restore();
-      return;
-    }
-    if (shape.type === "diamond") {
-      const xs = [shape.top.x, shape.right.x, shape.bottom.x, shape.left.x];
-      const ys = [shape.top.y, shape.right.y, shape.bottom.y, shape.left.y];
-      const minX = Math.min(...xs) - pad;
-      const maxX = Math.max(...xs) + pad;
-      const minY = Math.min(...ys) - pad;
-      const maxY = Math.max(...ys) + pad;
+  // 🔲 Handle points at corners
+  const handles = [
+    { x: x,     y: y },         // top-left
+    { x: x + w, y: y },         // top-right
+    { x: x + w, y: y + h },     // bottom-right
+    { x: x,     y: y + h },     // bottom-left
+  ];
 
-      this.ctx.strokeRect(minX, minY, maxX - minX, maxY - minY);
-
-      const centerX = (minX + maxX) / 2;
-      const centerY = (minY + maxY) / 2;
-
-      const corners = [
-        { x: minX, y: minY },
-        { x: maxX, y: minY },
-        { x: maxX, y: maxY },
-        { x: minX, y: maxY },
-      ];
-
-      for (const { x: hx, y: hy } of corners) {
-        this.drawConnectorLineToHandle(
-        hx < centerX ? minX : maxX,
-        hy < centerY ? minY : maxY,
-        hx, hy, stopDist
-      );
-      this.drawHandleBox(hx, hy);
-    }
-
-    this.ctx.restore();
-    return;
+  for (const { x: hx, y: hy } of handles) {
+    this.drawHandleBox(hx, hy);
   }
 
-    if (shape.type === "text") {
-      const width = this.ctx.measureText(shape.text).width;
-      const height = 20;
-      const x = shape.x - pad / 2;
-      const y = shape.y - height + pad / 2;
-      const w = width + pad;
-      const h = height + pad;
+  this.ctx.restore();
+  return;
+}
 
-      this.ctx.strokeRect(x, y, w, h);
+   if (shape.type === "circle") {
+  const x = shape.centerX - shape.rx - pad;
+  const y = shape.centerY - shape.ry - pad;
+  const w = shape.rx * 2 + pad * 2;
+  const h = shape.ry * 2 + pad * 2;
 
-      const corners = [
-        { x: x,     y: y },
-        { x: x + w, y: y },
-        { x: x + w, y: y + h },
-        { x: x,     y: y + h },
-      ];
+  const inset = handleSize / 2;
 
-      for (const { x: hx, y: hy } of corners) {
-        const fromX = hx < x + w / 2 ? x : x + w;
-        const fromY = hy < y + h / 2 ? y : y + h;
-        this.drawConnectorLineToHandle(fromX, fromY, hx, hy, stopDist);
-        this.drawHandleBox(hx, hy);
-      }
+  this.ctx.beginPath();
+  this.ctx.moveTo(x + inset, y);             // Top
+  this.ctx.lineTo(x + w - inset, y);
 
-      this.ctx.restore();
-      return;
-    }
+  this.ctx.moveTo(x + w, y + inset);         // Right
+  this.ctx.lineTo(x + w, y + h - inset);
 
-    if (shape.type === "pencil") {
-      const xs = shape.points.map(p => p.x);
-      const ys = shape.points.map(p => p.y);
-      const minX = Math.min(...xs) - pad;
-      const maxX = Math.max(...xs) + pad;
-      const minY = Math.min(...ys) - pad;
-      const maxY = Math.max(...ys) + pad;
+  this.ctx.moveTo(x + w - inset, y + h);     // Bottom
+  this.ctx.lineTo(x + inset, y + h);
 
-      this.ctx.strokeRect(minX, minY, maxX - minX, maxY - minY);
+  this.ctx.moveTo(x, y + h - inset);         // Left
+  this.ctx.lineTo(x, y + inset);
+  this.ctx.stroke();
 
-      const centerX = (minX + maxX) / 2;
-      const centerY = (minY + maxY) / 2;
+  const handles = [
+    { x: x,     y: y },
+    { x: x + w, y: y },
+    { x: x + w, y: y + h },
+    { x: x,     y: y + h },
+  ];
+  for (const { x: hx, y: hy } of handles) {
+    this.drawHandleBox(hx, hy);
+  }
 
-      const corners = [
-        { x: minX, y: minY },
-        { x: maxX, y: minY },
-        { x: maxX, y: maxY },
-        { x: minX, y: maxY },
-      ];
+  this.ctx.restore();
+  return;
+}
 
-      for (const { x: hx, y: hy } of corners) {
-        this.drawConnectorLineToHandle(
-          hx < centerX ? minX : maxX,
-          hy < centerY ? minY : maxY,
-          hx, hy, stopDist
-        );
-        this.drawHandleBox(hx, hy);
-      }
+if (shape.type === "diamond") {
+  const xs = [shape.top.x, shape.right.x, shape.bottom.x, shape.left.x];
+  const ys = [shape.top.y, shape.right.y, shape.bottom.y, shape.left.y];
+  const minX = Math.min(...xs) - pad;
+  const maxX = Math.max(...xs) + pad;
+  const minY = Math.min(...ys) - pad;
+  const maxY = Math.max(...ys) + pad;
 
-      this.ctx.restore();
-      return;
-    }
+  const inset = handleSize / 2;
+
+  this.ctx.beginPath();
+  this.ctx.moveTo(minX + inset, minY);             // Top
+  this.ctx.lineTo(maxX - inset, minY);
+
+  this.ctx.moveTo(maxX, minY + inset);             // Right
+  this.ctx.lineTo(maxX, maxY - inset);
+
+  this.ctx.moveTo(maxX - inset, maxY);             // Bottom
+  this.ctx.lineTo(minX + inset, maxY);
+
+  this.ctx.moveTo(minX, maxY - inset);             // Left
+  this.ctx.lineTo(minX, minY + inset);
+  this.ctx.stroke();
+
+  const corners = [
+    { x: minX, y: minY },
+    { x: maxX, y: minY },
+    { x: maxX, y: maxY },
+    { x: minX, y: maxY },
+  ];
+  for (const { x: hx, y: hy } of corners) {
+    this.drawHandleBox(hx, hy);
+  }
+
+  this.ctx.restore();
+  return;
+}
+
+if (shape.type === "text") {
+  const width = this.ctx.measureText(shape.text).width;
+  const height = 20;
+  const x = shape.x - pad / 2;
+  const y = shape.y - height + pad / 2;
+  const w = width + pad;
+  const h = height + pad;
+
+  const inset = handleSize / 2;
+
+  this.ctx.beginPath();
+  this.ctx.moveTo(x + inset, y);           // Top
+  this.ctx.lineTo(x + w - inset, y);
+
+  this.ctx.moveTo(x + w, y + inset);       // Right
+  this.ctx.lineTo(x + w, y + h - inset);
+
+  this.ctx.moveTo(x + w - inset, y + h);   // Bottom
+  this.ctx.lineTo(x + inset, y + h);
+
+  this.ctx.moveTo(x, y + h - inset);       // Left
+  this.ctx.lineTo(x, y + inset);
+  this.ctx.stroke();
+
+  const corners = [
+    { x: x,     y: y },
+    { x: x + w, y: y },
+    { x: x + w, y: y + h },
+    { x: x,     y: y + h },
+  ];
+  for (const { x: hx, y: hy } of corners) {
+    this.drawHandleBox(hx, hy);
+  }
+
+  this.ctx.restore();
+  return;
+}
+
+if (shape.type === "pencil") {
+  const xs = shape.points.map(p => p.x);
+  const ys = shape.points.map(p => p.y);
+  const minX = Math.min(...xs) - pad;
+  const maxX = Math.max(...xs) + pad;
+  const minY = Math.min(...ys) - pad;
+  const maxY = Math.max(...ys) + pad;
+
+  const inset = handleSize / 2;
+
+  this.ctx.beginPath();
+  this.ctx.moveTo(minX + inset, minY);           // Top
+  this.ctx.lineTo(maxX - inset, minY);
+
+  this.ctx.moveTo(maxX, minY + inset);           // Right
+  this.ctx.lineTo(maxX, maxY - inset);
+
+  this.ctx.moveTo(maxX - inset, maxY);           // Bottom
+  this.ctx.lineTo(minX + inset, maxY);
+
+  this.ctx.moveTo(minX, maxY - inset);           // Left
+  this.ctx.lineTo(minX, minY + inset);
+  this.ctx.stroke();
+
+  const corners = [
+    { x: minX, y: minY },
+    { x: maxX, y: minY },
+    { x: maxX, y: maxY },
+    { x: minX, y: maxY },
+  ];
+  for (const { x: hx, y: hy } of corners) {
+    this.drawHandleBox(hx, hy);
+  }
+
+  this.ctx.restore();
+  return;
+}
+
     
     if (shape.type === "line" || shape.type === "arrow") {
       this.drawLineHandles(shape); 
@@ -455,6 +532,86 @@ export class Game {
     localStorage.removeItem("solo_shapes");
     this.clearCanvas();
   }
+isOnSelectionBoxBorder(shape: Shape, x: number, y: number): boolean {
+  const pad = 8;
+  const tolerance = 6;
+  let boxX = 0, boxY = 0, boxW = 0, boxH = 0;
+
+  if (shape.type === "rect") {
+    const x1 = Math.min(shape.x, shape.x + shape.width);
+    const y1 = Math.min(shape.y, shape.y + shape.height);
+    const x2 = Math.max(shape.x, shape.x + shape.width);
+    const y2 = Math.max(shape.y, shape.y + shape.height);
+
+    boxX = x1 - pad;
+    boxY = y1 - pad;
+    boxW = (x2 - x1) + pad * 2;
+    boxH = (y2 - y1) + pad * 2;
+  }
+
+  // TODO: add other shape types if needed
+
+  const onLeft   = Math.abs(x - boxX) < tolerance && y >= boxY && y <= boxY + boxH;
+  const onRight  = Math.abs(x - (boxX + boxW)) < tolerance && y >= boxY && y <= boxY + boxH;
+  const onTop    = Math.abs(y - boxY) < tolerance && x >= boxX && x <= boxX + boxW;
+  const onBottom = Math.abs(y - (boxY + boxH)) < tolerance && x >= boxX && x <= boxX + boxW;
+
+  return onLeft || onRight || onTop || onBottom;
+}
+
+ isPointInsideSelectionBox(shape: Shape, x: number, y: number): boolean {
+  const pad = 8;
+  let boxX = 0, boxY = 0, boxW = 0, boxH = 0;
+
+  if (shape.type === "rect") {
+    const x1 = Math.min(shape.x, shape.x + shape.width);
+    const y1 = Math.min(shape.y, shape.y + shape.height);
+    const x2 = Math.max(shape.x, shape.x + shape.width);
+    const y2 = Math.max(shape.y, shape.y + shape.height);
+    boxX = x1 - pad;
+    boxY = y1 - pad;
+    boxW = (x2 - x1) + pad * 2;
+    boxH = (y2 - y1) + pad * 2;
+  } else if (shape.type === "circle") {
+    boxX = shape.centerX - shape.rx - pad;
+    boxY = shape.centerY - shape.ry - pad;
+    boxW = shape.rx * 2 + pad * 2;
+    boxH = shape.ry * 2 + pad * 2;
+  } else if (shape.type === "diamond") {
+    const xs = [shape.top.x, shape.right.x, shape.bottom.x, shape.left.x];
+    const ys = [shape.top.y, shape.right.y, shape.bottom.y, shape.left.y];
+    const minX = Math.min(...xs) - pad;
+    const maxX = Math.max(...xs) + pad;
+    const minY = Math.min(...ys) - pad;
+    const maxY = Math.max(...ys) + pad;
+    boxX = minX;
+    boxY = minY;
+    boxW = maxX - minX;
+    boxH = maxY - minY;
+  } else if (shape.type === "text") {
+    const width = 100;
+    const height = 30;
+    boxX = shape.x - pad / 2;
+    boxY = shape.y - height + pad / 2;
+    boxW = width + pad;
+    boxH = height + pad;
+  } else if (shape.type === "pencil") {
+    const xs = shape.points.map(p => p.x);
+    const ys = shape.points.map(p => p.y);
+    const minX = Math.min(...xs) - pad;
+    const maxX = Math.max(...xs) + pad;
+    const minY = Math.min(...ys) - pad;
+    const maxY = Math.max(...ys) + pad;
+    boxX = minX;
+    boxY = minY;
+    boxW = maxX - minX;
+    boxH = maxY - minY;
+  }
+
+  return x >= boxX && x <= boxX + boxW && y >= boxY && y <= boxY + boxH;
+}
+
+
 
   isPointInsideShape(x: number, y: number, shape: Shape): boolean {
     const tol = 10;
@@ -741,23 +898,34 @@ export class Game {
       }
     } else {
       // For all other shapes, use the existing hit test handle logic
-      const h = this.hitTestShapeHandle(shape, pos.x, pos.y);
-      if (h) {
-        this.dragMode = "resize";
-        this.activeHandle = h;
-        e.preventDefault();
-        return;
-      }
-    }
+const h = this.hitTestShapeHandle(shape, pos.x, pos.y);
+if (h) {
+  this.dragMode = "resize";
+  this.activeHandle = h;
+  e.preventDefault();
+  return;
+}
 
-    // 4‑b if click inside shape, start move
-      if (this.isPointInsideShape(pos.x,pos.y,shape)){
-        this.dragMode="move";
-        this.offsetX = pos.x;
-        this.offsetY = pos.y;
-        e.preventDefault();
-        return;
-      }
+if (
+  this.isPointInsideSelectionBox(shape, pos.x, pos.y) &&
+  !this.isPointInsideShape(pos.x, pos.y, shape)
+)
+ {
+  this.dragMode = "resize";
+  this.activeHandle = null;
+  e.preventDefault();
+  return;
+}
+
+
+if (this.isPointInsideShape(pos.x, pos.y, shape)) {
+  this.dragMode = "move";
+  this.offsetX = pos.x;
+  this.offsetY = pos.y;
+  e.preventDefault();
+  return;
+}
+    }
     }
 
     if (this.selectedTool === "select") {
@@ -1008,16 +1176,48 @@ export class Game {
       else if (hoverEnd) newHover = "end";
       else if (hoverMid) newHover = "mid";
 
-      if (newHover !== this.hoveredEndpoint) {
-        this.hoveredEndpoint = newHover;
-        this.canvas.style.cursor = newHover ? "pointer" : "default";
-        this.clearCanvas(); // trigger redraw with hover
-      }
+if (newHover !== this.hoveredEndpoint) {
+  this.hoveredEndpoint = newHover;
+
+  if (newHover === "start" || newHover === "end") {
+    this.canvas.style.cursor = "crosshair"; // resizing ends
+  } else if (newHover === "mid") {
+    this.canvas.style.cursor = "move"; // move entire arrow
+  } else {
+    this.canvas.style.cursor = "default";
+  }
+
+  this.clearCanvas(); // trigger redraw with hover
+}
+
     } else {
       this.hoveredEndpoint = null;
       this.canvas.style.cursor = "default";
+      
     }
+    if (this.selectedShapeIndex != null && shape.type !== "line" && shape.type !== "arrow") {
+  const h = this.hitTestShapeHandle(shape, pos.x, pos.y);
+if (h) {
+  const cursorMap: Record<"tl" | "tr" | "bl" | "br", string> = {
+    tl: "nwse-resize",
+    br: "nwse-resize",
+    tr: "nesw-resize",
+    bl: "nesw-resize",
+  };
+  this.canvas.style.cursor = cursorMap[h];
+  this.activeHandle = h; // ✅ assign here instead of hoveredEndpoint
+  this.clearCanvas();
+}
+ else if (this.isPointInsideShape(pos.x, pos.y, shape)) {
+    this.canvas.style.cursor = "move";
+  } else {
+    this.canvas.style.cursor = "default";
   }
+}
+
+    
+  }
+  
 
     /* ───────── DRAG‑TO‑MOVE / RESIZE ───────── */
     if (this.dragMode !== "none" && this.selectedShapeIndex != null) {
