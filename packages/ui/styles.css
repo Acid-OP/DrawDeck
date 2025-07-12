@@ -1,0 +1,17 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+@source "./";
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  /* your CSS vars (same as what you pasted earlier) */
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
