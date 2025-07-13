@@ -36,6 +36,12 @@ export function Canvas({
     height: 0,
   });
 
+  const [theme, setTheme] = useState<"light" | "dark">("dark");
+
+  const toggleTheme = () => {
+    setTheme((prev) => (prev === "dark" ? "light" : "dark"));
+  };
+
   useEffect(() => {
     if (typeof window === "undefined") return;
 
@@ -43,7 +49,7 @@ export function Canvas({
       setDimensions({ width: window.innerWidth, height: window.innerHeight });
     };
 
-    updateSize(); // once on mount
+    updateSize();
     window.addEventListener("resize", updateSize);
     return () => window.removeEventListener("resize", updateSize);
   }, []);
@@ -51,10 +57,15 @@ export function Canvas({
   useEffect(() => {
     game?.setTool(selectedTool);
   }, [selectedTool, game]);
+useEffect(() => {
+  if (game) {
+    game.setTheme(theme);
+  }
+}, [theme, game]);
 
   useEffect(() => {
     if (canvasRef.current && dimensions.width !== 0 && dimensions.height !== 0) {
-      const g = new Game(canvasRef.current, roomId, socket, isSolo);
+      const g = new Game(canvasRef.current, roomId, socket, isSolo , theme);
       g.onToolChange = (tool) => setSelectedTool(tool);
       g.onTextInsert = (x, y) => {
         if ((window as any).justBlurredTextInput) return;
@@ -67,17 +78,17 @@ export function Canvas({
   }, [canvasRef, isSolo, roomId, socket, dimensions]);
 
   return (
-    <div className="w-screen h-screen bg-[#121212] overflow-hidden relative">
+    <div className={`w-screen h-screen overflow-hidden relative ${theme === "dark" ? "bg-[#121212]" : "bg-white"}`}>
       <canvas
         ref={canvasRef}
         width={dimensions.width}
         height={dimensions.height}
-        style={{ backgroundColor: "#121212" }}
+        style={{ backgroundColor: theme === "dark" ? "#121212" : "#ffffff" }}
       />
 
       <div className="absolute top-4 left-0 w-full flex justify-between items-center px-6">
-        <Menu />
-        <TopBar setSelectedTool={setSelectedTool} selectedTool={selectedTool} />
+        <Menu theme={theme} onThemeToggle={toggleTheme} />
+        <TopBar selectedTool={selectedTool} setSelectedTool={setSelectedTool} theme={theme} />
         <ShareButton />
       </div>
 

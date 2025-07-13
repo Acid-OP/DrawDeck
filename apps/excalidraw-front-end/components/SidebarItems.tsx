@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { 
   Command, 
@@ -25,7 +24,6 @@ interface SidebarItemsProps {
 export const SidebarItems: React.FC<SidebarItemsProps> = ({ theme, onThemeToggle }) => {
   return (
     <div className="space-y-4">
-      {/* Features Section - starts from top with compact spacing */}
       <div className="space-y-1">
         <FeatureButton 
           icon={<Command size={18} />} 
@@ -61,7 +59,6 @@ export const SidebarItems: React.FC<SidebarItemsProps> = ({ theme, onThemeToggle
       </div>
       <SidebarSeparator theme={theme} />
 
-      {/* Social Section - compact spacing, no divider */}
       <div className="space-y-1">
         <SocialButton 
           icon={<Github size={18} />} 
@@ -82,12 +79,10 @@ export const SidebarItems: React.FC<SidebarItemsProps> = ({ theme, onThemeToggle
       </div>
       <SidebarSeparator theme={theme} className="my-2" />
 
-      {/* Theme Section - flows directly after social */}
       <div>
         <ThemeToggle theme={theme} onThemeChange={onThemeToggle} />
       </div>
 
-      {/* Canvas Background - flows directly after theme */}
       <CanvasBackgroundPicker theme={theme} />
     </div>
   );

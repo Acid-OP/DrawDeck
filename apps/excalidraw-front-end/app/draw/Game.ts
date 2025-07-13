@@ -79,6 +79,12 @@ export class Game {
   private genId() {
     return crypto.randomUUID();
   }
+  public setTheme(theme: "light" | "dark") {
+  this.theme = theme;
+  this.clearCanvas(); // Optional: re-render shapes with new theme colors if needed
+}
+
+  private theme: 'light' | 'dark' = 'dark';
   private localStorageTimeout: any = null;
   private isInit = false;
   private scheduleLocalSave() {
@@ -514,13 +520,15 @@ if (shape.type === "pencil") {
     const dist = Math.sqrt(dx * dx + dy * dy);
     return dist <= tol;
   }
-  constructor(canvas: HTMLCanvasElement, roomId: number | null, socket: WebSocket | null , isSolo:boolean=false) {
+  constructor(canvas: HTMLCanvasElement, roomId: number | null, socket: WebSocket | null , isSolo:boolean=false , theme: "light" | "dark" ) {
     this.canvas = canvas;
     this.ctx = canvas.getContext("2d")!;
     this.existingShapes = [];
     this.isSolo = isSolo;
     this.roomId = roomId;
     this.socket = socket;
+    this.theme = theme;
+    this.clearCanvas();
     this.clicked = false;
     this.init();
     if (!isSolo && this.socket) this.initHandlers();
@@ -704,25 +712,28 @@ isOnSelectionBoxBorder(shape: Shape, x: number, y: number): boolean {
     };
   };
 
-  drawDiamond(
-    top: { x: number; y: number },
-    right: { x: number; y: number },
-    bottom: { x: number; y: number },
-    left: { x: number; y: number },
-    radius: number = 10
-  ) {
-    this.ctx.beginPath();
-    this.ctx.moveTo(top.x, top.y);
-    this.ctx.quadraticCurveTo(top.x, top.y, top.x, top.y);
-    this.ctx.lineTo(right.x, right.y);
-    this.ctx.quadraticCurveTo(right.x, right.y, right.x, right.y);
-    this.ctx.lineTo(bottom.x, bottom.y);
-    this.ctx.quadraticCurveTo(bottom.x, bottom.y, bottom.x, bottom.y);
-    this.ctx.lineTo(left.x, left.y);
-    this.ctx.quadraticCurveTo(left.x, left.y, left.x, left.y);
-    this.ctx.lineTo(top.x, top.y);
-    this.ctx.stroke();
-  }
+drawDiamond(
+  top: { x: number; y: number },
+  right: { x: number; y: number },
+  bottom: { x: number; y: number },
+  left: { x: number; y: number },
+  strokeStyle: string,
+) {
+  this.ctx.strokeStyle = strokeStyle;
+
+  this.ctx.beginPath();
+  this.ctx.moveTo(top.x, top.y);
+  this.ctx.quadraticCurveTo(top.x, top.y, top.x, top.y);
+  this.ctx.lineTo(right.x, right.y);
+  this.ctx.quadraticCurveTo(right.x, right.y, right.x, right.y);
+  this.ctx.lineTo(bottom.x, bottom.y);
+  this.ctx.quadraticCurveTo(bottom.x, bottom.y, bottom.x, bottom.y);
+  this.ctx.lineTo(left.x, left.y);
+  this.ctx.quadraticCurveTo(left.x, left.y, left.x, left.y);
+  this.ctx.lineTo(top.x, top.y);
+  this.ctx.stroke();
+}
+
 
   destroy() {
     this.canvas.removeEventListener("mousedown", this.mouseDownHandler);
@@ -793,14 +804,13 @@ isOnSelectionBoxBorder(shape: Shape, x: number, y: number): boolean {
 
   clearCanvas() {
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-    this.ctx.fillStyle = "rgba(18,18,18,255)";
+     this.ctx.fillStyle = this.theme === "dark" ? "#121212" : "#ffffff";
     this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
     this.existingShapes.forEach((shape , idx) => {
-      const isHovered =
-      this.selectedTool === "eraser" &&
+      const isHovered = this.selectedTool === "eraser" &&
       this.hoveredForErase?.includes(idx);
-      const strokeCol = isHovered ? "rgba(255,80,80)" : "rgba(255,255,255)";
-      const fillCol   = isHovered ? "rgba(255,80,80)" : "rgba(255,255,255)";
+     const strokeCol = isHovered ? "rgba(255,80,80)" : (this.theme === 'dark' ? "#ffffff" : "#000000");
+     const fillCol = strokeCol;
       if (shape.type === "rect") {
         this.ctx.strokeStyle = strokeCol;
         const r = Math.min(
@@ -813,9 +823,11 @@ isOnSelectionBoxBorder(shape: Shape, x: number, y: number): boolean {
         this.ctx.stroke();
       } else if (shape.type === "diamond") {
         this.ctx.strokeStyle = strokeCol;
-        this.drawDiamond(shape.top, shape.right, shape.bottom, shape.left);
+        this.ctx.fillStyle = fillCol;
+        this.drawDiamond(shape.top, shape.right, shape.bottom, shape.left,strokeCol);
       } else if (shape.type === "circle") {
         this.ctx.strokeStyle = strokeCol;
+        this.ctx.fillStyle = fillCol;
         this.ctx.beginPath();
         this.ctx.ellipse(
           shape.centerX,
@@ -830,16 +842,18 @@ isOnSelectionBoxBorder(shape: Shape, x: number, y: number): boolean {
         this.ctx.closePath();
       } else if (shape.type === "pencil") {
         this.ctx.strokeStyle = strokeCol;
+        this.ctx.fillStyle = fillCol;
         this.drawPencilPath(shape.points);
       } else if (shape.type === "line" || shape.type === "arrow") {
         this.ctx.strokeStyle = strokeCol;
+        this.ctx.fillStyle = fillCol;
         this.ctx.beginPath();
         this.ctx.moveTo(shape.startX, shape.startY);
         this.ctx.lineTo(shape.endX, shape.endY);
         this.ctx.stroke();
         this.ctx.closePath();
         if (shape.type === "arrow") {
-          this.drawArrow(this.ctx, shape.startX, shape.startY, shape.endX, shape.endY);
+          this.drawArrow(this.ctx, shape.startX, shape.startY, shape.endX, shape.endY, strokeCol);
         }
         if (
           this.selectedTool === "select" &&
@@ -868,7 +882,6 @@ isOnSelectionBoxBorder(shape: Shape, x: number, y: number): boolean {
     for (let i = 1; i < points.length; i++) {
       this.ctx.lineTo(points[i].x, points[i].y);
     }
-    this.ctx.strokeStyle = "rgba(255, 255, 255)";
     this.ctx.stroke();
     this.ctx.closePath();
   }
@@ -898,36 +911,32 @@ isOnSelectionBoxBorder(shape: Shape, x: number, y: number): boolean {
       }
     } else {
       // For all other shapes, use the existing hit test handle logic
-const h = this.hitTestShapeHandle(shape, pos.x, pos.y);
-if (h) {
-  this.dragMode = "resize";
-  this.activeHandle = h;
-  e.preventDefault();
-  return;
-}
-
-if (
-  this.isPointInsideSelectionBox(shape, pos.x, pos.y) &&
-  !this.isPointInsideShape(pos.x, pos.y, shape)
-)
- {
-  this.dragMode = "resize";
-  this.activeHandle = null;
-  e.preventDefault();
-  return;
-}
-
-
-if (this.isPointInsideShape(pos.x, pos.y, shape)) {
-  this.dragMode = "move";
-  this.offsetX = pos.x;
-  this.offsetY = pos.y;
-  e.preventDefault();
-  return;
-}
+      const h = this.hitTestShapeHandle(shape, pos.x, pos.y);
+      if (h) {
+        this.dragMode = "resize";
+        this.activeHandle = h;
+        e.preventDefault();
+        return;
+      }
+      if (
+        this.isPointInsideSelectionBox(shape, pos.x, pos.y) &&
+        !this.isPointInsideShape(pos.x, pos.y, shape)
+      )
+      {
+        this.dragMode = "resize";
+        this.activeHandle = null;
+        e.preventDefault();
+        return;
+      }
+      
+      if (this.isPointInsideShape(pos.x, pos.y, shape)) {
+        this.dragMode = "move";
+        this.offsetX = pos.x;
+        this.offsetY = pos.y;
+        e.preventDefault();
+        return;
+      }}
     }
-    }
-
     if (this.selectedTool === "select") {
       for (let i = this.existingShapes.length - 1; i >= 0; i--) {
         if (this.isPointInsideShape(pos.x, pos.y, this.existingShapes[i])) {
@@ -968,8 +977,11 @@ if (this.isPointInsideShape(pos.x, pos.y, shape)) {
     startX: number,
     startY: number,
     endX: number,
-    endY: number
+    endY: number,
+    strokeStyle: string
   ) {
+    ctx.strokeStyle = strokeStyle;
+    ctx.fillStyle = strokeStyle;
     const headLength = 10;
     const angle = Math.atan2(endY - startY, endX - startX);
     const arrowTipX = endX;
@@ -1154,17 +1166,18 @@ if (this.isPointInsideShape(pos.x, pos.y, shape)) {
 
   mouseMoveHandler = (e: MouseEvent) => {
     const pos = this.getMousePos(e);
+    const strokeCol = this.theme === "dark" ? "#ffffff" : "#000000";
     if (this.selectedTool === "select" && this.selectedShapeIndex != null) {
       const shape = this.existingShapes[this.selectedShapeIndex];
 
     if (shape.type === "line" || shape.type === "arrow") {
       const dist = (x1: number, y1: number, x2: number, y2: number) =>
-        Math.hypot(x2 - x1, y2 - y1);
+      Math.hypot(x2 - x1, y2 - y1);
       const handleRadius = 8;
       const { startX: x1, startY: y1, endX: x2, endY: y2 } = shape;
       const mouseX = pos.x;
       const mouseY = pos.y;
-
+      this.ctx.strokeStyle = strokeCol;
       const hoverStart = dist(mouseX, mouseY, x1, y1) < handleRadius + 2;
       const hoverEnd = dist(mouseX, mouseY, x2, y2) < handleRadius + 2;
       const midX = (x1 + x2) / 2;
@@ -1175,48 +1188,42 @@ if (this.isPointInsideShape(pos.x, pos.y, shape)) {
       if (hoverStart) newHover = "start";
       else if (hoverEnd) newHover = "end";
       else if (hoverMid) newHover = "mid";
-
-if (newHover !== this.hoveredEndpoint) {
-  this.hoveredEndpoint = newHover;
-
-  if (newHover === "start" || newHover === "end") {
-    this.canvas.style.cursor = "crosshair"; // resizing ends
-  } else if (newHover === "mid") {
-    this.canvas.style.cursor = "move"; // move entire arrow
-  } else {
-    this.canvas.style.cursor = "default";
-  }
-
-  this.clearCanvas(); // trigger redraw with hover
-}
-
+      if (newHover !== this.hoveredEndpoint) {
+        this.hoveredEndpoint = newHover;
+        if (newHover === "start" || newHover === "end") {
+          this.canvas.style.cursor = "crosshair";
+        } else if (newHover === "mid") {
+          this.canvas.style.cursor = "move"; // move entire arrow
+        } else {
+          this.canvas.style.cursor = "default";
+        }
+        this.clearCanvas(); // trigger redraw with hover
+      }
     } else {
+      this.ctx.strokeStyle = strokeCol;
       this.hoveredEndpoint = null;
       this.canvas.style.cursor = "default";
-      
     }
     if (this.selectedShapeIndex != null && shape.type !== "line" && shape.type !== "arrow") {
-  const h = this.hitTestShapeHandle(shape, pos.x, pos.y);
-if (h) {
-  const cursorMap: Record<"tl" | "tr" | "bl" | "br", string> = {
-    tl: "nwse-resize",
-    br: "nwse-resize",
-    tr: "nesw-resize",
-    bl: "nesw-resize",
-  };
-  this.canvas.style.cursor = cursorMap[h];
-  this.activeHandle = h; // ✅ assign here instead of hoveredEndpoint
-  this.clearCanvas();
-}
- else if (this.isPointInsideShape(pos.x, pos.y, shape)) {
-    this.canvas.style.cursor = "move";
-  } else {
-    this.canvas.style.cursor = "default";
-  }
-}
-
-    
-  }
+      const h = this.hitTestShapeHandle(shape, pos.x, pos.y);
+      if (h) {
+        const cursorMap: Record<"tl" | "tr" | "bl" | "br", string> = {
+          tl: "nwse-resize",
+          br: "nwse-resize",
+          tr: "nesw-resize",
+          bl: "nesw-resize",
+        };
+        this.canvas.style.cursor = cursorMap[h];
+        this.activeHandle = h; // ✅ assign here instead of hoveredEndpoint
+        this.clearCanvas();
+      }
+       else if (this.isPointInsideShape(pos.x, pos.y, shape)) {
+          this.canvas.style.cursor = "move";
+        } else {
+          this.canvas.style.cursor = "default";
+        }
+      }
+    }
   
 
     /* ───────── DRAG‑TO‑MOVE / RESIZE ───────── */
@@ -1305,12 +1312,14 @@ if (h) {
             this.hoveredForErase.push(i);
           }
         }
+        this.ctx.strokeStyle = strokeCol;
         this.clearCanvas(); 
         return;
       }
       if (!this.clicked) return;
       if (this.selectedTool === "pencil") {
         this.pencilPoints.push(pos);
+        this.ctx.strokeStyle = strokeCol;
         this.clearCanvas();
         this.drawPencilPath(this.pencilPoints);
       } else {
@@ -1318,7 +1327,7 @@ if (h) {
         const width = pos.x - this.startX;
         const height = pos.y - this.startY;
         this.clearCanvas();
-        this.ctx.strokeStyle = "rgba(255, 255, 255)";
+        this.ctx.strokeStyle = strokeCol; 
         const cx = this.startX + width / 2;
         const cy = this.startY + height / 2;
         const top = { x: cx, y: cy - height / 2 };
@@ -1335,7 +1344,7 @@ if (h) {
           this.ctx.roundRect(this.startX, this.startY, width, height, r);
           this.ctx.stroke();
         } else if (this.selectedTool === "diamond") {
-          this.drawDiamond(top, right, bottom, left, 10);
+          this.drawDiamond(top, right, bottom, left,strokeCol);
         } else if (this.selectedTool === "circle") {
           const rx = Math.abs((pos.x - this.startX) / 2);
           const ry = Math.abs((pos.y - this.startY) / 2);
@@ -1343,24 +1352,27 @@ if (h) {
           const cy = this.startY + (pos.y - this.startY) / 2;
           this.ctx.beginPath();
           this.ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
+          this.ctx.strokeStyle = strokeCol;
           this.ctx.stroke();
           this.ctx.closePath();
       } else if (this.selectedTool === "line") {
           this.ctx.beginPath();
           this.ctx.moveTo(this.startX, this.startY);
           this.ctx.lineTo(pos.x, pos.y);
+          this.ctx.strokeStyle = strokeCol;
           this.ctx.stroke();
           this.ctx.closePath();
           this.endX = pos.x;
           this.endY = pos.y;
       } else if (this.selectedTool === "arrow") {
           this.clearCanvas(); 
-          this.drawArrow(this.ctx, this.startX, this.startY, pos.x, pos.y);
+          this.drawArrow(this.ctx, this.startX, this.startY, pos.x, pos.y, strokeCol);
           this.endX = pos.x;
           this.endY = pos.y;
       } else if (this.selectedTool === "text") {
+        if (!this.clicked) return;
           this.clearCanvas();
-          this.ctx.fillStyle = "rgba(255, 255, 255)";
+        this.ctx.fillStyle = strokeCol;
           this.ctx.font = "16px Arial";
           this.ctx.fillText("Sample Text", pos.x, pos.y);
       }

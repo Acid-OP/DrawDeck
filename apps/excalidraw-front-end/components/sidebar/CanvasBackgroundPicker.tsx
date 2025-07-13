@@ -38,7 +38,7 @@ export const CanvasBackgroundPicker: React.FC<CanvasBackgroundPickerProps> = ({ 
           <button
             key={color}
             onClick={() => handleColorSelect(color)}
-            className={`w-8 h-8 rounded-md border-2 transition-all duration-200 ${
+            className={`w-8 h-8 rounded-md border-2 transition-all duration-200 cursor-pointer ${
               selectedColor === color
                 ? 'border-blue-500 scale-110 shadow-md'
                 : theme === 'dark'
@@ -61,7 +61,7 @@ export const CanvasBackgroundPicker: React.FC<CanvasBackgroundPickerProps> = ({ 
         <button
           key={backgroundColors[5]}
           onClick={() => handleColorSelect(backgroundColors[5])}
-          className={`w-8 h-8 rounded-md border-2 transition-all duration-200 ${
+          className={`w-8 h-8 rounded-md border-2 transition-all duration-200 cursor-pointer ${
             selectedColor === backgroundColors[5]
               ? 'border-blue-500 scale-110 shadow-md'
               : theme === 'dark'

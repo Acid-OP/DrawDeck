@@ -4,10 +4,14 @@ import { useState, useRef, useEffect } from "react";
 import { SidebarModal } from "./SidebarModal";
 import { MenuIcon } from "lucide-react";
 
-export function Menu() {
+interface MenuProps {
+  theme: 'light' | 'dark';
+  onThemeToggle: () => void;
+}
+
+export function Menu({ theme, onThemeToggle }: MenuProps) {
   const [activated, setActivated] = useState(false);
   const [clicked, setClicked] = useState(false);
-  const [theme, setTheme] = useState<'light' | 'dark'>('dark');
 
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -15,10 +19,6 @@ export function Menu() {
     setActivated((prev) => !prev);
     setClicked(true);
     setTimeout(() => setClicked(false), 300);
-  };
-
-  const toggleTheme = () => {
-    setTheme((prev) => (prev === 'light' ? 'dark' : 'light'));
   };
 
   useEffect(() => {
@@ -37,28 +37,30 @@ export function Menu() {
     return () => document.removeEventListener("mousedown", handleOutsideClick);
   }, [activated]);
 
-  return (
-    <div className="relative inline-block" ref={menuRef}>
-      <div
-        onClick={handleClick}
-        className={`
-          bg-[#232329] p-3 rounded-lg inline-block cursor-pointer hover:bg-[#363541] transition
-          ${clicked ? "border-2 border-[#727198]" : "border-2 border-transparent"}
-        `}
-      >
-        <MenuIcon size={20} className="text-white" />
-      </div>
-
-      {activated && (
-        <div className="absolute left-0 mt-2 z-50">
-          <SidebarModal
-            isOpen={true}
-            onClose={() => setActivated(false)}
-            theme={theme}
-            onThemeToggle={toggleTheme}
-          />
-        </div>
-      )}
+ return (
+  <div className="relative inline-block" ref={menuRef}>
+    <div
+      onClick={handleClick}
+      className={`
+        p-3 rounded-lg inline-block cursor-pointer transition
+        ${clicked ? "border-2 border-blue-500" : "border-2 border-transparent"}
+        ${theme === "dark" ? "bg-[#232329] hover:bg-[#363541]" : "bg-[#ececf4] hover:bg-[#d6d6e2]"}
+      `}
+    >
+      <MenuIcon size={20} className={theme === "dark" ? "text-white" : "text-black"} />
     </div>
-  );
+
+    {activated && (
+      <div className="absolute left-0 mt-2 z-50">
+        <SidebarModal
+          isOpen={true}
+          onClose={() => setActivated(false)}
+          theme={theme}
+          onThemeToggle={onThemeToggle}
+        />
+      </div>
+    )}
+  </div>
+);
+
 }
