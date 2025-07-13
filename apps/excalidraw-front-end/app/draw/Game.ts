@@ -540,148 +540,82 @@ if (shape.type === "pencil") {
     localStorage.removeItem("solo_shapes");
     this.clearCanvas();
   }
-isOnSelectionBoxBorder(shape: Shape, x: number, y: number): boolean {
-  const pad = 8;
-  const tolerance = 6;
-  let boxX = 0, boxY = 0, boxW = 0, boxH = 0;
+  isOnSelectionBoxBorder(shape: Shape, x: number, y: number): boolean {
+    const pad = 8;
+    const tolerance = 6;
+    let boxX = 0, boxY = 0, boxW = 0, boxH = 0;
 
-  if (shape.type === "rect") {
-    const x1 = Math.min(shape.x, shape.x + shape.width);
-    const y1 = Math.min(shape.y, shape.y + shape.height);
-    const x2 = Math.max(shape.x, shape.x + shape.width);
-    const y2 = Math.max(shape.y, shape.y + shape.height);
+    if (shape.type === "rect") {
+      const x1 = Math.min(shape.x, shape.x + shape.width);
+      const y1 = Math.min(shape.y, shape.y + shape.height);
+      const x2 = Math.max(shape.x, shape.x + shape.width);
+      const y2 = Math.max(shape.y, shape.y + shape.height);
 
-    boxX = x1 - pad;
-    boxY = y1 - pad;
-    boxW = (x2 - x1) + pad * 2;
-    boxH = (y2 - y1) + pad * 2;
-  }
-
-  // TODO: add other shape types if needed
-
-  const onLeft   = Math.abs(x - boxX) < tolerance && y >= boxY && y <= boxY + boxH;
-  const onRight  = Math.abs(x - (boxX + boxW)) < tolerance && y >= boxY && y <= boxY + boxH;
-  const onTop    = Math.abs(y - boxY) < tolerance && x >= boxX && x <= boxX + boxW;
-  const onBottom = Math.abs(y - (boxY + boxH)) < tolerance && x >= boxX && x <= boxX + boxW;
-
-  return onLeft || onRight || onTop || onBottom;
-}
-
- isPointInsideSelectionBox(shape: Shape, x: number, y: number): boolean {
-  const pad = 8;
-  let boxX = 0, boxY = 0, boxW = 0, boxH = 0;
-
-  if (shape.type === "rect") {
-    const x1 = Math.min(shape.x, shape.x + shape.width);
-    const y1 = Math.min(shape.y, shape.y + shape.height);
-    const x2 = Math.max(shape.x, shape.x + shape.width);
-    const y2 = Math.max(shape.y, shape.y + shape.height);
-    boxX = x1 - pad;
-    boxY = y1 - pad;
-    boxW = (x2 - x1) + pad * 2;
-    boxH = (y2 - y1) + pad * 2;
-  } else if (shape.type === "circle") {
-    boxX = shape.centerX - shape.rx - pad;
-    boxY = shape.centerY - shape.ry - pad;
-    boxW = shape.rx * 2 + pad * 2;
-    boxH = shape.ry * 2 + pad * 2;
-  } else if (shape.type === "diamond") {
-    const xs = [shape.top.x, shape.right.x, shape.bottom.x, shape.left.x];
-    const ys = [shape.top.y, shape.right.y, shape.bottom.y, shape.left.y];
-    const minX = Math.min(...xs) - pad;
-    const maxX = Math.max(...xs) + pad;
-    const minY = Math.min(...ys) - pad;
-    const maxY = Math.max(...ys) + pad;
-    boxX = minX;
-    boxY = minY;
-    boxW = maxX - minX;
-    boxH = maxY - minY;
-  } else if (shape.type === "text") {
-    const width = 100;
-    const height = 30;
-    boxX = shape.x - pad / 2;
-    boxY = shape.y - height + pad / 2;
-    boxW = width + pad;
-    boxH = height + pad;
-  } else if (shape.type === "pencil") {
-    const xs = shape.points.map(p => p.x);
-    const ys = shape.points.map(p => p.y);
-    const minX = Math.min(...xs) - pad;
-    const maxX = Math.max(...xs) + pad;
-    const minY = Math.min(...ys) - pad;
-    const maxY = Math.max(...ys) + pad;
-    boxX = minX;
-    boxY = minY;
-    boxW = maxX - minX;
-    boxH = maxY - minY;
-  }
-
-  return x >= boxX && x <= boxX + boxW && y >= boxY && y <= boxY + boxH;
-}
-
-
-
-  isPointInsideShape(x: number, y: number, shape: Shape): boolean {
-    const tol = 10;
-    switch (shape.type) {
-      case "line":
-      case "arrow": {
-        return this.isPointNearLineSegment(
-          x, y,
-          shape.startX, shape.startY,
-          shape.endX, shape.endY,
-          tol
-        );
-      }
-      case "pencil": {
-        for (let i = 0; i < shape.points.length - 1; i++) {
-          if (this.isPointNearLineSegment(
-            x, y,
-            shape.points[i].x, shape.points[i].y,
-            shape.points[i + 1].x, shape.points[i + 1].y,
-            tol
-          )) {
-            return true;
-          }
-        }
-        return false;
-      }
-      case "diamond": {
-        const xs = [shape.top.x, shape.right.x, shape.bottom.x, shape.left.x];
-        const ys = [shape.top.y, shape.right.y, shape.bottom.y, shape.left.y];
-        const minX = Math.min(...xs) - tol;
-        const maxX = Math.max(...xs) + tol;
-        const minY = Math.min(...ys) - tol;
-        const maxY = Math.max(...ys) + tol;
-        return x >= minX && x <= maxX && y >= minY && y <= maxY;
-      }
-      case "rect": {
-        const x1 = Math.min(shape.x, shape.x + shape.width) - tol;
-        const x2 = Math.max(shape.x, shape.x + shape.width) + tol;
-        const y1 = Math.min(shape.y, shape.y + shape.height) - tol;
-        const y2 = Math.max(shape.y, shape.y + shape.height) + tol;
-        return x >= x1 && x <= x2 && y >= y1 && y <= y2;
-      }
-      case "circle": {
-        const dx = x - shape.centerX;
-        const dy = y - shape.centerY;
-        const norm = (dx * dx) / (shape.rx * shape.rx) + (dy * dy) / (shape.ry * shape.ry);
-        return norm <= 1.1;
-      }
-      case "text": {
-        const width = this.ctx.measureText(shape.text).width;
-        const height = 20;
-        return (
-          x >= shape.x &&
-          x <= shape.x + width &&
-          y <= shape.y &&
-          y >= shape.y - height
-        );
-      }
-      default:
-        return false;
-      }
+      boxX = x1 - pad;
+      boxY = y1 - pad;
+      boxW = (x2 - x1) + pad * 2;
+      boxH = (y2 - y1) + pad * 2;
     }
+    
+    const onLeft   = Math.abs(x - boxX) < tolerance && y >= boxY && y <= boxY + boxH;
+    const onRight  = Math.abs(x - (boxX + boxW)) < tolerance && y >= boxY && y <= boxY + boxH;
+    const onTop    = Math.abs(y - boxY) < tolerance && x >= boxX && x <= boxX + boxW;
+    const onBottom = Math.abs(y - (boxY + boxH)) < tolerance && x >= boxX && x <= boxX + boxW;
+
+    return onLeft || onRight || onTop || onBottom;
+  }
+  isPointInsideSelectionBox(shape: Shape, x: number, y: number): boolean {
+    const pad = 8;
+    let boxX = 0, boxY = 0, boxW = 0, boxH = 0;
+
+    if (shape.type === "rect") {
+      const x1 = Math.min(shape.x, shape.x + shape.width);
+      const y1 = Math.min(shape.y, shape.y + shape.height);
+      const x2 = Math.max(shape.x, shape.x + shape.width);
+      const y2 = Math.max(shape.y, shape.y + shape.height);
+      boxX = x1 - pad;
+      boxY = y1 - pad;
+      boxW = (x2 - x1) + pad * 2;
+      boxH = (y2 - y1) + pad * 2;
+    }else if (shape.type === "circle") {
+      boxX = shape.centerX - shape.rx - pad;
+      boxY = shape.centerY - shape.ry - pad;
+      boxW = shape.rx * 2 + pad * 2;
+      boxH = shape.ry * 2 + pad * 2;
+    } else if (shape.type === "diamond") {
+      const xs = [shape.top.x, shape.right.x, shape.bottom.x, shape.left.x];
+      const ys = [shape.top.y, shape.right.y, shape.bottom.y, shape.left.y];
+      const minX = Math.min(...xs) - pad;
+      const maxX = Math.max(...xs) + pad;
+      const minY = Math.min(...ys) - pad;
+      const maxY = Math.max(...ys) + pad;
+      boxX = minX;
+      boxY = minY;
+      boxW = maxX - minX;
+      boxH = maxY - minY;
+    } else if (shape.type === "text") {
+      const width = 100;
+      const height = 30;
+      boxX = shape.x - pad / 2;
+      boxY = shape.y - height + pad / 2;
+      boxW = width + pad;
+      boxH = height + pad;
+    } else if (shape.type === "pencil") {
+      const xs = shape.points.map(p => p.x);
+      const ys = shape.points.map(p => p.y);
+      const minX = Math.min(...xs) - pad;
+      const maxX = Math.max(...xs) + pad;
+      const minY = Math.min(...ys) - pad;
+      const maxY = Math.max(...ys) + pad;
+      boxX = minX;
+      boxY = minY;
+      boxW = maxX - minX;
+      boxH = maxY - minY;
+    }
+    return x >= boxX && x <= boxX + boxW && y >= boxY && y <= boxY + boxH;
+  }
+
+  
 
   addTextShape(x: number, y: number, text: string) {
     const shape = {
@@ -711,6 +645,84 @@ isOnSelectionBoxBorder(shape: Shape, x: number, y: number): boolean {
       y: e.clientY - rect.top,
     };
   };
+private isPointInsideShape(x: number, y: number, shape: Shape): boolean {
+  const pad = 6;
+
+  if (shape.type === "rect") {
+    const x1 = Math.min(shape.x, shape.x + shape.width);
+    const y1 = Math.min(shape.y, shape.y + shape.height);
+    const x2 = Math.max(shape.x, shape.x + shape.width);
+    const y2 = Math.max(shape.y, shape.y + shape.height);
+    return (
+      x >= x1 - pad &&
+      x <= x2 + pad &&
+      y >= y1 - pad &&
+      y <= y2 + pad
+    );
+  }
+
+  if (shape.type === "circle") {
+    const dx = x - shape.centerX;
+    const dy = y - shape.centerY;
+    const norm =
+      (dx * dx) / (shape.rx * shape.rx) + (dy * dy) / (shape.ry * shape.ry);
+    return norm <= 1.1;
+  }
+
+  if (shape.type === "diamond") {
+    const xs = [shape.top.x, shape.right.x, shape.bottom.x, shape.left.x];
+    const ys = [shape.top.y, shape.right.y, shape.bottom.y, shape.left.y];
+    const minX = Math.min(...xs) - pad;
+    const maxX = Math.max(...xs) + pad;
+    const minY = Math.min(...ys) - pad;
+    const maxY = Math.max(...ys) + pad;
+    return x >= minX && x <= maxX && y >= minY && y <= maxY;
+  }
+
+  if (shape.type === "text") {
+    const width = 100;
+    const height = 30;
+    return (
+      x >= shape.x &&
+      x <= shape.x + width &&
+      y <= shape.y &&
+      y >= shape.y - height
+    );
+  }
+
+  if (shape.type === "pencil") {
+    for (let i = 0; i < shape.points.length - 1; i++) {
+      if (
+        this.isPointNearLineSegment(
+          x,
+          y,
+          shape.points[i].x,
+          shape.points[i].y,
+          shape.points[i + 1].x,
+          shape.points[i + 1].y,
+          pad
+        )
+      ) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  if (shape.type === "line" || shape.type === "arrow") {
+    return this.isPointNearLineSegment(
+      x,
+      y,
+      shape.startX,
+      shape.startY,
+      shape.endX,
+      shape.endY,
+      pad
+    );
+  }
+
+  return false;
+}
 
 drawDiamond(
   top: { x: number; y: number },
@@ -746,10 +758,10 @@ drawDiamond(
   }
   setTool(tool: Tool) {
     this.selectedTool = tool;
+    this.hoveredForErase = [];
   }
-  
   async init() {
-    this.isInit = true;
+    // this.isInit = true;
     if (this.isSolo) {
       const saved = localStorage.getItem("solo_shapes");
       if (saved) {
@@ -777,30 +789,35 @@ drawDiamond(
   }
 
   initHandlers() {
-    if (!this.socket || !this.roomId) return;
-    this.socket.onmessage = (event) => {
-      const msg = JSON.parse(event.data);
-      if (msg.roomId !== this.roomId?.toString()) return;
-      switch (msg.type) {
-        case "shape:add": {
-          const existing = this.existingShapes.find(s => s.id === msg.shape.id);
-          if (!existing) {
-            this.existingShapes.push(msg.shape);
-            this.clearCanvas();
-          }
-          break;
+  if (!this.socket || !this.roomId) return;
+
+  this.socket.onmessage = (event) => {
+    const msg = JSON.parse(event.data);
+    if (msg.roomId !== this.roomId?.toString()) return;
+
+    switch (msg.type) {
+      case "shape:add": {
+        const shape = msg.shape;
+        const exists = this.existingShapes.some(s => s.id === shape.id);
+        if (!exists) {
+          this.existingShapes.push(shape);
+          this.clearCanvas();
         }
-        case "shape:delete": {
-          const idx = this.existingShapes.findIndex(s => s.id === msg.shapeId);
-          if (idx !== -1) {
-            this.existingShapes.splice(idx, 1);
-            this.clearCanvas();
-          }
-          break;
-        }
+        break;
       }
-    };
-  }
+
+      case "shape:delete": {
+        const shapeId = msg.shapeId;
+        const index = this.existingShapes.findIndex(s => s.id === shapeId);
+        if (index !== -1) {
+          this.existingShapes.splice(index, 1);
+          this.clearCanvas();
+        }
+        break;
+      }
+    }
+  };
+}
 
   clearCanvas() {
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
@@ -910,7 +927,6 @@ drawDiamond(
         return;
       }
     } else {
-      // For all other shapes, use the existing hit test handle logic
       const h = this.hitTestShapeHandle(shape, pos.x, pos.y);
       if (h) {
         this.dragMode = "resize";
@@ -949,17 +965,23 @@ drawDiamond(
       this.clearCanvas();
       return;
     }
-    if (this.selectedTool === "eraser") {
-      this.clicked = true;
-      this.hoveredForErase = [];
-      for (let i = 0; i < this.existingShapes.length; i++) {
-        if (this.isPointInsideShape(pos.x, pos.y, this.existingShapes[i])) {
-          this.hoveredForErase.push(i);
-        }
-      }
-      this.clearCanvas();
-      return;
+if (this.selectedTool === "eraser") {
+  console.log("Eraser mouse up triggered");
+  this.clicked = true;
+  this.hoveredForErase = [];
+
+  const hitIndexes: number[] = [];
+  for (let i = 0; i < this.existingShapes.length; i++) {
+    if (this.isPointInsideShape(pos.x, pos.y, this.existingShapes[i])) {
+      hitIndexes.push(i);
     }
+  }
+
+  this.hoveredForErase = hitIndexes;
+  this.clearCanvas();
+  return;
+}
+
     if (this.selectedTool === "pencil") {
       this.clicked = true;
       this.pencilPoints = [pos];
@@ -1040,45 +1062,57 @@ drawDiamond(
     this.clearCanvas();
     return;
   }
-    if (this.selectedTool === "eraser" && this.hoveredForErase.length) {
-      const doomedIds = this.hoveredForErase.map(i => this.existingShapes[i].id);
-      if (this.isSolo) {
-        this.hoveredForErase.sort((a, b) => b - a).forEach(i => this.existingShapes.splice(i, 1));
-        this.hoveredForErase = [];
-        this.clearCanvas();
-        if (this.isSolo) this.scheduleLocalSave();
-        return;
-      }
-      doomedIds.forEach(id =>
-        this.safeSend(
-          JSON.stringify({
-            type: "shape:delete",
-            roomId: this.roomId?.toString(),
-            shapeId: id,
-          }),
-        ),
-      );
-      const token = localStorage.getItem("token");
-      if (!token) {
-        console.warn("No token found. Skipping deletion requests.");
-        return;
-      }
-      if (doomedIds.length === 0) return;
-      try {
-        await axios.delete(`${BACKEND_URL}/shapes/${doomedIds.join(",")}`, {
-          headers: {
-            Authorization: localStorage.getItem("token") ?? "",
-          },
-        });
-        console.log("🗑️ Shapes deleted");
-      } catch (err) {
-        console.error("❌ Error deleting shapes:", err);
-      }
-      this.hoveredForErase.sort((a, b) => b - a).forEach(i => this.existingShapes.splice(i, 1));
-      this.hoveredForErase = [];
-      this.clearCanvas();
+  if (this.selectedTool === "eraser") {
+    if (!this.hoveredForErase || this.hoveredForErase.length === 0) return;
+    console.log(" Inside eraser logic, isSolo?", this.isSolo);
+    const doomedIds = this.hoveredForErase.map(i => this.existingShapes[i]?.id).filter(Boolean);
+    this.hoveredForErase.sort((a, b) => b - a).forEach(i => {
+      const shape = this.existingShapes[i];
+      if (!shape) return;
+      console.log("🗑️ Deleting shape at index", i);
+      this.existingShapes.splice(i, 1);
+    });
+
+    this.hoveredForErase = [];
+    this.clearCanvas();
+
+    if (this.isSolo) {
+      this.scheduleLocalSave();
       return;
     }
+
+  // 🎯 Collaborative mode
+    doomedIds.forEach(id => {
+      this.safeSend(
+        JSON.stringify({
+          type: "shape:delete",
+          roomId: this.roomId?.toString(),
+          shapeId: id,
+        })
+      );
+    });
+
+    const token = localStorage.getItem("token");
+    if (!token) {
+      console.warn("No token found. Skipping deletion requests.");
+      return;
+    }
+
+    if (doomedIds.length === 0) return;
+    try {
+      await axios.delete(`${BACKEND_URL}/shapes/${doomedIds.join(",")}`, {
+        headers: {
+          Authorization: token,
+        },
+      });
+      console.log("✅ Deleted from backend:", doomedIds);
+    } catch (err) {
+      console.error("❌ Backend deletion failed:", err);
+    }
+    return;
+  }
+
+
     let shape: Shape | null = null;
 
     if (this.selectedTool === "rect") {
@@ -1193,11 +1227,11 @@ drawDiamond(
         if (newHover === "start" || newHover === "end") {
           this.canvas.style.cursor = "crosshair";
         } else if (newHover === "mid") {
-          this.canvas.style.cursor = "move"; // move entire arrow
+          this.canvas.style.cursor = "move"; 
         } else {
           this.canvas.style.cursor = "default";
         }
-        this.clearCanvas(); // trigger redraw with hover
+        this.clearCanvas(); 
       }
     } else {
       this.ctx.strokeStyle = strokeCol;
@@ -1214,7 +1248,7 @@ drawDiamond(
           bl: "nesw-resize",
         };
         this.canvas.style.cursor = cursorMap[h];
-        this.activeHandle = h; // ✅ assign here instead of hoveredEndpoint
+        this.activeHandle = h;
         this.clearCanvas();
       }
        else if (this.isPointInsideShape(pos.x, pos.y, shape)) {
@@ -1311,6 +1345,7 @@ drawDiamond(
           if (this.isPointInsideShape(pos.x, pos.y, this.existingShapes[i]) && !this.hoveredForErase.includes(i)) {
             this.hoveredForErase.push(i);
           }
+          console.log("Hovered for erase:", this.hoveredForErase);
         }
         this.ctx.strokeStyle = strokeCol;
         this.clearCanvas(); 
