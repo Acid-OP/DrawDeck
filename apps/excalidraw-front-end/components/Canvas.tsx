@@ -5,7 +5,7 @@ import { Game } from "@/app/draw/Game";
 import { ShareButton } from "./ShareButton";
 import { TopBar } from "./TopBar";
 import { Menu } from "./Menu";
-
+import { PropertiesPanel } from "./PropertiesPanel";
 export type Tool =
   | "hand"
   | "select"
@@ -76,6 +76,12 @@ useEffect(() => {
       return () => g.destroy();
     }
   }, [canvasRef, isSolo, roomId, socket, dimensions]);
+  const [strokeIndex, setStrokeIndex] = useState(0);
+const [backgroundIndex, setBackgroundIndex] = useState(0);
+const [strokeWidthIndex, setStrokeWidthIndex] = useState(1);
+const [strokeStyleIndex, setStrokeStyleIndex] = useState(0);
+const [fillIndex, setFillIndex] = useState(0);
+
 
   return (
     <div className={`w-screen h-screen overflow-hidden relative ${theme === "dark" ? "bg-[#121212]" : "bg-white"}`}>
@@ -89,9 +95,24 @@ useEffect(() => {
       <div className="absolute top-4 left-0 w-full flex justify-between items-center px-6">
         <Menu theme={theme} onThemeToggle={toggleTheme} />
         <TopBar selectedTool={selectedTool} setSelectedTool={setSelectedTool} theme={theme} />
+        {["rect", "diamond", "circle", "arrow", "line", "pencil", "text"].includes(selectedTool) && (
+          <div className="absolute top-[72px] left-6 z-50">
+            <PropertiesPanel
+            strokeSelectedIndex={strokeIndex}
+            backgroundSelectedIndex={backgroundIndex}
+            strokeWidthSelectedIndex={strokeWidthIndex}
+            strokeStyleSelectedIndex={strokeStyleIndex}
+            fillSelectedIndex={fillIndex}
+            onStrokeColorSelect={setStrokeIndex}
+            onBackgroundColorSelect={setBackgroundIndex}
+            onStrokeWidthSelect={setStrokeWidthIndex}
+            onStrokeStyleSelect={setStrokeStyleIndex}
+            onFillStyleSelect={setFillIndex}
+          />
+          </div>
+        )}
         <ShareButton />
       </div>
-
       {inputBox && (
         <textarea
           autoFocus
