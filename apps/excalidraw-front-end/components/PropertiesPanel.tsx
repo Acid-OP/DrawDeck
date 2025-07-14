@@ -126,14 +126,14 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
   const backgroundColors = ['transparent', '#ffc9c9', '#b2f2bb', '#a5d8ff', '#ffec99', 'transparent'];
 
   const strokeWidths = [
-    <Minus className="w-4 h-4 text-white" strokeWidth={1} />, // thin
-    <Minus className="w-4 h-4 text-white" strokeWidth={3} />, // medium
-    <Minus className="w-4 h-4 text-white" strokeWidth={5} />  // bold
+    <Minus className="w-4 h-4 text-white" strokeWidth={1} />, 
+    <Minus className="w-4 h-4 text-white" strokeWidth={3} />, 
+    <Minus className="w-4 h-4 text-white" strokeWidth={5} />  
   ];
 
   const strokeStyles = [
-    <Minus className="w-4 h-4 text-white" strokeWidth={2} />, // solid
-    <MoreHorizontal className="w-4 h-4 text-white" strokeWidth={3} />, // dashed
+    <Minus className="w-4 h-4 text-white" strokeWidth={2} />, 
+    <MoreHorizontal className="w-4 h-4 text-white" strokeWidth={3} />, 
     <div className="flex gap-0.5 overflow-hidden w-5 h-5 items-center justify-center">
       {[...Array(7)].map((_, i) => (
         <div key={i} className="w-[2px] h-[2px] bg-white rounded-full" />
