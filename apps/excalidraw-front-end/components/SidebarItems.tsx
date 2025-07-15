@@ -105,7 +105,6 @@ export const SidebarItems: React.FC<SidebarItemsProps> = ({ theme, onThemeToggle
       {showLiveModal && (
         <LiveCollabModal 
           onClose={() => setShowLiveModal(false)}
-          onCreateRoom={handleCreateRoom}
         />
       )}
     </>
