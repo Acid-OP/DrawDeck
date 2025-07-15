@@ -19,11 +19,11 @@ export type Tool =
   | "eraser";
 
 export function Canvas({
-  roomId,
+  roomName,
   socket,
   isSolo = false,
 }: {
-  roomId: number;
+  roomName: string;
   socket: WebSocket | null;
   isSolo?: boolean;
 }) {
@@ -65,7 +65,7 @@ useEffect(() => {
 
   useEffect(() => {
     if (canvasRef.current && dimensions.width !== 0 && dimensions.height !== 0) {
-      const g = new Game(canvasRef.current, roomId, socket, isSolo , theme);
+      const g = new Game(canvasRef.current, roomName, socket, isSolo , theme);
       g.onToolChange = (tool) => setSelectedTool(tool);
       g.onTextInsert = (x, y) => {
         if ((window as any).justBlurredTextInput) return;
@@ -75,7 +75,7 @@ useEffect(() => {
 
       return () => g.destroy();
     }
-  }, [canvasRef, isSolo, roomId, socket, dimensions]);
+  }, [canvasRef, isSolo, roomName, socket, dimensions]);
   const [strokeIndex, setStrokeIndex] = useState(0);
 const [backgroundIndex, setBackgroundIndex] = useState(0);
 const [strokeWidthIndex, setStrokeWidthIndex] = useState(1);

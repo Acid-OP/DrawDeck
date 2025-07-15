@@ -1,7 +1,4 @@
 import { Tool } from "@/components/Canvas";
-import { getExistingShapes } from "./http";
-import axios from "axios";
-import { BACKEND_URL } from "@/config";
 
 type BaseShape = { readonly id: string };
 type Shape =
@@ -56,7 +53,8 @@ export class Game {
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
   private existingShapes: Shape[];
-  private roomId?: number | null;
+  private roomId?: string | null;
+  private roomName?: string | null;
   private clicked: boolean;
   private startX: number | null = null;
   private startY: number | null = null;
@@ -83,55 +81,56 @@ export class Game {
   this.theme = theme;
   this.clearCanvas(); // Optional: re-render shapes with new theme colors if needed
 }
-
   private theme: 'light' | 'dark' = 'dark';
   private localStorageTimeout: any = null;
   private isInit = false;
-  private scheduleLocalSave() {
-    if (!this.isSolo) return;
-    if (this.localStorageTimeout) clearTimeout(this.localStorageTimeout);
-    this.localStorageTimeout = setTimeout(() => {
-      this.saveToLocalStorage();
-    }, 1000); // 1 second delay
-  }
-  private pendingWrites: Shape[] = [];
-  private flushTimeout: any = null;
-  private saveToLocalStorage() {
-    if (!this.isSolo) return;
-    try {
-      localStorage.setItem("solo_shapes", JSON.stringify(this.existingShapes));
-    } catch (err) {
-      console.error("Failed to save shapes to localStorage", err);
-    }
-  }
+private scheduleLocalSave() {
+  if (this.localStorageTimeout) clearTimeout(this.localStorageTimeout);
+  this.localStorageTimeout = setTimeout(() => {
+    this.saveToLocalStorage();
+  }, 1000);
+}
 
-  private scheduleWrite(shape: Shape) {
-    if (!this.roomId) return;
-    this.pendingWrites.push(shape);
-    if (this.flushTimeout) clearTimeout(this.flushTimeout);
-    this.flushTimeout = setTimeout(() => {
-      this.flushToDB();
-    }, 1000);
+private saveToLocalStorage() {
+  try {
+    const key = this.getLocalStorageKey();
+    localStorage.setItem(key, JSON.stringify(this.existingShapes));
+  } catch (err) {
+    console.error("Failed to save shapes to localStorage", err);
   }
-  
+}
+
+private scheduleWrite(shape: Shape) {
+  if (!this.roomId) return;
+  const key = `shapes_${this.roomId}`;
+  localStorage.setItem(key, JSON.stringify(this.existingShapes));
+}
+
   private safeSend(payload: any) {
     if (this.isSolo || !this.socket || !this.roomId) return;
     this.socket.send(JSON.stringify(payload));
   }
+private broadcastShape(shape: Shape) {
+  const key = this.getLocalStorageKey();
 
-
-  private async flushToDB() {
-    if (this.isSolo || !this.roomId) return;
-    const shapes = [...this.pendingWrites];
-    this.pendingWrites = [];
-    try {
-      await axios.post(`${BACKEND_URL}/shapes/${this.roomId}`, { shapes }, {
-        headers: { Authorization: localStorage.getItem("token") ?? "" },
-      });
-    } catch (err) {
-      console.error("Flush failed", err);
-    }
+  if (this.isSolo) {
+    // Solo mode — write to localStorage
+    const existing = JSON.parse(localStorage.getItem(key) || "[]");
+    const updated = [...existing, shape];
+    localStorage.setItem(key, JSON.stringify(updated));
   }
+
+  this.existingShapes.push(shape);
+
+  // Multiplayer — send to server via socket
+  this.safeSend?.({
+    type: "shape:add",
+    roomId: this.roomId?.toString(),
+    shape,
+  });
+}
+
+
 
   hitTestShapeHandle(shape: Shape, mouseX: number, mouseY: number): "tl" | "tr" | "bl" | "br" | null {
   const handleSize = 10;
@@ -520,12 +519,20 @@ if (shape.type === "pencil") {
     const dist = Math.sqrt(dx * dx + dy * dy);
     return dist <= tol;
   }
-  constructor(canvas: HTMLCanvasElement, roomId: number | null, socket: WebSocket | null , isSolo:boolean=false , theme: "light" | "dark" ) {
+  private getLocalStorageKey(): string {
+  return this.isSolo ? "solo_shapes" : `shapes_${this.roomId}`;
+}
+
+  constructor(canvas: HTMLCanvasElement, roomName: string | null, socket: WebSocket | null , isSolo:boolean=false , theme: "light" | "dark" ) {
     this.canvas = canvas;
     this.ctx = canvas.getContext("2d")!;
     this.existingShapes = [];
     this.isSolo = isSolo;
-    this.roomId = roomId;
+    this.roomName = roomName;
+    this.roomId = roomName;
+      console.log("[Game.constructor] roomName:", roomName);
+  console.log("[Game.constructor] parsed roomId:", this.roomId);
+
     this.socket = socket;
     this.theme = theme;
     this.clearCanvas();
@@ -534,12 +541,13 @@ if (shape.type === "pencil") {
     if (!isSolo && this.socket) this.initHandlers();
     this.initMouseHandlers();
   }
-  clearSoloShapes() {
-    if (!this.isSolo) return;
-    this.existingShapes = [];
-    localStorage.removeItem("solo_shapes");
-    this.clearCanvas();
-  }
+clearShapes() {
+  const key = this.getLocalStorageKey();
+  localStorage.removeItem(key);
+  this.existingShapes = [];
+  this.clearCanvas();
+}
+
   isOnSelectionBoxBorder(shape: Shape, x: number, y: number): boolean {
     const pad = 8;
     const tolerance = 6;
@@ -625,17 +633,13 @@ if (shape.type === "pencil") {
       y,
       text,
     };
-
     this.existingShapes.push(shape);
-    if(!this.isSolo){
-      this.safeSend(JSON.stringify({
-        type: "shape:add",
-        roomId: this.roomId?.toString(),
-        shape,
-      }));
-    this.scheduleWrite(shape);
-    }
-    this.clearCanvas();
+if (this.isSolo) {
+  this.scheduleLocalSave();
+} else {
+  this.broadcastShape(shape);
+}
+
   }
 
   getMousePos = (e: MouseEvent) => {
@@ -745,52 +749,54 @@ drawDiamond(
   this.ctx.lineTo(top.x, top.y);
   this.ctx.stroke();
 }
-
-
   destroy() {
     this.canvas.removeEventListener("mousedown", this.mouseDownHandler);
     this.canvas.removeEventListener("mouseup", this.mouseUpHandler);
     this.canvas.removeEventListener("mousemove", this.mouseMoveHandler);
-    if (this.flushTimeout) {
-      clearTimeout(this.flushTimeout);
-      this.flushToDB();
-    }
+
   }
   setTool(tool: Tool) {
     this.selectedTool = tool;
     this.hoveredForErase = [];
   }
+  
   async init() {
-    // this.isInit = true;
-    if (this.isSolo) {
-      const saved = localStorage.getItem("solo_shapes");
-      if (saved) {
-        try {
-          const shapes: Shape[] = JSON.parse(saved);
-          this.existingShapes = shapes;
-        } catch (e) {
-          console.error("Failed to parse saved solo shapes", e);
-        }
+  if (this.isSolo) {
+    const key = this.getLocalStorageKey();
+    const saved = localStorage.getItem(key);
+    if (saved) {
+      try {
+        const shapes: Shape[] = JSON.parse(saved);
+        this.existingShapes = shapes;
+      } catch (e) {
+        console.error("Failed to parse saved solo shapes", e);
       }
-      this.clearCanvas();
-      this.isInit = false;
-      return;
     }
-    if (!this.roomId) return; 
-    const shapes = await getExistingShapes(this.roomId);
-    const seenIds = new Set(this.existingShapes.map(s => s.id));
-    shapes.forEach(shape => {
-      if (!seenIds.has(shape.id)) {
-        this.existingShapes.push(shape);
-      }
-    });
-
     this.clearCanvas();
+    this.isInit = false;
+    return;
   }
 
-  initHandlers() {
-  if (!this.socket || !this.roomId) return;
+  if (!this.roomId) return;
 
+  // 👇 ADD THIS
+  this.initHandlers();
+
+  const saved = localStorage.getItem(`shapes_${this.roomId}`);
+  const shapes: Shape[] = saved ? JSON.parse(saved) : [];
+
+  const seenIds = new Set(this.existingShapes.map(s => s.id));
+  shapes.forEach((shape: Shape) => {
+    if (!seenIds.has(shape.id)) {
+      this.existingShapes.push(shape);
+    }
+  });
+
+  this.clearCanvas();
+}
+
+  initHandlers() {
+  if (this.isSolo || !this.socket || !this.roomId) return;
   this.socket.onmessage = (event) => {
     const msg = JSON.parse(event.data);
     if (msg.roomId !== this.roomId?.toString()) return;
@@ -801,23 +807,49 @@ drawDiamond(
         const exists = this.existingShapes.some(s => s.id === shape.id);
         if (!exists) {
           this.existingShapes.push(shape);
+          this.scheduleWrite(shape);
+          this.broadcastShape(shape);
           this.clearCanvas();
         }
         break;
       }
-
       case "shape:delete": {
-        const shapeId = msg.shapeId;
-        const index = this.existingShapes.findIndex(s => s.id === shapeId);
-        if (index !== -1) {
-          this.existingShapes.splice(index, 1);
-          this.clearCanvas();
-        }
-        break;
-      }
+  const shapeId = msg.shapeId;
+  const index = this.existingShapes.findIndex(s => s.id === shapeId);
+  if (index !== -1) {
+    this.deleteShapeByIndex(index);
+  }
+  break;
+}
+
     }
   };
 }
+deleteShapeById(id: string) {
+  this.existingShapes = this.existingShapes.filter(shape => shape.id !== id);
+  this.saveToLocalStorage();
+}
+
+private deleteShapeByIndex(index: number) {
+  const shape = this.existingShapes[index];
+  if (!shape) return;
+  this.existingShapes.splice(index, 1);
+
+  if (this.isSolo) {
+  this.scheduleLocalSave();
+} else {
+  this.scheduleWriteAll();
+  this.safeSend({
+    type: "shape:delete",
+    roomId: this.roomId?.toString(),
+    shapeId: shape.id,
+  });
+}
+
+
+  this.clearCanvas();
+}
+
 
   clearCanvas() {
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
@@ -907,6 +939,7 @@ drawDiamond(
     const pos = this.getMousePos(e);
     if (this.selectedTool==="select" && this.selectedShapeIndex!=null){
       const shape=this.existingShapes[this.selectedShapeIndex];
+      if (!shape) return; 
       if (shape.type === "line" || shape.type === "arrow") {
       const dist = (x1: number, y1: number, x2: number, y2: number) =>
         Math.hypot(x2 - x1, y2 - y1);
@@ -1020,6 +1053,11 @@ if (this.selectedTool === "eraser") {
     ctx.lineTo(rightX, rightY);
     ctx.stroke();
   }
+private scheduleWriteAll() {
+  if (!this.roomId) return;
+  const key = `shapes_${this.roomId}`;
+  localStorage.setItem(key, JSON.stringify(this.existingShapes));
+}
 
   mouseUpHandler = async (e: MouseEvent) => {
     const pos = this.getMousePos(e);
@@ -1030,54 +1068,57 @@ if (this.selectedTool === "eraser") {
       this.clearCanvas();  
       if (this.selectedShapeIndex != null) {
         const shape = this.existingShapes[this.selectedShapeIndex];
-        this.safeSend(
-          JSON.stringify({
-            type: "shape:add",
-            roomId: this.roomId?.toString(),
-            shape,
-          })
-        );
+        if (this.isSolo) {
+          this.scheduleLocalSave(); // Save locally
+        } else {
+          this.safeSend(
+            JSON.stringify({
+              type: "shape:add",
+              roomId: this.roomId?.toString(),
+              shape,
+            })
+          );
+        }
       }
-      return;
+    return;
     }
     this.clicked = false;
     if (this.startX == null || this.startY == null) return;
+    if (this.selectedTool === "line" || this.selectedTool === "arrow") {
+      const shape: Shape = {
+        id: this.genId(),
+        type: this.selectedTool,
+        startX: this.startX,
+        startY: this.startY,
+        endX: pos.x,
+        endY: pos.y,
+      };
 
-  if (this.selectedTool === "line" || this.selectedTool === "arrow") {
-    const shape: Shape = {
-      id: this.genId(),
-      type: this.selectedTool,
-      startX: this.startX,
-      startY: this.startY,
-      endX: pos.x,
-      endY: pos.y,
-    };
+      this.existingShapes.push(shape);
+      this.broadcastShape(shape);
+      this.scheduleLocalSave();
 
-    this.existingShapes.push(shape);
-    this.selectedShapeIndex = this.existingShapes.length - 1;
+      this.selectedShapeIndex = this.existingShapes.length - 1;
 
-    if (this.onToolChange) this.onToolChange("select");
-    this.selectedTool = "select";
+      if (this.onToolChange) this.onToolChange("select");
+      this.selectedTool = "select";
 
-    this.clearCanvas();
-    return;
-  }
-  if (this.selectedTool === "eraser") {
+      this.clearCanvas();
+      return;
+    }
+    if (this.selectedTool === "eraser") {
     if (!this.hoveredForErase || this.hoveredForErase.length === 0) return;
     console.log(" Inside eraser logic, isSolo?", this.isSolo);
     const doomedIds = this.hoveredForErase.map(i => this.existingShapes[i]?.id).filter(Boolean);
     this.hoveredForErase.sort((a, b) => b - a).forEach(i => {
-      const shape = this.existingShapes[i];
-      if (!shape) return;
-      console.log("🗑️ Deleting shape at index", i);
-      this.existingShapes.splice(i, 1);
-    });
+  this.deleteShapeByIndex(i);
+});
 
     this.hoveredForErase = [];
     this.clearCanvas();
 
     if (this.isSolo) {
-      this.scheduleLocalSave();
+    
       return;
     }
 
@@ -1091,28 +1132,10 @@ if (this.selectedTool === "eraser") {
         })
       );
     });
+    this.scheduleWriteAll();
 
-    const token = localStorage.getItem("token");
-    if (!token) {
-      console.warn("No token found. Skipping deletion requests.");
-      return;
-    }
-
-    if (doomedIds.length === 0) return;
-    try {
-      await axios.delete(`${BACKEND_URL}/shapes/${doomedIds.join(",")}`, {
-        headers: {
-          Authorization: token,
-        },
-      });
-      console.log("✅ Deleted from backend:", doomedIds);
-    } catch (err) {
-      console.error("❌ Backend deletion failed:", err);
-    }
     return;
   }
-
-
     let shape: Shape | null = null;
 
     if (this.selectedTool === "rect") {
@@ -1178,19 +1201,15 @@ if (this.selectedTool === "eraser") {
       }, 0);
       return;}
       if (!shape) return;
-      this.existingShapes.push(shape);
-      this.clearCanvas();
-      if (this.isSolo) this.scheduleLocalSave();
-      if (!this.isSolo) {
-        this.safeSend(
-          JSON.stringify({
-            type: "shape:add",
-            roomId: this.roomId?.toString(),
-            shape,
-          })
-        );
-        this.scheduleWrite(shape);
-      }
+
+this.existingShapes.push(shape);
+if (!this.isSolo) {
+  this.broadcastShape(shape);
+}
+this.scheduleLocalSave();
+
+
+
       this.startX = null;
       this.startY = null;
       this.endX = null;
@@ -1203,7 +1222,7 @@ if (this.selectedTool === "eraser") {
     const strokeCol = this.theme === "dark" ? "#ffffff" : "#000000";
     if (this.selectedTool === "select" && this.selectedShapeIndex != null) {
       const shape = this.existingShapes[this.selectedShapeIndex];
-
+      if (!shape) return;
     if (shape.type === "line" || shape.type === "arrow") {
       const dist = (x1: number, y1: number, x2: number, y2: number) =>
       Math.hypot(x2 - x1, y2 - y1);
@@ -1327,16 +1346,19 @@ if (this.selectedTool === "eraser") {
               s.endY = p.y;
             }}
           }
-        if (this.socket && this.roomId) {
-          this.safeSend(JSON.stringify({
-            type: "shape:add",
-            roomId: this.roomId?.toString(),
-            shape: s
-          }));
-        }
-        this.scheduleWrite(s);
-        this.clearCanvas(); 
-        if (this.isSolo) this.scheduleLocalSave();
+this.clearCanvas();
+
+if (this.isSolo) {
+  this.scheduleLocalSave();
+} else {
+  this.safeSend(JSON.stringify({
+    type: "shape:add",
+    roomId: this.roomId?.toString(),
+    shape: s
+  }));
+  this.scheduleWrite(s);
+}
+
         return;
       }
       if (this.selectedTool === "eraser") {

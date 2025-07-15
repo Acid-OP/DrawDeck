@@ -5,7 +5,7 @@ import axios from "axios";
 import { useRouter } from "next/navigation";
 import { BACKEND_URL } from "@/config";
 import { SquareSlash } from "lucide-react";
-
+import { encodeRoomId } from "@/utils/slug";
 interface Props {
   onClose: () => void;
 }
@@ -40,7 +40,9 @@ export const LiveSessionInitModal: React.FC<Props> = ({ onClose }) => {
         }
       );
 
-      router.push(`/canvas/${roomName}`);
+      // const slug = encodeRoomId(roomName);
+      // router.push(`/canvas/${slug}`);
+      router.push(`/canvas/${roomName.trim()}`);
     } catch (err) {
       console.error("❌ Room creation failed", err);
       alert("Room creation failed. Check console.");

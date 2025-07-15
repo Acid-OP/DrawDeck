@@ -1,8 +1,8 @@
-// app/canvas/solo/page.tsx
+// SoloCanvas.tsx
 "use client";
 
 import { Canvas } from "@/components/Canvas";
 
-export default function SoloCanvasPage() {
-  return <Canvas roomId={-1} socket={null} isSolo={true} />;
+export default function SoloCanvas() {
+  return <Canvas roomName="__solo" socket={null} isSolo={true} />;
 }
