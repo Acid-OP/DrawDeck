@@ -1,8 +1,8 @@
-import {WebSocketServer} from "ws";
+import { WebSocketServer } from "ws";
 import jwt, { type JwtPayload } from "jsonwebtoken";
-import {JWT_SECRET} from '@repo/backend-common/index'
+import { JWT_SECRET } from "@repo/backend-common/index";
 import WebSocket from "ws";
-import {prismaClient} from "@repo/db/client";
+
 const wss = new WebSocketServer({ port: 8080 });
 
 wss.on("listening", () => {
@@ -26,23 +26,27 @@ function verifyToken(token: string): string | null {
   }
 }
 
-function broadcastToRoom(roomId: string, payload: unknown) {
+function broadcastToRoom(roomName: string, payload: unknown) {
   const msg = JSON.stringify(payload);
-  clients.forEach((c) => {
-    if (c.rooms.has(roomId)) c.ws.send(msg);
+  clients.forEach((client) => {
+    if (client.rooms.has(roomName)) {
+      client.ws.send(msg);
+    }
   });
 }
 
-wss.on('connection',function connection(ws , request) {
+wss.on("connection", (ws, request) => {
   const query = new URL(request.url ?? "", "http://localhost");
   const userId = verifyToken(query.searchParams.get("token") ?? "");
+
   if (!userId) {
     return ws.close(4001, "invalidtoken");
   }
+
   const client: ClientInfo = { ws, userId, rooms: new Set() };
   clients.add(client);
-  
-  ws.on("message", async (raw) => {
+
+  ws.on("message", (raw) => {
     let payload: any;
     try {
       payload = JSON.parse(raw.toString());
@@ -54,65 +58,41 @@ wss.on('connection',function connection(ws , request) {
 
     switch (type) {
       case "join_room": {
-        client.rooms.add(String(payload.roomId));
+        client.rooms.add(String(payload.roomName));
         break;
       }
 
       case "leave_room": {
-        client.rooms.delete(String(payload.roomId));
+        client.rooms.delete(String(payload.roomName));
         break;
       }
 
       case "shape:add": {
-        const { roomId, shape } = payload;
-        try {
-await prismaClient.shape.upsert({
-  where: { id: shape.id },
-  create: {
-    id: shape.id,
-    roomId: Number(roomId),
-    userId,
-    type: shape.type,
-    data: shape,
-  },
-  update: {
-    roomId: Number(roomId),
-    userId,
-    type: shape.type,
-    data: shape,
-  },
-});
-
-
-          broadcastToRoom(String(roomId), {
-            type: "shape:add",
-            roomId,
-            shape,
-          });
-        } catch (err) {
-          console.error("shape:add failed", err);
-        }
+        const { roomName, shape } = payload;
+        broadcastToRoom(String(roomName), {
+          type: "shape:add",
+          roomName,
+          shape,
+        });
         break;
       }
 
       case "shape:delete": {
-        const { roomId, shapeId } = payload;
-        try {
-          await prismaClient.shape.delete({ where: { id: shapeId } });
-          broadcastToRoom(String(roomId), {
-            type: "shape:delete",
-            roomId,
-            shapeId,
-          });
-        } catch (err) {
-          console.error("shape:delete failed", err);
-        }
+        const { roomName, shapeId } = payload;
+        broadcastToRoom(String(roomName), {
+          type: "shape:delete",
+          roomName,
+          shapeId,
+        });
         break;
       }
 
+      default: {
+        console.warn("Unknown message type:", type);
+      }
     }
   });
-  
+
   ws.on("close", () => {
     clients.delete(client);
   });

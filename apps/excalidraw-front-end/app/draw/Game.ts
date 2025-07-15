@@ -310,28 +310,27 @@ private broadcastShape(shape: Shape) {
 
   const inset = handleSize / 2;
 
-  // ⬛ Draw 4 trimmed sides (lines not touching center of handles)
   this.ctx.beginPath();
-  this.ctx.moveTo(x + inset, y);             // Top side
+  this.ctx.moveTo(x + inset, y);            
   this.ctx.lineTo(x + w - inset, y);
 
-  this.ctx.moveTo(x + w, y + inset);         // Right side
+  this.ctx.moveTo(x + w, y + inset);        
   this.ctx.lineTo(x + w, y + h - inset);
 
-  this.ctx.moveTo(x + w - inset, y + h);     // Bottom side
+  this.ctx.moveTo(x + w - inset, y + h);   
   this.ctx.lineTo(x + inset, y + h);
 
-  this.ctx.moveTo(x, y + h - inset);         // Left side
+  this.ctx.moveTo(x, y + h - inset);         
   this.ctx.lineTo(x, y + inset);
 
   this.ctx.stroke();
 
-  // 🔲 Handle points at corners
+  
   const handles = [
-    { x: x,     y: y },         // top-left
-    { x: x + w, y: y },         // top-right
-    { x: x + w, y: y + h },     // bottom-right
-    { x: x,     y: y + h },     // bottom-left
+    { x: x,     y: y },         
+    { x: x + w, y: y },         
+    { x: x + w, y: y + h },     
+    { x: x,     y: y + h },     
   ];
 
   for (const { x: hx, y: hy } of handles) {
@@ -351,16 +350,16 @@ private broadcastShape(shape: Shape) {
   const inset = handleSize / 2;
 
   this.ctx.beginPath();
-  this.ctx.moveTo(x + inset, y);             // Top
+  this.ctx.moveTo(x + inset, y);         
   this.ctx.lineTo(x + w - inset, y);
 
-  this.ctx.moveTo(x + w, y + inset);         // Right
+  this.ctx.moveTo(x + w, y + inset);         
   this.ctx.lineTo(x + w, y + h - inset);
 
-  this.ctx.moveTo(x + w - inset, y + h);     // Bottom
+  this.ctx.moveTo(x + w - inset, y + h);     
   this.ctx.lineTo(x + inset, y + h);
 
-  this.ctx.moveTo(x, y + h - inset);         // Left
+  this.ctx.moveTo(x, y + h - inset);       
   this.ctx.lineTo(x, y + inset);
   this.ctx.stroke();
 
@@ -389,16 +388,16 @@ if (shape.type === "diamond") {
   const inset = handleSize / 2;
 
   this.ctx.beginPath();
-  this.ctx.moveTo(minX + inset, minY);             // Top
+  this.ctx.moveTo(minX + inset, minY);            
   this.ctx.lineTo(maxX - inset, minY);
 
-  this.ctx.moveTo(maxX, minY + inset);             // Right
+  this.ctx.moveTo(maxX, minY + inset);             
   this.ctx.lineTo(maxX, maxY - inset);
 
-  this.ctx.moveTo(maxX - inset, maxY);             // Bottom
+  this.ctx.moveTo(maxX - inset, maxY);             
   this.ctx.lineTo(minX + inset, maxY);
 
-  this.ctx.moveTo(minX, maxY - inset);             // Left
+  this.ctx.moveTo(minX, maxY - inset);             
   this.ctx.lineTo(minX, minY + inset);
   this.ctx.stroke();
 
@@ -427,16 +426,16 @@ if (shape.type === "text") {
   const inset = handleSize / 2;
 
   this.ctx.beginPath();
-  this.ctx.moveTo(x + inset, y);           // Top
+  this.ctx.moveTo(x + inset, y);          
   this.ctx.lineTo(x + w - inset, y);
 
-  this.ctx.moveTo(x + w, y + inset);       // Right
+  this.ctx.moveTo(x + w, y + inset);     
   this.ctx.lineTo(x + w, y + h - inset);
 
-  this.ctx.moveTo(x + w - inset, y + h);   // Bottom
+  this.ctx.moveTo(x + w - inset, y + h);  
   this.ctx.lineTo(x + inset, y + h);
 
-  this.ctx.moveTo(x, y + h - inset);       // Left
+  this.ctx.moveTo(x, y + h - inset);       
   this.ctx.lineTo(x, y + inset);
   this.ctx.stroke();
 
@@ -465,16 +464,16 @@ if (shape.type === "pencil") {
   const inset = handleSize / 2;
 
   this.ctx.beginPath();
-  this.ctx.moveTo(minX + inset, minY);           // Top
+  this.ctx.moveTo(minX + inset, minY);          
   this.ctx.lineTo(maxX - inset, minY);
 
-  this.ctx.moveTo(maxX, minY + inset);           // Right
+  this.ctx.moveTo(maxX, minY + inset);           
   this.ctx.lineTo(maxX, maxY - inset);
 
-  this.ctx.moveTo(maxX - inset, maxY);           // Bottom
+  this.ctx.moveTo(maxX - inset, maxY);         
   this.ctx.lineTo(minX + inset, maxY);
 
-  this.ctx.moveTo(minX, maxY - inset);           // Left
+  this.ctx.moveTo(minX, maxY - inset);           
   this.ctx.lineTo(minX, minY + inset);
   this.ctx.stroke();
 
@@ -779,7 +778,6 @@ drawDiamond(
 
   if (!this.roomId) return;
 
-  // 👇 ADD THIS
   this.initHandlers();
 
   const saved = localStorage.getItem(`shapes_${this.roomId}`);
@@ -814,17 +812,15 @@ drawDiamond(
         break;
       }
       case "shape:delete": {
-  const shapeId = msg.shapeId;
-  const index = this.existingShapes.findIndex(s => s.id === shapeId);
-  if (index !== -1) {
-    this.deleteShapeByIndex(index);
+        const shapeId = msg.shapeId;
+        const index = this.existingShapes.findIndex(s => s.id === shapeId);
+        if (index !== -1) {
+          this.deleteShapeByIndex(index);
+        }
+        break;
+      }}
+    };
   }
-  break;
-}
-
-    }
-  };
-}
 deleteShapeById(id: string) {
   this.existingShapes = this.existingShapes.filter(shape => shape.id !== id);
   this.saveToLocalStorage();

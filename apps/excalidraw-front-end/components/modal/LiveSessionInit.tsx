@@ -1,11 +1,9 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
-import axios from "axios";
 import { useRouter } from "next/navigation";
-import { BACKEND_URL } from "@/config";
 import { SquareSlash } from "lucide-react";
-import { encodeRoomId } from "@/utils/slug";
+
 interface Props {
   onClose: () => void;
 }
@@ -13,43 +11,18 @@ interface Props {
 export const LiveSessionInitModal: React.FC<Props> = ({ onClose }) => {
   const modalRef = useRef<HTMLDivElement>(null);
   const [roomName, setRoomName] = useState("");
-  const [creating, setCreating] = useState(false);
   const router = useRouter();
 
-  const handleCreateRoom = async (e: React.FormEvent) => {
+  const handleCreateRoom = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!roomName.trim()) return alert("Please enter a room name");
+    const trimmed = roomName.trim();
 
-    const token = localStorage.getItem("token");
-    if (!token) {
-      alert("Please login first");
-      onClose();
+    if (!trimmed) {
+      alert("Please enter a room name");
       return;
     }
 
-    try {
-      setCreating(true);
-      await axios.post(
-        `${BACKEND_URL}/room`,
-        { name: roomName },
-        {
-          headers: {
-            Authorization: `${token}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
-
-      // const slug = encodeRoomId(roomName);
-      // router.push(`/canvas/${slug}`);
-      router.push(`/canvas/${roomName.trim()}`);
-    } catch (err) {
-      console.error("❌ Room creation failed", err);
-      alert("Room creation failed. Check console.");
-      onClose();
-    } finally {
-      setCreating(false);
-    }
+    router.push(`/canvas/${trimmed}`);
   };
 
   // Escape key
@@ -93,10 +66,9 @@ export const LiveSessionInitModal: React.FC<Props> = ({ onClose }) => {
 
           <button
             type="submit"
-            disabled={creating}
-            className="bg-[#bbb8ff] hover:bg-[#a8a5ff] text-black w-full py-4 rounded-md text-lg font-medium disabled:opacity-60"
+            className="bg-[#bbb8ff] hover:bg-[#a8a5ff] text-black w-full py-4 rounded-md text-lg font-medium"
           >
-            {creating ? "Creating..." : "Create Room"}
+            Create Room
           </button>
         </form>
 

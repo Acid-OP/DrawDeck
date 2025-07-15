@@ -18,6 +18,8 @@ import { ThemeToggle } from './sidebar/ThemeToggle';
 import { CanvasBackgroundPicker } from './sidebar/CanvasBackgroundPicker';
 import { SidebarSeparator } from './sidebar/SidebarSeparator';
 import { LiveCollabModal } from './modal/LiveCollabModal';
+import { Router } from 'next/router';
+import { useRouter } from 'next/navigation';
 
 interface SidebarItemsProps {
   theme: 'light' | 'dark';
@@ -26,11 +28,14 @@ interface SidebarItemsProps {
 
 export const SidebarItems: React.FC<SidebarItemsProps> = ({ theme, onThemeToggle }) => {
   const [showLiveModal, setShowLiveModal] = useState(false);
-
+ const router = useRouter();
   const handleLiveClick = () => {
     setShowLiveModal(true);
   };
 
+  const handleSignupClick = () => {
+    router.push("/signup");
+  };
   const handleCreateRoom = () => {
     const roomSlug = generateRoomIdAndKey();
     window.location.href = `/canvas/${roomSlug}`;
@@ -71,6 +76,7 @@ export const SidebarItems: React.FC<SidebarItemsProps> = ({ theme, onThemeToggle
             label="Sign Up" 
             variant="primary"
             theme={theme}
+            onClick={handleSignupClick}
           />
         </div>
         <SidebarSeparator theme={theme} />
