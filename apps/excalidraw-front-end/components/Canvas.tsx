@@ -6,6 +6,7 @@ import { ShareButton } from "./ShareButton";
 import { TopBar } from "./TopBar";
 import { Menu } from "./Menu";
 import { ExcalidrawPropertiesPanel } from "./PropertiesPanel";
+import { LiveCollabModal } from "./modal/LiveCollabModal";
 
 export type Tool =
   | "hand"
@@ -32,11 +33,13 @@ export function Canvas({
   const [game, setGame] = useState<Game>();
   const [selectedTool, setSelectedTool] = useState<Tool>("hand");
   const [inputBox, setInputBox] = useState<{ x: number; y: number } | null>(null);
-  const [dimensions, setDimensions] = useState<{ width: number; height: number }>({
-    width: 0,
-    height: 0,
-  });
-
+  const [dimensions, setDimensions] = useState<{ width: number; height: number }>({width: 0,height: 0,});
+  const [showLiveModal, setShowLiveModal] = useState(false);
+  const [strokeIndex, setStrokeIndex] = useState(0);
+  const [backgroundIndex, setBackgroundIndex] = useState(0);
+  const [strokeWidthIndex, setStrokeWidthIndex] = useState(1);
+  const [strokeStyleIndex, setStrokeStyleIndex] = useState(0);
+  const [fillIndex, setFillIndex] = useState(0);
   const [theme, setTheme] = useState<"light" | "dark">("dark");
 
   const toggleTheme = () => {
@@ -58,11 +61,12 @@ export function Canvas({
   useEffect(() => {
     game?.setTool(selectedTool);
   }, [selectedTool, game]);
-useEffect(() => {
-  if (game) {
-    game.setTheme(theme);
-  }
-}, [theme, game]);
+  
+  useEffect(() => {
+    if (game) {
+      game.setTheme(theme);
+    }
+  }, [theme, game]);
 
   useEffect(() => {
     if (canvasRef.current && dimensions.width !== 0 && dimensions.height !== 0) {
@@ -77,11 +81,7 @@ useEffect(() => {
       return () => g.destroy();
     }
   }, [canvasRef, isSolo, roomName, socket, dimensions]);
-  const [strokeIndex, setStrokeIndex] = useState(0);
-const [backgroundIndex, setBackgroundIndex] = useState(0);
-const [strokeWidthIndex, setStrokeWidthIndex] = useState(1);
-const [strokeStyleIndex, setStrokeStyleIndex] = useState(0);
-const [fillIndex, setFillIndex] = useState(0);
+
 
 
   return (
@@ -92,28 +92,28 @@ const [fillIndex, setFillIndex] = useState(0);
         height={dimensions.height}
         style={{ backgroundColor: theme === "dark" ? "#121212" : "#ffffff" }}
       />
-
       <div className="absolute top-4 left-0 w-full flex justify-between items-center px-6">
         <Menu theme={theme} onThemeToggle={toggleTheme} />
         <TopBar selectedTool={selectedTool} setSelectedTool={setSelectedTool} theme={theme} />
         {["rect", "diamond", "circle", "arrow", "line", "pencil", "text"].includes(selectedTool) && (
           <div className="absolute top-[72px] left-6 z-50">
-  <ExcalidrawPropertiesPanel
-  strokeSelectedIndex={strokeIndex}
-  backgroundSelectedIndex={backgroundIndex}
-  strokeWidthSelectedIndex={strokeWidthIndex}
-  strokeStyleSelectedIndex={strokeStyleIndex}
-  fillSelectedIndex={fillIndex}
-  onStrokeColorSelect={setStrokeIndex}
-  onBackgroundColorSelect={setBackgroundIndex}
-  onStrokeWidthSelect={setStrokeWidthIndex}
-  onStrokeStyleSelect={setStrokeStyleIndex}
-  onFillStyleSelect={setFillIndex}
-/>
-
+            <ExcalidrawPropertiesPanel
+            strokeSelectedIndex={strokeIndex}
+            backgroundSelectedIndex={backgroundIndex}
+            strokeWidthSelectedIndex={strokeWidthIndex}
+            strokeStyleSelectedIndex={strokeStyleIndex}
+            fillSelectedIndex={fillIndex}
+            onStrokeColorSelect={setStrokeIndex}
+            onBackgroundColorSelect={setBackgroundIndex}
+            onStrokeWidthSelect={setStrokeWidthIndex}
+            onStrokeStyleSelect={setStrokeStyleIndex}
+            onFillStyleSelect={setFillIndex}
+            theme={theme}
+            onThemeToggle={toggleTheme}
+          />
           </div>
         )}
-        <ShareButton />
+        <ShareButton onClick={() => setShowLiveModal(true)} />
       </div>
       {inputBox && (
         <textarea
@@ -139,6 +139,9 @@ const [fillIndex, setFillIndex] = useState(0);
           }}
         />
       )}
+      {showLiveModal && (
+        <LiveCollabModal onClose={() => setShowLiveModal(false)} />
+        )}
     </div>
   );
 }

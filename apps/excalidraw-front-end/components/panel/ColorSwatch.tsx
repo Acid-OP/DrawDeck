@@ -8,6 +8,7 @@ interface ColorSwatchProps {
   title?: string;
   size?: 'sm' | 'md';
   isTransparent?: boolean;
+  theme: 'light' | 'dark'; // added
 }
 
 export const ColorSwatch: React.FC<ColorSwatchProps> = ({
@@ -16,7 +17,8 @@ export const ColorSwatch: React.FC<ColorSwatchProps> = ({
   onClick,
   title,
   size = 'md',
-  isTransparent = false
+  isTransparent = false,
+  theme,
 }) => {
   const sizeClasses = {
     sm: 'w-7 h-7',
@@ -28,18 +30,20 @@ export const ColorSwatch: React.FC<ColorSwatchProps> = ({
       onClick={onClick}
       title={title}
       className={cn(
-        'rounded-sm transition-all hover:scale-105 focus:outline-none',
-        selected && 'border-2 border-[#a8a5ff]',
+        'rounded-sm transition-all hover:scale-105 focus:outline-none cursor-pointer',
+        selected && (theme === 'dark' ? 'border-2 border-[#a8a5ff]' : 'border-2 border-[#5050ff]'),
         sizeClasses[size],
         'flex items-center justify-center',
-        
       )}
       style={{
         backgroundColor: isTransparent ? '#00000000' : color
       }}
     >
       {isTransparent && (
-        <div className="w-3 h-3 border border-dashed border-black" />
+        <div className={cn(
+          'w-3 h-3 border border-dashed',
+          theme === 'dark' ? 'border-white' : 'border-black'
+        )} />
       )}
     </button>
   );
