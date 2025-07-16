@@ -1,103 +1,16 @@
+'use client';
+
 import React from 'react';
-import { Minus, MoreHorizontal } from 'lucide-react';
+import { cn } from '@repo/ui/lib/utils';
+import { ColorSwatch } from './panel/ColorSwatch'; // ✅ correct
+import { StyleButton } from './panel/StyleButton';
+import { PropertySection } from './panel/PropertySection';
+import { StrokePattern, StrokeWidthPattern } from './panel/StrokePatterns';
+import { FillPattern } from './panel/FillPatterns';
+import { SidebarSeparator } from './sidebar/SidebarSeparator';
 
-interface ColorSwatchProps {
-  color: string;
-  selected?: boolean;
-  onClick?: () => void;
-  title?: string;
-  large?: boolean;
-  icon?: React.ReactNode;
-  className?: string;
-}
 
-const ColorSwatch: React.FC<ColorSwatchProps> = ({ color, selected = false, onClick, title, large = false, icon, className = '' }) => {
-  return (
-    <button
-      onClick={onClick}
-      title={title}
-      className={`
-        w-7 h-7
-        rounded-sm transition-all duration-200 hover:scale-110
-        ${selected ? 'ring-2 ring-ring shadow-sm' : ''}
-        hover:ring-2 hover:ring-ring focus:outline-none focus:ring-2 focus:ring-ring
-        flex items-center justify-center cursor-pointer
-        text-xs
-        ${className}
-      `}
-      style={{ backgroundColor: color }}
-      aria-label={`Select ${title || color}`}
-    >
-      {icon}
-    </button>
-  );
-};
-
-interface StrokeControlProps {
-  selected?: boolean;
-  onClick?: () => void;
-  title?: string;
-  children: React.ReactNode;
-  className?: string;
-}
-
-const StrokeControl: React.FC<StrokeControlProps> = ({ selected = false, onClick, title, children, className = '' }) => {
-  return (
-    <button
-      onClick={onClick}
-      title={title}
-      className={`
-        w-9 h-9 rounded-sm transition-all duration-200 hover:scale-110 flex items-center justify-center cursor-pointer
-        ${selected ? 'bg-[#403e6a]' : 'bg-[#2e2d39]'}
-        hover:ring-2 hover:ring-stroke-control-selected focus:outline-none focus:ring-2 focus:ring-stroke-control-selected
-        text-xs
-        ${className}
-      `}
-    >
-      {children}
-    </button>
-  );
-};
-
-interface SectionProps {
-  label: string;
-  children: React.ReactNode;
-  className?: string;
-}
-
-const Section: React.FC<SectionProps> = ({ label, children, className = '' }) => (
-  <div className={`space-y-2 pt-4 ${className}`}>
-    <label className="text-sm font-medium text-[#d3d3d3] select-none block pb-1">{label}</label>
-    {children}
-  </div>
-);
-
-const FillStyleSection: React.FC<{
-  selectedIndex?: number;
-  onSelect?: (index: number) => void;
-}> = ({ selectedIndex, onSelect }) => {
-  const fillIcons = ['Hachure', 'Cross Hatch', 'Dots'];
-  return (
-    <Section label="Fill">
-      <div className="flex gap-1.5 pb-6">
-        {fillIcons.map((name, index) => (
-          <StrokeControl
-            key={index}
-            selected={selectedIndex === index}
-            onClick={() => onSelect?.(index)}
-            title={name}
-          >
-            <div className="w-5 h-5 bg-white text-[10px] text-black rounded-sm flex items-center justify-center">
-              {name[0]}
-            </div>
-          </StrokeControl>
-        ))}
-      </div>
-    </Section>
-  );
-};
-
-export interface PropertiesPanelProps {
+export interface ExcalidrawPropertiesPanelProps {
   strokeSelectedIndex?: number;
   backgroundSelectedIndex?: number;
   strokeWidthSelectedIndex?: number;
@@ -108,11 +21,13 @@ export interface PropertiesPanelProps {
   onStrokeWidthSelect?: (index: number) => void;
   onStrokeStyleSelect?: (index: number) => void;
   onFillStyleSelect?: (index: number) => void;
+  className?: string;
+  compact?: boolean;
 }
 
-export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
+export const ExcalidrawPropertiesPanel: React.FC<ExcalidrawPropertiesPanelProps> = ({
   strokeSelectedIndex = 0,
-  backgroundSelectedIndex,
+  backgroundSelectedIndex = 0,
   strokeWidthSelectedIndex = 0,
   strokeStyleSelectedIndex = 0,
   fillSelectedIndex = 0,
@@ -120,111 +35,151 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
   onBackgroundColorSelect,
   onStrokeWidthSelect,
   onStrokeStyleSelect,
-  onFillStyleSelect
+  onFillStyleSelect,
+  className,
+  compact = false,
 }) => {
-  const strokeColors = ['#1e1e1e', '#e03131', '#2f9e44', '#1971c2', '#f08c00', '#ffffff'];
-  const backgroundColors = ['transparent', '#ffc9c9', '#b2f2bb', '#a5d8ff', '#ffec99', 'transparent'];
+  const strokeColors = [
+    { color: '#1e1e1e', name: 'Black' },
+    { color: '#e03131', name: 'Red' },
+    { color: '#2f9e44', name: 'Green' },
+    { color: '#1971c2', name: 'Blue' },
+    { color: '#f08c00', name: 'Orange' },
+  ];
+
+  const backgroundColors = [
+    { color: 'transparent', name: 'Transparent', isTransparent: true },
+    { color: '#ffc9c9', name: 'Light Red' },
+    { color: '#b2f2bb', name: 'Light Green' },
+    { color: '#a5d8ff', name: 'Light Blue' },
+    { color: '#ffec99', name: 'Light Yellow' },
+  ];
 
   const strokeWidths = [
-    <Minus className="w-4 h-4 text-white" strokeWidth={1} />, 
-    <Minus className="w-4 h-4 text-white" strokeWidth={3} />, 
-    <Minus className="w-4 h-4 text-white" strokeWidth={5} />  
+    { type: 'thin' as const, name: 'Thin' },
+    { type: 'medium' as const, name: 'Medium' },
+    { type: 'thick' as const, name: 'Thick' },
   ];
 
   const strokeStyles = [
-    <Minus className="w-4 h-4 text-white" strokeWidth={2} />, 
-    <MoreHorizontal className="w-4 h-4 text-white" strokeWidth={3} />, 
-    <div className="flex gap-0.5 overflow-hidden w-5 h-5 items-center justify-center">
-      {[...Array(7)].map((_, i) => (
-        <div key={i} className="w-[2px] h-[2px] bg-white rounded-full" />
-      ))}
-    </div>
+    { type: 'solid' as const, name: 'Solid' },
+    { type: 'dashed' as const, name: 'Dashed' },
+    { type: 'dotted' as const, name: 'Dotted' },
+  ];
+
+  const fillStyles = [
+    { type: 'hachure' as const, name: 'Hachure' },
+    { type: 'cross-hatch' as const, name: 'Cross-hatch' },
+    { type: 'dots' as const, name: 'Dots' },
+    { type: 'solid' as const, name: 'Solid' },
   ];
 
   return (
-    <div className="w-60 bg-[#232329] rounded-lg shadow-sm px-2">
-      <Section label="Stroke">
-        <div className="flex items-center">
-          <div className="flex gap-1.5">
-            {strokeColors.slice(0, 5).map((color, index) => (
-              <ColorSwatch
-                key={index}
-                color={color}
-                selected={strokeSelectedIndex === index}
-                onClick={() => onStrokeColorSelect?.(index)}
-                title={color}
-              />
-            ))}
-          </div>
-          <div className="w-4" />
-          <ColorSwatch
-            color={strokeColors[5]}
-            selected={strokeSelectedIndex === 5}
-            onClick={() => onStrokeColorSelect?.(5)}
-            title={strokeColors[5]}
-          />
+    <div
+      className={cn(
+        'bg-[#232329]  rounded-lg p-4',
+        'shadow-lg backdrop-blur-sm',
+        compact ? 'w-56' : 'w-68',
+        className
+      )}
+    >
+      {/* Stroke Color */}
+      <PropertySection label="Stroke" compact={compact}>
+        <div className="flex items-center gap-1.5">
+          {strokeColors.map((colorData, index) => (
+            <React.Fragment key={index}>
+            <ColorSwatch
+              key={index}
+              color={colorData.color}
+              selected={strokeSelectedIndex === index}
+              onClick={() => onStrokeColorSelect?.(index)}
+              title={colorData.name}
+              size="md"
+            />{index === 4 && (
+            <SidebarSeparator theme="dark" orientation="vertical" length="h-6" className="mx-1" />
+            )}
+            </React.Fragment>
+          ))}
+          <StyleButton className="ml-1 cursor-pointer" title="More colors..." size="md">
+            <div className="w-3 h-3 rounded-full bg-gradient-to-br from-red-400 via-yellow-400 to-blue-400" />
+          </StyleButton>
         </div>
-      </Section>
+      </PropertySection>
 
-      <Section label="Background">
-        <div className="flex items-center">
-          <div className="flex gap-1.5">
-            {backgroundColors.slice(0, 5).map((color, index) => (
-              <ColorSwatch
-                key={index}
-                color={color === 'transparent' ? 'white' : color}
-                icon={color === 'transparent' ? <div className="w-2.5 h-2.5 border border-dashed border-black" /> : undefined}
-                selected={backgroundSelectedIndex === index}
-                onClick={() => onBackgroundColorSelect?.(index)}
-                title={color}
-              />
-            ))}
-          </div>
-          <div className="w-4" />
-          <ColorSwatch
-            color={backgroundColors[5] === 'transparent' ? 'white' : backgroundColors[5]}
-            icon={<div className="w-2.5 h-2.5 border border-dashed border-black" />}
-            selected={backgroundSelectedIndex === 5}
-            onClick={() => onBackgroundColorSelect?.(5)}
-            title={backgroundColors[5]}
-          />
+      {/* Background */}
+      <PropertySection label="Background" compact={compact}>
+        <div className="flex items-center gap-1.5">
+          {backgroundColors.map((colorData, index) => (
+            <React.Fragment key={index}>
+            <ColorSwatch
+              key={index}
+              color={colorData.color}
+              selected={backgroundSelectedIndex === index}
+              onClick={() => onBackgroundColorSelect?.(index)}
+              title={colorData.name}
+              size="md"
+              isTransparent={colorData.isTransparent}
+            />{index === 4 && (
+            <SidebarSeparator theme="dark" orientation="vertical" length="h-6" className="mx-1" />
+            )}
+            </React.Fragment>
+          ))}
+          <StyleButton className="ml-1 cursor-pointer" title="More colors..." size="md">
+            <div className="w-3 h-3 rounded-full bg-gradient-to-br from-purple-400 via-pink-400 to-green-400" />
+          </StyleButton>
         </div>
-      </Section>
+      </PropertySection>
 
-      <Section label="Stroke Width">
-        <div className="flex gap-1.5">
-          {strokeWidths.map((icon, index) => (
-            <StrokeControl
+      {/* Stroke Width */}
+      <PropertySection label="Stroke Width" compact={compact}>
+        <div className="flex items-center gap-1.5">
+          {strokeWidths.map((widthData, index) => (
+            <StyleButton
               key={index}
               selected={strokeWidthSelectedIndex === index}
               onClick={() => onStrokeWidthSelect?.(index)}
-              title={['Thin', 'Bold', 'Extra Bold'][index]}
+              title={widthData.name}
+              size="lg"
             >
-              {icon}
-            </StrokeControl>
+              <StrokeWidthPattern width={widthData.type} color="currentColor" />
+            </StyleButton>
           ))}
         </div>
-      </Section>
+      </PropertySection>
 
-      <Section label="Stroke Style">
-        <div className="flex gap-1.5">
-          {strokeStyles.map((style, index) => (
-            <StrokeControl
+      {/* Stroke Style */}
+      <PropertySection label="Stroke Style" compact={compact}>
+        <div className="flex items-center gap-1.5">
+          {strokeStyles.map((styleData, index) => (
+            <StyleButton
               key={index}
               selected={strokeStyleSelectedIndex === index}
               onClick={() => onStrokeStyleSelect?.(index)}
-              title={['Solid', 'Dashed', 'Dotted'][index]}
+              title={styleData.name}
+              size="lg"
             >
-              {style}
-            </StrokeControl>
+              <StrokePattern type={styleData.type} color="currentColor" />
+            </StyleButton>
           ))}
         </div>
-      </Section>
+      </PropertySection>
 
-      <FillStyleSection
-        selectedIndex={fillSelectedIndex}
-        onSelect={onFillStyleSelect}
-      />
+      {/* Fill Style */}
+      <PropertySection label="Fill Style" compact={compact}>
+        <div className="flex items-center gap-1.5">
+          {fillStyles.map((fillData, index) => (
+            <StyleButton
+              key={index}
+              selected={fillSelectedIndex === index}
+              onClick={() => onFillStyleSelect?.(index)}
+              title={fillData.name}
+              size="lg"
+            >
+              <FillPattern type={fillData.type} color="currentColor" size={14} />
+            </StyleButton>
+          ))}
+        </div>
+      </PropertySection>
     </div>
   );
 };

@@ -5,7 +5,8 @@ import { Game } from "@/app/draw/Game";
 import { ShareButton } from "./ShareButton";
 import { TopBar } from "./TopBar";
 import { Menu } from "./Menu";
-import { PropertiesPanel } from "./PropertiesPanel";
+import { ExcalidrawPropertiesPanel } from "./PropertiesPanel";
+
 export type Tool =
   | "hand"
   | "select"
@@ -97,18 +98,19 @@ const [fillIndex, setFillIndex] = useState(0);
         <TopBar selectedTool={selectedTool} setSelectedTool={setSelectedTool} theme={theme} />
         {["rect", "diamond", "circle", "arrow", "line", "pencil", "text"].includes(selectedTool) && (
           <div className="absolute top-[72px] left-6 z-50">
-            <PropertiesPanel
-            strokeSelectedIndex={strokeIndex}
-            backgroundSelectedIndex={backgroundIndex}
-            strokeWidthSelectedIndex={strokeWidthIndex}
-            strokeStyleSelectedIndex={strokeStyleIndex}
-            fillSelectedIndex={fillIndex}
-            onStrokeColorSelect={setStrokeIndex}
-            onBackgroundColorSelect={setBackgroundIndex}
-            onStrokeWidthSelect={setStrokeWidthIndex}
-            onStrokeStyleSelect={setStrokeStyleIndex}
-            onFillStyleSelect={setFillIndex}
-          />
+  <ExcalidrawPropertiesPanel
+  strokeSelectedIndex={strokeIndex}
+  backgroundSelectedIndex={backgroundIndex}
+  strokeWidthSelectedIndex={strokeWidthIndex}
+  strokeStyleSelectedIndex={strokeStyleIndex}
+  fillSelectedIndex={fillIndex}
+  onStrokeColorSelect={setStrokeIndex}
+  onBackgroundColorSelect={setBackgroundIndex}
+  onStrokeWidthSelect={setStrokeWidthIndex}
+  onStrokeStyleSelect={setStrokeStyleIndex}
+  onFillStyleSelect={setFillIndex}
+/>
+
           </div>
         )}
         <ShareButton />

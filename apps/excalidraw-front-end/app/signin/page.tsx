@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Palette,
   Sparkles,
@@ -13,6 +13,7 @@ import {
 import { useRouter } from "next/navigation";
 
 const ExcalidrawSignin = () => {
+  const [hasMounted, setHasMounted] = useState(false);
   const [isDark, setIsDark] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
@@ -20,6 +21,12 @@ const ExcalidrawSignin = () => {
   });
 
   const router = useRouter();
+
+  useEffect(() => {
+    setHasMounted(true);
+  }, []);
+
+  if (!hasMounted) return null;
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -52,7 +59,6 @@ const ExcalidrawSignin = () => {
         isDark ? "bg-[#232329]" : "bg-[#fff0c9]"
       }`}
     >
-      {/* Theme toggle */}
       <button
         onClick={() => setIsDark(!isDark)}
         className="fixed top-4 right-4 z-50 p-2 rounded-full bg-yellow-300 hover:bg-yellow-400 transition-all duration-300 cursor-pointer shadow"
@@ -60,7 +66,6 @@ const ExcalidrawSignin = () => {
         <span className="text-2xl">{isDark ? "🌙" : "☀"}</span>
       </button>
 
-      {/* Floating icons */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
         {floatingDoodles.map((doodle, index) => (
           <div
@@ -82,7 +87,6 @@ const ExcalidrawSignin = () => {
         ))}
       </div>
 
-      {/* Header */}
       <div className="pt-8 text-center">
         <h1
           className="text-6xl font-bold mb-2 animate-pulse"
@@ -102,9 +106,7 @@ const ExcalidrawSignin = () => {
         </p>
       </div>
 
-      {/* Main content */}
       <div className="flex flex-col lg:flex-row items-center justify-between mt-12 max-w-screen-xl mx-auto">
-        {/* Left: Animation */}
         <div className="relative flex items-center justify-center">
           <div className="relative">
             <div
@@ -146,7 +148,6 @@ const ExcalidrawSignin = () => {
           </div>
         </div>
 
-        {/* Right: Login Box */}
         <div
           className="w-full max-w-md p-8 rounded-3xl shadow-2xl backdrop-blur-sm border-[3px] border-solid"
           style={{
