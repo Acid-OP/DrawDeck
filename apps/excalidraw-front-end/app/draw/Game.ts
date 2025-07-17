@@ -903,6 +903,7 @@ deleteShapeById(id: string) {
 }
 
 private deleteShapeByIndex(index: number) {
+  console.log("hellloooo")
   const shape = this.existingShapes[index];
   if (!shape) return;
   this.existingShapes.splice(index, 1);
@@ -943,6 +944,7 @@ private deleteShapeByIndex(index: number) {
     this.existingShapes.forEach((shape , idx) => {
       const isHovered = this.selectedTool === "eraser" &&
       this.hoveredForErase?.includes(idx);
+      
       const strokeCol = isHovered 
       ? "rgba(255,80,80)" 
       : (shape as any).strokeColor ?? (this.theme === 'dark' ? "#ffffff" : "#000000");
@@ -1161,21 +1163,48 @@ drawPencilPath(
       this.clearCanvas();
       return;
     }
-    if (this.selectedTool === "eraser") {
-      console.log("Eraser mouse up triggered");
-      this.clicked = true;
-      this.hoveredForErase = [];
+  if (this.selectedTool === "eraser") {
+  this.clicked = true;
+  this.hoveredForErase = [];
+  const logicalX = pos.x + this.panOffsetX;
+  const logicalY = pos.y + this.panOffsetY;
+  let deleted = false;
+  let deletedShape: Shape | null = null;
 
-      const hitIndexes: number[] = [];
-      for (let i = 0; i < this.existingShapes.length; i++) {
-        if (this.isPointInsideShape(pos.x, pos.y, this.existingShapes[i])) {
-          hitIndexes.push(i);
-        }
-      }
-      this.hoveredForErase = hitIndexes;
-      this.clearCanvas();
-      return;
+  for (let i = this.existingShapes.length - 1; i >= 0; i--) {
+    if (this.isPointInsideShape(logicalX, logicalY, this.existingShapes[i])) {
+      deletedShape = this.existingShapes[i];
+      this.deleteShapeByIndex(i); // Removes from array, redraws, handles solo/collab storage
+      deleted = true;
+
+      // Only one shape should be erased per click
+      break;
     }
+  }
+
+  if (deleted) {
+    this.clearCanvas(); // Optional: if your deleteShapeByIndex doesn't already call this
+
+    // Broadcast delete if not in solo mode and shape was found
+    if (!this.isSolo && deletedShape) {
+      this.safeSend(
+        JSON.stringify({
+          type: "shape:delete",
+          roomId: this.roomId?.toString(),
+          shapeId: deletedShape.id,
+        })
+      );
+      this.scheduleWriteAll();
+    } else if (this.isSolo) {
+      // For local only, ensure storage updates if deleteShapeByIndex doesn't do it
+      this.scheduleLocalSave?.();
+    }
+  }
+
+  return;
+}
+
+
     if (this.selectedTool === "pencil") {
       this.clicked = true;
       this.pencilPoints = [pos];
@@ -1243,9 +1272,10 @@ private scheduleWriteAll() {
 }
 
   mouseUpHandler = async (e: MouseEvent) => {
+    console.log("[Debug] mouseUpHandler called. Current tool:", this.selectedTool);
     const pos = this.getMousePos(e);
-      if (this.selectedTool === "hand" && this.isPanning) {
-    this.isPanning = false;
+    if (this.selectedTool === "hand" && this.isPanning) {
+      this.isPanning = false;
     return;
   }
 
@@ -1300,32 +1330,14 @@ private scheduleWriteAll() {
       this.clearCanvas();
       return;
     }
-    if (this.selectedTool === "eraser") {
-    if (!this.hoveredForErase || this.hoveredForErase.length === 0) return;
-    console.log(" Inside eraser logic, isSolo?", this.isSolo);
-    const doomedIds = this.hoveredForErase.map(i => this.existingShapes[i]?.id).filter(Boolean);
-    this.hoveredForErase.sort((a, b) => b - a).forEach(i => {
-      this.deleteShapeByIndex(i);
-    });
-    this.hoveredForErase = [];
-    this.clearCanvas();
-    if (this.isSolo) {
-      return;
-    }
-  // 🎯 Collaborative mode
-    doomedIds.forEach(id => {
-      this.safeSend(
-        JSON.stringify({
-          type: "shape:delete",
-          roomId: this.roomId?.toString(),
-          shapeId: id,
-        })
-      );
-    });
-    this.scheduleWriteAll();
+if (this.selectedTool === "eraser") {
+  this.clicked = false; // End gesture
+  // No deletion needed if all is done in mouse move
+  return;
+}
 
-    return;
-  }
+
+
     let shape: Shape | null = null;
     
     if (this.selectedTool === "rect") {
@@ -1338,11 +1350,11 @@ private scheduleWriteAll() {
         Math.abs(height) * 0.5
       );
    shape = {
-  id: this.genId(),
-  type: "rect",
-  x: this.startX + this.panOffsetX,
-  y: this.startY + this.panOffsetY,
-  width: width,
+    id: this.genId(),
+    type: "rect",
+    x: this.startX + this.panOffsetX,
+    y: this.startY + this.panOffsetY,
+    width: width,
   height: height,
   radius: r,
   // Add panel properties below:
@@ -1616,26 +1628,39 @@ else if (this.selectedTool === "text") {
           }
           return;
         }
-        if (this.selectedTool === "eraser") {
-          if (!this.clicked) return;
-
-  // Apply pan offset
+if (this.selectedTool === "eraser" && this.clicked) {
   const logicalX = pos.x + this.panOffsetX;
   const logicalY = pos.y + this.panOffsetY;
 
-  for (let i = 0; i < this.existingShapes.length; i++) {
-    if (
-      this.isPointInsideShape(logicalX, logicalY, this.existingShapes[i]) &&
-      !this.hoveredForErase.includes(i)
-    ) {
-      this.hoveredForErase.push(i);
+  // Loop from topmost shape to bottom (reverse order)
+  for (let i = this.existingShapes.length - 1; i >= 0; i--) {
+    if (this.isPointInsideShape(logicalX, logicalY, this.existingShapes[i])) {
+      const shape = this.existingShapes[i];
+
+      // Remove shape immediately on erase hover
+      this.deleteShapeByIndex(i);
+
+      // Socket/collaborative sync
+      if (!this.isSolo && shape) {
+        this.safeSend(
+          JSON.stringify({
+            type: "shape:delete",
+            roomId: this.roomId?.toString(),
+            shapeId: shape.id,
+          })
+        );
+        this.scheduleWriteAll();
+      } else if (this.isSolo) {
+        this.scheduleLocalSave?.();
+      }
+
+      this.clearCanvas(); // Redraw after each delete
+      break; // Stop at first match (optional, remove break to delete all under eraser)
     }
   }
-  console.log("Hovered for erase:", this.hoveredForErase);
-  this.ctx.strokeStyle = strokeCol;
-  this.clearCanvas();
   return;
 }
+
 
 if (!this.clicked) return;
 
