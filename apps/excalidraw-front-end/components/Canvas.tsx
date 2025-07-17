@@ -7,6 +7,7 @@ import { TopBar } from "./TopBar";
 import { Menu } from "./Menu";
 import { ExcalidrawPropertiesPanel } from "./PropertiesPanel";
 import { LiveCollabModal } from "./modal/LiveCollabModal";
+import { ZoomBar } from "./ZoomBar";
 
 export type Tool =
   | "hand"
@@ -45,6 +46,8 @@ export function Canvas({
   const toggleTheme = () => {
     setTheme((prev) => (prev === "dark" ? "light" : "dark"));
   };
+const [zoom, setZoom] = useState(1);
+// minZoom, maxZoom, zoomStep can be left as defaults, or customized
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -142,6 +145,8 @@ export function Canvas({
       {showLiveModal && (
         <LiveCollabModal onClose={() => setShowLiveModal(false)} />
         )}
+        <ZoomBar zoom={zoom} setZoom={setZoom} theme={theme} />
+
     </div>
   );
 }

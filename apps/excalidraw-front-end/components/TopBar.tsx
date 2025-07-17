@@ -12,7 +12,6 @@ import {
 } from "lucide-react";
 import { IconButton } from "./IconButton";
 import { Tool } from "./Canvas";
-
 interface TopBarProps {
   selectedTool: Tool;
   setSelectedTool: (s: Tool) => void;

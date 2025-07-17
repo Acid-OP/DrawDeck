@@ -10,9 +10,17 @@ interface IconButtonProps {
   theme: "light" | "dark";
 }
 
-export function IconButton({ icon, onClick, activated, shortcutKey, theme }: IconButtonProps) {
-  const styledIcon = {
-    ...icon.props,
+export function IconButton({
+  icon,
+  onClick,
+  activated,
+  shortcutKey,
+  theme,
+}: IconButtonProps) {
+  // If Lucide icon, add `fill` when activated in light mode
+  // Fall back to "none" fill for others
+  const isActiveLight = activated && theme === "light";
+  const styledIcon: Partial<LucideProps> = {
     size: icon.props.size ?? 18,
     color: activated
       ? theme === "light"
@@ -21,17 +29,23 @@ export function IconButton({ icon, onClick, activated, shortcutKey, theme }: Ico
       : theme === "light"
         ? "#666666"
         : "#e3e3e8",
+    fill: isActiveLight ? "#030064" : "none",
+    // Most Lucide icons will respect `fill` prop on `svg`
   };
 
-  const bgColor = activated
-    ? theme === "light"
+  const bgColor =
+    activated && theme === "light"
       ? "#e0dfff"
-      : "#403e6a"
-    : "transparent";
+      : activated && theme === "dark"
+      ? "#403e6a"
+      : "transparent";
+  const hoverBg = theme === "light"
+    ? "hover:bg-gray-100"
+    : "hover:bg-white/5";
 
-  const hoverBg = theme === "light" ? "hover:bg-gray-100" : "hover:bg-white/5";
-
-  const shortcutColor = theme === "light" ? "#4a4a4d" : "#ffffff";
+  const shortcutColor = theme === "light"
+    ? "#4a4a4d"
+    : "#ffffff";
 
   return (
     <div
