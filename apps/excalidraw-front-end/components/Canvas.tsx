@@ -36,17 +36,35 @@ export function Canvas({
   const [inputBox, setInputBox] = useState<{ x: number; y: number } | null>(null);
   const [dimensions, setDimensions] = useState<{ width: number; height: number }>({width: 0,height: 0,});
   const [showLiveModal, setShowLiveModal] = useState(false);
-  const [strokeIndex, setStrokeIndex] = useState(0);
-  const [backgroundIndex, setBackgroundIndex] = useState(0);
-  const [strokeWidthIndex, setStrokeWidthIndex] = useState(1);
-  const [strokeStyleIndex, setStrokeStyleIndex] = useState(0);
-  const [fillIndex, setFillIndex] = useState(0);
+  const [strokeIndex, setStrokeIndex] = useState(0);           // e.g., black
+  const [backgroundIndex, setBackgroundIndex] = useState(0);   // e.g., transparent
+  const [strokeWidthIndex, setStrokeWidthIndex] = useState(1); // e.g., medium
+  const [strokeStyleIndex, setStrokeStyleIndex] = useState(0); // solid
+  const [fillIndex, setFillIndex] = useState(0);               // hachure
   const [theme, setTheme] = useState<"light" | "dark">("dark");
+  const strokeColors = [
+    '#1e1e1e', // Black
+    '#e03131', // Red
+    '#2f9e44', // Green
+    '#1971c2', // Blue
+    '#f08c00'  // Orange
+  ];
+
+  const backgroundColors = [
+    'transparent',
+    '#ffc9c9', // Light Red
+    '#b2f2bb', // Light Green
+    '#a5d8ff', // Light Blue
+    '#ffec99'  // Light Yellow
+  ];
+
+  const strokeWidths = [2, 3.5, 6]; // px
+  // Add style/fill arrays if needed!
 
   const toggleTheme = () => {
     setTheme((prev) => (prev === "dark" ? "light" : "dark"));
   };
-const [zoom, setZoom] = useState(1);
+  const [zoom, setZoom] = useState(1);
 // minZoom, maxZoom, zoomStep can be left as defaults, or customized
 
   useEffect(() => {
@@ -70,6 +88,21 @@ const [zoom, setZoom] = useState(1);
       game.setTheme(theme);
     }
   }, [theme, game]);
+useEffect(() => {
+  if (!game) return;
+  game.setStrokeColor(strokeColors[strokeIndex]);
+  game.setBackgroundColor(backgroundColors[backgroundIndex]);
+  game.setStrokeWidth(strokeWidths[strokeWidthIndex]);
+  game.setStrokeStyle(strokeStyleIndex); // Map index to line style if needed
+  game.setFillStyle(fillIndex);           // Map index to fill style if needed
+}, [
+  game,
+  strokeIndex,
+  backgroundIndex,
+  strokeWidthIndex,
+  strokeStyleIndex,
+  fillIndex
+]);
 
   useEffect(() => {
     if (canvasRef.current && dimensions.width !== 0 && dimensions.height !== 0) {

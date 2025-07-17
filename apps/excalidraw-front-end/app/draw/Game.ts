@@ -1,8 +1,10 @@
 import { Tool } from "@/components/Canvas";
 
-type BaseShape = { readonly id: string };
+
+    type BaseShape = { readonly id: string };
+
 type Shape =
-  |  (BaseShape &{
+  | (BaseShape & StyleFields & {
       type: "rect";
       x: number;
       y: number;
@@ -10,44 +12,52 @@ type Shape =
       height: number;
       radius: number;
     })
-  | (BaseShape &{
+  | (BaseShape & StyleFields & {
       type: "diamond";
       top: { x: number; y: number };
       right: { x: number; y: number };
       bottom: { x: number; y: number };
       left: { x: number; y: number };
     })
-  | (BaseShape &{ 
-    type: "circle"; 
+  | (BaseShape & StyleFields & {
+      type: "circle";
       centerX: number;
-      centerY: number; 
-      rx: number; 
-      ry: number 
+      centerY: number;
+      rx: number;
+      ry: number;
     })
-  | (BaseShape &{
+  | (BaseShape & StyleFields & {
       type: "line";
       startX: number;
       startY: number;
       endX: number;
       endY: number;
     })
-  | (BaseShape &{
-      type: "pencil";
-      points: { x: number; y: number }[];
-    })
-  | (BaseShape &{
+  | (BaseShape & StyleFields & {
       type: "arrow";
       startX: number;
       startY: number;
       endX: number;
       endY: number;
     })
-  | (BaseShape &{
+  | (BaseShape & StyleFields & {
+      type: "pencil";
+      points: { x: number; y: number }[];
+    })
+  | (BaseShape & StyleFields & {
       type: "text";
       x: number;
       y: number;
       text: string;
     });
+
+interface StyleFields {
+  strokeColor: string;
+  backgroundColor: string;
+  strokeWidth: number;
+  strokeStyle: number | string;
+  fillStyle: number | string;
+}
 
 export class Game {
   private canvas: HTMLCanvasElement;
@@ -78,6 +88,11 @@ export class Game {
   private offsetY = 0;
   private readonly MAX_CORNER_RADIUS = 10;
   private isSolo: boolean;
+  public currentStrokeColor: string = '#1e1e1e';      // default black
+  public currentBackgroundColor: string = 'transparent';
+  public currentStrokeWidth: number = 2;
+  public currentStrokeStyle: number = 0;
+  public currentFillStyle: number = 0;
   private hoveredEndpoint: "start" | "end" | "mid" | null = null;
   private genId() {
     return crypto.randomUUID();
@@ -555,113 +570,139 @@ if (shape.type === "line" || shape.type === "arrow") {
     if (!isSolo && this.socket) this.initHandlers();
     this.initMouseHandlers();
   }
-clearShapes() {
-  const key = this.getLocalStorageKey();
-  localStorage.removeItem(key);
-  this.existingShapes = [];
-  this.clearCanvas();
-}
-
-isOnSelectionBoxBorder(shape: Shape, x: number, y: number): boolean {
-  const pad = 8;
-  const tolerance = 6;
-  let boxX = 0, boxY = 0, boxW = 0, boxH = 0;
-
-  // ✅ Apply pan offset to the input point
-  x -= this.panOffsetX;
-  y -= this.panOffsetY;
-
-  if (shape.type === "rect") {
-    const x1 = Math.min(shape.x, shape.x + shape.width);
-    const y1 = Math.min(shape.y, shape.y + shape.height);
-    const x2 = Math.max(shape.x, shape.x + shape.width);
-    const y2 = Math.max(shape.y, shape.y + shape.height);
-
-    boxX = x1 - pad;
-    boxY = y1 - pad;
-    boxW = (x2 - x1) + pad * 2;
-    boxH = (y2 - y1) + pad * 2;
+  setStrokeColor(color: string) {
+    this.currentStrokeColor = color;
   }
 
-  const onLeft   = Math.abs(x - boxX) < tolerance && y >= boxY && y <= boxY + boxH;
-  const onRight  = Math.abs(x - (boxX + boxW)) < tolerance && y >= boxY && y <= boxY + boxH;
-  const onTop    = Math.abs(y - boxY) < tolerance && x >= boxX && x <= boxX + boxW;
-  const onBottom = Math.abs(y - (boxY + boxH)) < tolerance && x >= boxX && x <= boxX + boxW;
-
-  return onLeft || onRight || onTop || onBottom;
-}
-
-isPointInsideSelectionBox(shape: Shape, x: number, y: number): boolean {
-  const pad = 8;
-  let boxX = 0, boxY = 0, boxW = 0, boxH = 0;
-
-  // ✅ Apply pan offset to bring mouse coordinates into world space
-  x -= this.panOffsetX;
-  y -= this.panOffsetY;
-
-  if (shape.type === "rect") {
-    const x1 = Math.min(shape.x, shape.x + shape.width);
-    const y1 = Math.min(shape.y, shape.y + shape.height);
-    const x2 = Math.max(shape.x, shape.x + shape.width);
-    const y2 = Math.max(shape.y, shape.y + shape.height);
-    boxX = x1 - pad;
-    boxY = y1 - pad;
-    boxW = (x2 - x1) + pad * 2;
-    boxH = (y2 - y1) + pad * 2;
-  } else if (shape.type === "circle") {
-    boxX = shape.centerX - shape.rx - pad;
-    boxY = shape.centerY - shape.ry - pad;
-    boxW = shape.rx * 2 + pad * 2;
-    boxH = shape.ry * 2 + pad * 2;
-  } else if (shape.type === "diamond") {
-    const xs = [shape.top.x, shape.right.x, shape.bottom.x, shape.left.x];
-    const ys = [shape.top.y, shape.right.y, shape.bottom.y, shape.left.y];
-    const minX = Math.min(...xs) - pad;
-    const maxX = Math.max(...xs) + pad;
-    const minY = Math.min(...ys) - pad;
-    const maxY = Math.max(...ys) + pad;
-    boxX = minX;
-    boxY = minY;
-    boxW = maxX - minX;
-    boxH = maxY - minY;
-  } else if (shape.type === "text") {
-    const width = 100;
-    const height = 30;
-    boxX = shape.x - pad / 2;
-    boxY = shape.y - height + pad / 2;
-    boxW = width + pad;
-    boxH = height + pad;
-  } else if (shape.type === "pencil") {
-    const xs = shape.points.map(p => p.x);
-    const ys = shape.points.map(p => p.y);
-    const minX = Math.min(...xs) - pad;
-    const maxX = Math.max(...xs) + pad;
-    const minY = Math.min(...ys) - pad;
-    const maxY = Math.max(...ys) + pad;
-    boxX = minX;
-    boxY = minY;
-    boxW = maxX - minX;
-    boxH = maxY - minY;
+  setBackgroundColor(color: string) {
+    this.currentBackgroundColor = color;
   }
 
-  return x >= boxX && x <= boxX + boxW && y >= boxY && y <= boxY + boxH;
-}  
+  setStrokeWidth(width: number) {
+    this.currentStrokeWidth = width;
+  }
+
+  setStrokeStyle(style: number) {
+    this.currentStrokeStyle = style; 
+  }
+
+  setFillStyle(style: number) {
+    this.currentFillStyle = style;
+  }
+
+  clearShapes() {
+    const key = this.getLocalStorageKey();
+    localStorage.removeItem(key);
+    this.existingShapes = [];
+    this.clearCanvas();
+  }
+
+  isOnSelectionBoxBorder(shape: Shape, x: number, y: number): boolean {
+    const pad = 8;
+    const tolerance = 6;
+    let boxX = 0, boxY = 0, boxW = 0, boxH = 0;
+
+    // ✅ Apply pan offset to the input point
+    x -= this.panOffsetX;
+    y -= this.panOffsetY;
+
+    if (shape.type === "rect") {
+      const x1 = Math.min(shape.x, shape.x + shape.width);
+      const y1 = Math.min(shape.y, shape.y + shape.height);
+      const x2 = Math.max(shape.x, shape.x + shape.width);
+      const y2 = Math.max(shape.y, shape.y + shape.height);
+
+      boxX = x1 - pad;
+      boxY = y1 - pad;
+      boxW = (x2 - x1) + pad * 2;
+      boxH = (y2 - y1) + pad * 2;
+    }
+
+    const onLeft   = Math.abs(x - boxX) < tolerance && y >= boxY && y <= boxY + boxH;
+    const onRight  = Math.abs(x - (boxX + boxW)) < tolerance && y >= boxY && y <= boxY + boxH;
+    const onTop    = Math.abs(y - boxY) < tolerance && x >= boxX && x <= boxX + boxW;
+    const onBottom = Math.abs(y - (boxY + boxH)) < tolerance && x >= boxX && x <= boxX + boxW;
+
+    return onLeft || onRight || onTop || onBottom;
+  }
+
+  isPointInsideSelectionBox(shape: Shape, x: number, y: number): boolean {
+    const pad = 8;
+    let boxX = 0, boxY = 0, boxW = 0, boxH = 0;
+
+    // ✅ Apply pan offset to bring mouse coordinates into world space
+    x -= this.panOffsetX;
+    y -= this.panOffsetY;
+
+    if (shape.type === "rect") {
+      const x1 = Math.min(shape.x, shape.x + shape.width);
+      const y1 = Math.min(shape.y, shape.y + shape.height);
+      const x2 = Math.max(shape.x, shape.x + shape.width);
+      const y2 = Math.max(shape.y, shape.y + shape.height);
+      boxX = x1 - pad;
+      boxY = y1 - pad;
+      boxW = (x2 - x1) + pad * 2;
+      boxH = (y2 - y1) + pad * 2;
+    } else if (shape.type === "circle") {
+      boxX = shape.centerX - shape.rx - pad;
+      boxY = shape.centerY - shape.ry - pad;
+      boxW = shape.rx * 2 + pad * 2;
+      boxH = shape.ry * 2 + pad * 2;
+    } else if (shape.type === "diamond") {
+      const xs = [shape.top.x, shape.right.x, shape.bottom.x, shape.left.x];
+      const ys = [shape.top.y, shape.right.y, shape.bottom.y, shape.left.y];
+      const minX = Math.min(...xs) - pad;
+      const maxX = Math.max(...xs) + pad;
+      const minY = Math.min(...ys) - pad;
+      const maxY = Math.max(...ys) + pad;
+      boxX = minX;
+      boxY = minY;
+      boxW = maxX - minX;
+      boxH = maxY - minY;
+    } else if (shape.type === "text") {
+      const width = 100;
+      const height = 30;
+      boxX = shape.x - pad / 2;
+      boxY = shape.y - height + pad / 2;
+      boxW = width + pad;
+      boxH = height + pad;
+    } else if (shape.type === "pencil") {
+      const xs = shape.points.map(p => p.x);
+      const ys = shape.points.map(p => p.y);
+      const minX = Math.min(...xs) - pad;
+      const maxX = Math.max(...xs) + pad;
+      const minY = Math.min(...ys) - pad;
+      const maxY = Math.max(...ys) + pad;
+      boxX = minX;
+      boxY = minY;
+      boxW = maxX - minX;
+      boxH = maxY - minY;
+    }
+
+    return x >= boxX && x <= boxX + boxW && y >= boxY && y <= boxY + boxH;
+  }  
 
   addTextShape(x: number, y: number, text: string) {
-    const shape = {
-      id: this.genId(),
-      type: "text" as const,
-      x,
-      y,
-      text,
-    };
-    this.existingShapes.push(shape);
-    if (this.isSolo) {
-      this.scheduleLocalSave();
-    } else {
-      this.broadcastShape(shape);
-    }
+  const shape = {
+    id: this.genId(),
+    type: "text" as const,
+    x,
+    y,
+    text,
+    strokeColor: this.currentStrokeColor,
+    backgroundColor: this.currentBackgroundColor,
+    strokeWidth: this.currentStrokeWidth,
+    strokeStyle: this.currentStrokeStyle,
+    fillStyle: this.currentFillStyle,
+  };
+  this.existingShapes.push(shape);
+  if (this.isSolo) {
+    this.scheduleLocalSave();
+  } else {
+    this.broadcastShape(shape);
   }
+}
+
 
   getMousePos = (e: MouseEvent) => {
     const rect = this.canvas.getBoundingClientRect();
@@ -759,35 +800,28 @@ drawDiamond(
   bottom: { x: number; y: number },
   left: { x: number; y: number },
   strokeStyle: string,
-) {
+  fillStyle: string = "transparent",
+  dashPattern: number[] = [],
+  lineWidth: number = 2,
+): void {
   const offsetX = this.panOffsetX;
   const offsetY = this.panOffsetY;
 
+  this.ctx.save();
   this.ctx.strokeStyle = strokeStyle;
+  this.ctx.fillStyle = fillStyle;
+  this.ctx.setLineDash(dashPattern);
+  this.ctx.lineWidth = lineWidth;
 
   this.ctx.beginPath();
   this.ctx.moveTo(top.x - offsetX, top.y - offsetY);
-  this.ctx.quadraticCurveTo(
-    top.x - offsetX, top.y - offsetY,
-    top.x - offsetX, top.y - offsetY
-  );
   this.ctx.lineTo(right.x - offsetX, right.y - offsetY);
-  this.ctx.quadraticCurveTo(
-    right.x - offsetX, right.y - offsetY,
-    right.x - offsetX, right.y - offsetY
-  );
   this.ctx.lineTo(bottom.x - offsetX, bottom.y - offsetY);
-  this.ctx.quadraticCurveTo(
-    bottom.x - offsetX, bottom.y - offsetY,
-    bottom.x - offsetX, bottom.y - offsetY
-  );
   this.ctx.lineTo(left.x - offsetX, left.y - offsetY);
-  this.ctx.quadraticCurveTo(
-    left.x - offsetX, left.y - offsetY,
-    left.x - offsetX, left.y - offsetY
-  );
-  this.ctx.lineTo(top.x - offsetX, top.y - offsetY);
+  this.ctx.closePath();
+  this.ctx.fill();
   this.ctx.stroke();
+  this.ctx.restore();
 }
 
   destroy() {
@@ -887,7 +921,11 @@ private deleteShapeByIndex(index: number) {
 
   this.clearCanvas();
 }
-
+  getDashArray(style: number | string): number[] {
+    if (style === 1 || style === "dashed") return [8, 6];
+    if (style === 2 || style === "dotted") return [2, 6];
+    return [];
+  }
 
   clearCanvas() {
     const offsetX = this.panOffsetX;
@@ -895,11 +933,30 @@ private deleteShapeByIndex(index: number) {
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
     this.ctx.fillStyle = this.theme === "dark" ? "#121212" : "#ffffff";
     this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+      // Util: map style index/enum to dash arrays
+  function getDashArray(style: number | string): number[] {
+    if (style === 1 || style === "dashed") return [8, 6];
+    if (style === 2 || style === "dotted") return [2, 6];
+    return [];
+  }
+
     this.existingShapes.forEach((shape , idx) => {
       const isHovered = this.selectedTool === "eraser" &&
       this.hoveredForErase?.includes(idx);
-     const strokeCol = isHovered ? "rgba(255,80,80)" : (this.theme === 'dark' ? "#ffffff" : "#000000");
-     const fillCol = strokeCol;
+      const strokeCol = isHovered 
+      ? "rgba(255,80,80)" 
+      : (shape as any).strokeColor ?? (this.theme === 'dark' ? "#ffffff" : "#000000");
+      const fillCol = (shape as any).backgroundColor ?? "transparent";
+      const lineWidth = (shape as any).strokeWidth ?? 2;
+      const dashArray = getDashArray((shape as any).strokeStyle);
+
+      this.ctx.save(); // Save graphics state
+
+      this.ctx.strokeStyle = strokeCol;
+      this.ctx.fillStyle = fillCol;
+      this.ctx.lineWidth = lineWidth;
+      this.ctx.setLineDash(dashArray);
+
       if (shape.type === "rect") {
         this.ctx.strokeStyle = strokeCol;
         const r = Math.min(
@@ -919,7 +976,7 @@ private deleteShapeByIndex(index: number) {
       } else if (shape.type === "diamond") {
         this.ctx.strokeStyle = strokeCol;
         this.ctx.fillStyle = fillCol;
-        this.drawDiamond(
+         this.drawDiamond(
         {
           x: shape.top.x - offsetX,
           y: shape.top.y - offsetY,
@@ -936,8 +993,12 @@ private deleteShapeByIndex(index: number) {
           x: shape.left.x - offsetX,
           y: shape.left.y - offsetY,
         },
-        strokeCol
+        strokeCol,
+        fillCol,
+        dashArray,
+        lineWidth
       );
+
       } else if (shape.type === "circle") {
         this.ctx.strokeStyle = strokeCol;
         this.ctx.fillStyle = fillCol;
@@ -987,16 +1048,22 @@ private deleteShapeByIndex(index: number) {
 
         }
       } else if (shape.type === "text") {
-        this.ctx.fillStyle = "rgba(255, 255, 255)";
-        this.ctx.fillStyle = fillCol; 
+        this.ctx.fillStyle = (shape as any).strokeColor ?? (this.theme === "dark" ? "#fff" : "#000");
         this.ctx.font = "16px Arial";
         this.ctx.fillText(shape.text, shape.x - offsetX, shape.y - offsetY);
       }
-      if (this.selectedTool === "select" && this.selectedShapeIndex === this.existingShapes.indexOf(shape)) {
+      // Draw selection box if selected
+      if (
+        this.selectedTool === "select" &&
+        this.selectedShapeIndex === this.existingShapes.indexOf(shape)
+      ) {
         this.drawSelectionBox(shape);
       }
-    });    
-  }
+
+      this.ctx.restore(); // Restore previous state (clears lineDash etc.)
+      });
+    }
+
 drawPencilPath(
   points: { x: number; y: number }[],
   offsetX: number,
@@ -1128,11 +1195,17 @@ drawPencilPath(
   endX: number,
   endY: number,
   strokeStyle: string,
+  fillStyle: string = strokeStyle,
+  lineWidth: number = 2,
+  dashPattern: number[] = [],
   offsetX: number = 0,
   offsetY: number = 0
-) {
+): void {
+  ctx.save();
   ctx.strokeStyle = strokeStyle;
-  ctx.fillStyle = strokeStyle;
+  ctx.fillStyle = fillStyle;
+  ctx.lineWidth = lineWidth;
+  ctx.setLineDash(dashPattern);
 
   const headLength = 10;
   const angle = Math.atan2(endY - startY, endX - startX);
@@ -1144,14 +1217,24 @@ drawPencilPath(
   const rightX = arrowTipX - headLength * Math.cos(angle + Math.PI / 6);
   const rightY = arrowTipY - headLength * Math.sin(angle + Math.PI / 6);
 
+  // Draw the main arrow shaft
   ctx.beginPath();
   ctx.moveTo(startX - offsetX, startY - offsetY);
   ctx.lineTo(arrowTipX, arrowTipY);
-  ctx.lineTo(leftX, leftY);
-  ctx.moveTo(arrowTipX, arrowTipY);
-  ctx.lineTo(rightX, rightY);
   ctx.stroke();
+
+  // Draw and fill the arrowhead
+  ctx.beginPath();
+  ctx.moveTo(arrowTipX, arrowTipY);
+  ctx.lineTo(leftX, leftY);
+  ctx.lineTo(rightX, rightY);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.restore();
 }
+
 
 private scheduleWriteAll() {
   if (!this.roomId) return;
@@ -1190,14 +1273,20 @@ private scheduleWriteAll() {
     this.clicked = false;
     if (this.startX == null || this.startY == null) return;
     if (this.selectedTool === "line" || this.selectedTool === "arrow") {
-      const shape: Shape = {
-        id: this.genId(),
-        type: this.selectedTool,
-        startX: this.startX,
-        startY: this.startY,
-        endX: pos.x,
-        endY: pos.y,
-      };
+     const shape: Shape = {
+    id: this.genId(),
+    type: this.selectedTool,
+    startX: this.startX,
+    startY: this.startY,
+    endX: pos.x,
+    endY: pos.y,
+    strokeColor: this.currentStrokeColor,
+    backgroundColor: this.currentBackgroundColor,
+    strokeWidth: this.currentStrokeWidth,
+    strokeStyle: this.currentStrokeStyle,
+    fillStyle: this.currentFillStyle,
+  };
+
 
       this.existingShapes.push(shape);
       // this.broadcastShape(shape);
@@ -1248,15 +1337,22 @@ private scheduleWriteAll() {
         Math.abs(width) * 0.5,
         Math.abs(height) * 0.5
       );
-      shape = {
-        id: this.genId(),
-        type: "rect",
-        x: this.startX + this.panOffsetX, // ⬅️ Apply pan offset here
-        y: this.startY + this.panOffsetY, // ⬅️ Apply pan offset here
-        width: width,
-        height: height,
-        radius: r,
-      };
+   shape = {
+  id: this.genId(),
+  type: "rect",
+  x: this.startX + this.panOffsetX,
+  y: this.startY + this.panOffsetY,
+  width: width,
+  height: height,
+  radius: r,
+  // Add panel properties below:
+  strokeColor: this.currentStrokeColor,
+  backgroundColor: this.currentBackgroundColor,
+  strokeWidth: this.currentStrokeWidth,
+  strokeStyle: this.currentStrokeStyle,
+  fillStyle: this.currentFillStyle,
+};
+
     } else if (this.selectedTool === "diamond") {
   if (this.startX === null || this.startY === null) return;
 
@@ -1265,14 +1361,20 @@ private scheduleWriteAll() {
   const cx = this.startX + width / 2 + this.panOffsetX;
   const cy = this.startY + height / 2 + this.panOffsetY;
 
-  shape = {
-    id: this.genId(),
-    type: "diamond",
-    top:    { x: cx, y: cy - height / 2 },
-    right:  { x: cx + width / 2, y: cy },
-    bottom: { x: cx, y: cy + height / 2 },
-    left:   { x: cx - width / 2, y: cy },
-  };
+shape = {
+  id: this.genId(),
+  type: "diamond",
+  top:    { x: cx, y: cy - height / 2 },
+  right:  { x: cx + width / 2, y: cy },
+  bottom: { x: cx, y: cy + height / 2 },
+  left:   { x: cx - width / 2, y: cy },
+  strokeColor: this.currentStrokeColor,
+  backgroundColor: this.currentBackgroundColor,
+  strokeWidth: this.currentStrokeWidth,
+  strokeStyle: this.currentStrokeStyle,
+  fillStyle: this.currentFillStyle,
+};
+
 } else if (this.selectedTool === "circle") {
   if (this.startX === null || this.startY === null) return;
 
@@ -1282,13 +1384,18 @@ private scheduleWriteAll() {
   const cy = this.startY + (pos.y - this.startY) / 2 + this.panOffsetY;
 
   shape = {
-    id: this.genId(),
-    type: "circle",
-    rx,
-    ry,
-    centerX: cx,
-    centerY: cy,
-  };
+  id: this.genId(),
+  type: "circle",
+  rx,
+  ry,
+  centerX: cx,
+  centerY: cy,
+  strokeColor: this.currentStrokeColor,
+  backgroundColor: this.currentBackgroundColor,
+  strokeWidth: this.currentStrokeWidth,
+  strokeStyle: this.currentStrokeStyle,
+  fillStyle: this.currentFillStyle,
+};
 }
 else if (this.selectedTool === "pencil") {
   // Apply panOffset to all pencil points
@@ -1302,11 +1409,17 @@ else if (this.selectedTool === "pencil") {
     y: pos.y + this.panOffsetY,
   });
 
-  shape = {
-    id: this.genId(),
-    type: "pencil",
-    points: adjustedPoints,
-  };
+ shape = {
+  id: this.genId(),
+  type: "pencil",
+  points: adjustedPoints,
+  strokeColor: this.currentStrokeColor,
+  backgroundColor: this.currentBackgroundColor,
+  strokeWidth: this.currentStrokeWidth,
+  strokeStyle: this.currentStrokeStyle,
+  fillStyle: this.currentFillStyle,
+};
+
 }
 else if (this.selectedTool === "text") {
   if ((window as any).justBlurredTextInput) return;
@@ -1345,152 +1458,151 @@ else if (this.selectedTool === "text") {
     }
 
     const pos = this.getMousePos(e);
-    const strokeCol = this.theme === "dark" ? "#ffffff" : "#000000";
+    const strokeCol = this.currentStrokeColor;
+    const fillCol = this.currentBackgroundColor;
+    const lineWidth = this.currentStrokeWidth;
+    const dashArray = this.getDashArray(this.currentStrokeStyle); // helper function as in clearCanvas
+
     if (this.selectedTool === "select" && this.selectedShapeIndex != null) {
       const shape = this.existingShapes[this.selectedShapeIndex];
       if (!shape) return;
- if (shape.type === "line" || shape.type === "arrow") {
-  const dist = (x1: number, y1: number, x2: number, y2: number) =>
-    Math.hypot(x2 - x1, y2 - y1);
-  const handleRadius = 8;
+      if (shape.type === "line" || shape.type === "arrow") {
+        const dist = (x1: number, y1: number, x2: number, y2: number) =>
+          Math.hypot(x2 - x1, y2 - y1);
+          const handleRadius = 8;
 
-  const x1 = shape.startX - this.panOffsetX;
-  const y1 = shape.startY - this.panOffsetY;
-  const x2 = shape.endX - this.panOffsetX;
-  const y2 = shape.endY - this.panOffsetY;
+          const x1 = shape.startX - this.panOffsetX;
+          const y1 = shape.startY - this.panOffsetY;
+          const x2 = shape.endX - this.panOffsetX;
+          const y2 = shape.endY - this.panOffsetY;
 
-  const mouseX = pos.x;
-  const mouseY = pos.y;
+          const mouseX = pos.x;
+          const mouseY = pos.y;
 
-  this.ctx.strokeStyle = strokeCol;
+          this.ctx.strokeStyle = strokeCol;
 
-  const hoverStart = dist(mouseX, mouseY, x1, y1) < handleRadius + 2;
-  const hoverEnd = dist(mouseX, mouseY, x2, y2) < handleRadius + 2;
+          const hoverStart = dist(mouseX, mouseY, x1, y1) < handleRadius + 2;
+          const hoverEnd = dist(mouseX, mouseY, x2, y2) < handleRadius + 2;
 
-  const midX = (x1 + x2) / 2;
-  const midY = (y1 + y2) / 2;
-  const hoverMid = dist(mouseX, mouseY, midX, midY) < handleRadius + 2;
+          const midX = (x1 + x2) / 2;
+          const midY = (y1 + y2) / 2;
+          const hoverMid = dist(mouseX, mouseY, midX, midY) < handleRadius + 2;
 
-  let newHover: "start" | "end" | "mid" | null = null;
-  if (hoverStart) newHover = "start";
-  else if (hoverEnd) newHover = "end";
-  else if (hoverMid) newHover = "mid";
+          let newHover: "start" | "end" | "mid" | null = null;
+          if (hoverStart) newHover = "start";
+          else if (hoverEnd) newHover = "end";
+          else if (hoverMid) newHover = "mid";
 
-  if (newHover !== this.hoveredEndpoint) {
-    this.hoveredEndpoint = newHover;
-    if (newHover === "start" || newHover === "end") {
-      this.canvas.style.cursor = "crosshair";
-    } else if (newHover === "mid") {
-      this.canvas.style.cursor = "move";
-    } else {
-      this.canvas.style.cursor = "default";
-    }
-    this.clearCanvas();
-  }
-}
-else {
-      this.ctx.strokeStyle = strokeCol;
-      this.hoveredEndpoint = null;
-      this.canvas.style.cursor = "default";
-    }
-if (this.selectedShapeIndex != null && shape.type !== "line" && shape.type !== "arrow") {
-  // Correct mouse position relative to panned canvas
-  const offsetX = this.panOffsetX;
-  const offsetY = this.panOffsetY;
+          if (newHover !== this.hoveredEndpoint) {
+            this.hoveredEndpoint = newHover;
+            if (newHover === "start" || newHover === "end") {
+              this.canvas.style.cursor = "crosshair";
+            } else if (newHover === "mid") {
+              this.canvas.style.cursor = "move";
+            } else {
+              this.canvas.style.cursor = "default";
+            }
+            this.clearCanvas();
+          }
+        } else {
+          this.ctx.strokeStyle = strokeCol;
+          this.hoveredEndpoint = null;
+          this.canvas.style.cursor = "default";
+        }
+        if (this.selectedShapeIndex != null && shape.type !== "line" && shape.type !== "arrow") {
+          // Correct mouse position relative to panned canvas
+          const offsetX = this.panOffsetX;
+          const offsetY = this.panOffsetY;
+          const h = this.hitTestShapeHandle(shape, pos.x + offsetX, pos.y + offsetY);
+          if (h) {
+            const cursorMap: Record<"tl" | "tr" | "bl" | "br", string> = {
+              tl: "nwse-resize",
+              br: "nwse-resize",
+              tr: "nesw-resize",
+              bl: "nesw-resize",
+            };
+            this.canvas.style.cursor = cursorMap[h];
+            this.activeHandle = h;
+            this.clearCanvas();
+          } else if (this.isPointInsideShape(pos.x + offsetX, pos.y + offsetY, shape)) {
+            this.canvas.style.cursor = "move";
+          } else {
+            this.canvas.style.cursor = "default";
+          }
+        }
+      }
+      /* ───────── DRAG‑TO‑MOVE / RESIZE ───────── */
+      if (this.dragMode !== "none" && this.selectedShapeIndex != null) {
+        const p = this.getMousePos(e);
+        p.x += this.panOffsetX;
+        p.y += this.panOffsetY;
+        
+        const s = this.existingShapes[this.selectedShapeIndex];
+        if (this.dragMode === "move") {
+          const dx = p.x - this.offsetX;
+          const dy = p.y - this.offsetY;
+          this.offsetX = p.x;
+          this.offsetY = p.y;    
 
-  const h = this.hitTestShapeHandle(shape, pos.x + offsetX, pos.y + offsetY);
-  if (h) {
-    const cursorMap: Record<"tl" | "tr" | "bl" | "br", string> = {
-      tl: "nwse-resize",
-      br: "nwse-resize",
-      tr: "nesw-resize",
-      bl: "nesw-resize",
-    };
-    this.canvas.style.cursor = cursorMap[h];
-    this.activeHandle = h;
-    this.clearCanvas();
-  } else if (this.isPointInsideShape(pos.x + offsetX, pos.y + offsetY, shape)) {
-    this.canvas.style.cursor = "move";
-  } else {
-    this.canvas.style.cursor = "default";
-  }
-}
-    }
-  
+          switch (s.type) {
+            case "rect":   s.x += dx; s.y += dy; break;
+            case "circle": s.centerX += dx; s.centerY += dy; break;
+            case "diamond":
+              s.top.x += dx;    s.top.y += dy;
+              s.right.x += dx;  s.right.y += dy;
+              s.bottom.x += dx; s.bottom.y += dy;
+              s.left.x += dx;   s.left.y += dy;
+              break;
+            case "line":
+            case "arrow":
+              s.startX += dx; s.startY += dy;
+              s.endX += dx;   s.endY += dy;
+              break;
+            case "pencil":
+              s.points = s.points.map((pt) => ({
+                x: pt.x + dx,
+                y: pt.y + dy
+              }));
+              break;
+            case "text":
+              s.x += dx;
+              s.y += dy;
+              break;
+            }
+          }
+          else if (this.dragMode === "resize" && this.activeHandle) {
+            p.x += this.panOffsetX;
+            p.y += this.panOffsetY;
 
-    /* ───────── DRAG‑TO‑MOVE / RESIZE ───────── */
-if (this.dragMode !== "none" && this.selectedShapeIndex != null) {
-  const p = this.getMousePos(e);
-  p.x += this.panOffsetX;
-  p.y += this.panOffsetY;
+            if (s.type === "rect") {
+              const h = this.activeHandle;
+              if (h === "tl" || h === "bl") {
+                const newW = s.x + s.width - p.x;
+                s.x = p.x;
+                s.width = newW;
+              }
+              if (h === "tl" || h === "tr") {
+                const newH = s.y + s.height - p.y;
+                s.y = p.y;
+                s.height = newH;
+              }
+              if (h === "tr" || h === "br") s.width  = p.x - s.x;
+              if (h === "bl" || h === "br") s.height = p.y - s.y;
 
-  const s = this.existingShapes[this.selectedShapeIndex];
-  if (this.dragMode === "move") {
-    const dx = p.x - this.offsetX;
-    const dy = p.y - this.offsetY;
-    this.offsetX = p.x;
-    this.offsetY = p.y;    
+            } else if (s.type === "circle") {
+              s.rx = Math.abs(p.x - s.centerX);
+              s.ry = Math.abs(p.y - s.centerY);
 
-    switch (s.type) {
-      case "rect":   s.x += dx; s.y += dy; break;
-      case "circle": s.centerX += dx; s.centerY += dy; break;
-      case "diamond":
-        s.top.x += dx;    s.top.y += dy;
-        s.right.x += dx;  s.right.y += dy;
-        s.bottom.x += dx; s.bottom.y += dy;
-        s.left.x += dx;   s.left.y += dy;
-        break;
-      case "line":
-      case "arrow":
-        s.startX += dx; s.startY += dy;
-        s.endX += dx;   s.endY += dy;
-        break;
-      case "pencil":
-        s.points = s.points.map((pt) => ({
-          x: pt.x + dx,
-          y: pt.y + dy
-        }));
-        break;
-      case "text":
-        s.x += dx;
-        s.y += dy;
-        break;
-    }
-  }
-else if (this.dragMode === "resize" && this.activeHandle) {
-  p.x += this.panOffsetX;
-  p.y += this.panOffsetY;
-
-  if (s.type === "rect") {
-    const h = this.activeHandle;
-    if (h === "tl" || h === "bl") {
-      const newW = s.x + s.width - p.x;
-      s.x = p.x;
-      s.width = newW;
-    }
-    if (h === "tl" || h === "tr") {
-      const newH = s.y + s.height - p.y;
-      s.y = p.y;
-      s.height = newH;
-    }
-    if (h === "tr" || h === "br") s.width  = p.x - s.x;
-    if (h === "bl" || h === "br") s.height = p.y - s.y;
-
-  } else if (s.type === "circle") {
-    s.rx = Math.abs(p.x - s.centerX);
-    s.ry = Math.abs(p.y - s.centerY);
-
-  } else if (s.type === "line" || s.type === "arrow") {
-    if (this.activeHandle === "start") {
-      s.startX = p.x;
-      s.startY = p.y;
-    } else if (this.activeHandle === "end") {
-      s.endX = p.x;
-      s.endY = p.y;
-    }
-  }
-}
-
+            } else if (s.type === "line" || s.type === "arrow") {
+              if (this.activeHandle === "start") {
+                s.startX = p.x;
+                s.startY = p.y;
+              } else if (this.activeHandle === "end") {
+                s.endX = p.x;
+                s.endY = p.y;
+              }
+            }
+          }
           this.clearCanvas();
           if (this.isSolo) {
             this.scheduleLocalSave();
@@ -1505,7 +1617,7 @@ else if (this.dragMode === "resize" && this.activeHandle) {
           return;
         }
         if (this.selectedTool === "eraser") {
-  if (!this.clicked) return;
+          if (!this.clicked) return;
 
   // Apply pan offset
   const logicalX = pos.x + this.panOffsetX;
@@ -1533,14 +1645,18 @@ if (this.selectedTool === "pencil") {
     x: pos.x + this.panOffsetX,
     y: pos.y + this.panOffsetY,
   });
-  this.ctx.strokeStyle = strokeCol;
+  this.ctx.save();
+  this.ctx.strokeStyle = this.currentStrokeColor;
+  this.ctx.lineWidth = this.currentStrokeWidth;
+  this.ctx.setLineDash(this.getDashArray(this.currentStrokeStyle));
   this.clearCanvas();
   this.drawPencilPath(this.pencilPoints, this.panOffsetX, this.panOffsetY);
+  this.ctx.restore();
 }
 else {
   if (this.startX === null || this.startY === null) return;
 
-  // Adjust all positions by pan offset
+  // Compute offsets
   const offsetStartX = this.startX - this.panOffsetX;
   const offsetStartY = this.startY - this.panOffsetY;
   const offsetPosX = pos.x - this.panOffsetX;
@@ -1548,9 +1664,22 @@ else {
   const width = offsetPosX - offsetStartX;
   const height = offsetPosY - offsetStartY;
 
+  // Clear before preview redraw
   this.clearCanvas();
-  this.ctx.strokeStyle = strokeCol;
 
+  // Read panel-selected properties
+  const strokeCol = this.currentStrokeColor;
+  const fillCol = this.currentBackgroundColor;
+  const lineWidth = this.currentStrokeWidth;
+  const dashArray = this.getDashArray(this.currentStrokeStyle);
+
+  this.ctx.save();
+  this.ctx.strokeStyle = strokeCol;
+  this.ctx.fillStyle = fillCol;
+  this.ctx.lineWidth = lineWidth;
+  this.ctx.setLineDash(dashArray);
+
+  // Common geometry calculations for symmetric shapes
   const cx = offsetStartX + width / 2;
   const cy = offsetStartY + height / 2;
   const top = { x: cx, y: cy - height / 2 };
@@ -1558,40 +1687,90 @@ else {
   const bottom = { x: cx, y: cy + height / 2 };
   const left = { x: cx - width / 2, y: cy };
 
-  if (this.selectedTool === "rect") {
-    this.ctx.beginPath();
-    const r = Math.min(
-      this.MAX_CORNER_RADIUS,
-      Math.abs(width) * 0.5,
-      Math.abs(height) * 0.5
-    );
-    this.ctx.roundRect(offsetStartX, offsetStartY, width, height, r);
-    this.ctx.stroke();
-  } else if (this.selectedTool === "diamond") {
-    this.drawDiamond(top, right, bottom, left, strokeCol);
-  } else if (this.selectedTool === "circle") {
-    const rx = Math.abs(width / 2);
-    const ry = Math.abs(height / 2);
-    this.ctx.beginPath();
-    this.ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
-    this.ctx.stroke();
-    this.ctx.closePath();
-  } else if (this.selectedTool === "line") {
-    this.ctx.beginPath();
-    this.ctx.moveTo(offsetStartX, offsetStartY);
-    this.ctx.lineTo(offsetPosX, offsetPosY);
-    this.ctx.stroke();
-    this.ctx.closePath();
-    this.endX = pos.x;
-    this.endY = pos.y;
-  } else if (this.selectedTool === "arrow") {
-    this.drawArrow(this.ctx, this.startX, this.startY, pos.x, pos.y, strokeCol, this.panOffsetX, this.panOffsetY);
+if (this.selectedTool === "rect") {
+  const r = Math.min(
+    this.MAX_CORNER_RADIUS,
+    Math.abs(width) * 0.5,
+    Math.abs(height) * 0.5
+  );
+
+  // Panel-driven styles
+  const strokeCol = this.currentStrokeColor;
+  const fillCol = this.currentBackgroundColor;
+  const lineWidth = this.currentStrokeWidth;
+  const dashArray = this.getDashArray(this.currentStrokeStyle);
+
+  this.ctx.save();
+  this.ctx.strokeStyle = strokeCol;
+  this.ctx.fillStyle = fillCol;
+  this.ctx.lineWidth = lineWidth;
+  this.ctx.setLineDash(dashArray);
+
+  this.ctx.beginPath();
+  this.ctx.roundRect(offsetStartX, offsetStartY, width, height, r);
+  this.ctx.fill();
+  this.ctx.stroke();
+
+  this.ctx.restore();
+} else if (this.selectedTool === "diamond") {
+  this.drawDiamond(
+    top,
+    right,
+    bottom,
+    left,
+    this.currentStrokeColor,              // stroke color from panel
+    this.currentBackgroundColor,          // fill color from panel
+    this.getDashArray(this.currentStrokeStyle), // dash array from panel
+    this.currentStrokeWidth               // line width from panel
+  );
+} else if (this.selectedTool === "circle") {
+  const rx = Math.abs(width / 2);
+  const ry = Math.abs(height / 2);
+  this.ctx.save();
+  this.ctx.strokeStyle = this.currentStrokeColor;
+  this.ctx.fillStyle = this.currentBackgroundColor;
+  this.ctx.lineWidth = this.currentStrokeWidth;
+  this.ctx.setLineDash(this.getDashArray(this.currentStrokeStyle));
+  this.ctx.beginPath();
+  this.ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
+  this.ctx.fill();    // Apply fill from panel
+  this.ctx.stroke();  // Apply stroke from panel
+  this.ctx.closePath();
+  this.ctx.restore();
+}else if (this.selectedTool === "line") {
+  this.ctx.save();
+  this.ctx.strokeStyle = this.currentStrokeColor;
+  this.ctx.lineWidth = this.currentStrokeWidth;
+  this.ctx.setLineDash(this.getDashArray(this.currentStrokeStyle));
+  this.ctx.beginPath();
+  this.ctx.moveTo(offsetStartX, offsetStartY);
+  this.ctx.lineTo(offsetPosX, offsetPosY);
+  this.ctx.stroke();
+  this.ctx.closePath();
+  this.ctx.restore();
+  this.endX = pos.x;
+  this.endY = pos.y;
+}
+ else if (this.selectedTool === "arrow") {
+ this.drawArrow(
+  this.ctx,
+  this.startX!,
+  this.startY!,
+  pos.x,
+  pos.y,
+  this.currentStrokeColor,                  // stroke color
+  this.currentBackgroundColor,              // fill color (arrowhead fill)
+  this.currentStrokeWidth,                  // line width
+  this.getDashArray(this.currentStrokeStyle), // dash array
+  this.panOffsetX,
+  this.panOffsetY
+);
     this.endX = pos.x;
     this.endY = pos.y;
   } else if (this.selectedTool === "text") {
     if (!this.clicked) return;
     this.clearCanvas();
-    this.ctx.fillStyle = strokeCol;
+    this.ctx.fillStyle = this.currentStrokeColor;
     this.ctx.font = "16px Arial";
     this.ctx.fillText("Sample Text", offsetPosX, offsetPosY);
   }
