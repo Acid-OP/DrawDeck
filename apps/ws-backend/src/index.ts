@@ -69,6 +69,7 @@ wss.on("connection", (ws, request) => {
 
       case "shape:add": {
         const { roomName, shape } = payload;
+        console.log("📩 Received shape:add for room:", roomName, shape);
         broadcastToRoom(String(roomName), {
           type: "shape:add",
           roomName,

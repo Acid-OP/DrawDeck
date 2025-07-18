@@ -143,12 +143,10 @@ export class Game {
   // Multiplayer — send to server via socket
     this.safeSend?.({
       type: "shape:add",
-      roomId: this.roomId?.toString(),
+      roomName: this.roomId?.toString(),
       shape,
     });
   }
-
-
 
   hitTestShapeHandle(shape: Shape, mouseX: number, mouseY: number): "tl" | "tr" | "bl" | "br" | null {
     const handleSize = 10;
@@ -567,7 +565,10 @@ if (shape.type === "line" || shape.type === "arrow") {
     this.clearCanvas();
     this.clicked = false;
     this.init();
-    if (!isSolo && this.socket) this.initHandlers();
+    // if (!isSolo && this.socket) this.initHandlers();
+      if (!this.isSolo && this.socket) {
+    this.initHandlers(); // ✅ set up socket listener ONCE
+  }
     this.initMouseHandlers();
   }
   setStrokeColor(color: string) {
@@ -854,7 +855,7 @@ drawDiamond(
 
   if (!this.roomId) return;
 
-  this.initHandlers();
+  // this.initHandlers();
 
   const saved = localStorage.getItem(`shapes_${this.roomId}`);
   const shapes: Shape[] = saved ? JSON.parse(saved) : [];
@@ -869,11 +870,14 @@ drawDiamond(
   this.clearCanvas();
 }
 
-  initHandlers() {
+initHandlers() {
   if (this.isSolo || !this.socket || !this.roomId) return;
+
   this.socket.onmessage = (event) => {
     const msg = JSON.parse(event.data);
-    if (msg.roomId !== this.roomId?.toString()) return;
+console.log("📬 Received WebSocket message:", msg);
+    // ✅ FIXED ROOM MATCHING
+    if (msg.roomName !== this.roomId?.toString()) return;
 
     switch (msg.type) {
       case "shape:add": {
@@ -881,12 +885,11 @@ drawDiamond(
         const exists = this.existingShapes.some(s => s.id === shape.id);
         if (!exists) {
           this.existingShapes.push(shape);
-          this.scheduleWrite(shape);
-          this.broadcastShape(shape);
           this.clearCanvas();
         }
         break;
       }
+
       case "shape:delete": {
         const shapeId = msg.shapeId;
         const index = this.existingShapes.findIndex(s => s.id === shapeId);
@@ -894,9 +897,12 @@ drawDiamond(
           this.deleteShapeByIndex(index);
         }
         break;
-      }}
-    };
-  }
+      }
+    }
+  };
+}
+
+
 deleteShapeById(id: string) {
   this.existingShapes = this.existingShapes.filter(shape => shape.id !== id);
   this.saveToLocalStorage();
@@ -914,11 +920,10 @@ private deleteShapeByIndex(index: number) {
   this.scheduleWriteAll();
   this.safeSend({
     type: "shape:delete",
-    roomId: this.roomId?.toString(),
+    roomName: this.roomId?.toString(),
     shapeId: shape.id,
   });
 }
-
 
   this.clearCanvas();
 }
@@ -1190,7 +1195,7 @@ drawPencilPath(
       this.safeSend(
         JSON.stringify({
           type: "shape:delete",
-          roomId: this.roomId?.toString(),
+          roomName: this.roomId?.toString(),
           shapeId: deletedShape.id,
         })
       );
@@ -1292,7 +1297,7 @@ private scheduleWriteAll() {
           this.safeSend(
             JSON.stringify({
               type: "shape:add",
-              roomId: this.roomId?.toString(),
+              roomName: this.roomId?.toString(),
               shape,
             })
           );
@@ -1317,10 +1322,14 @@ private scheduleWriteAll() {
     fillStyle: this.currentFillStyle,
   };
 
-
-      this.existingShapes.push(shape);
-      // this.broadcastShape(shape);
+this.existingShapes.push(shape);
+if (!this.isSolo) {
+  this.broadcastShape(shape); // ✅ UNCOMMENT THIS
+}
+     
       this.scheduleLocalSave();
+
+
 
       this.selectedShapeIndex = this.existingShapes.length - 1;
 
@@ -1473,7 +1482,7 @@ else if (this.selectedTool === "text") {
     const strokeCol = this.currentStrokeColor;
     const fillCol = this.currentBackgroundColor;
     const lineWidth = this.currentStrokeWidth;
-    const dashArray = this.getDashArray(this.currentStrokeStyle); // helper function as in clearCanvas
+    const dashArray = this.getDashArray(this.currentStrokeStyle); 
 
     if (this.selectedTool === "select" && this.selectedShapeIndex != null) {
       const shape = this.existingShapes[this.selectedShapeIndex];
@@ -1621,7 +1630,7 @@ else if (this.selectedTool === "text") {
           } else {
             this.safeSend(JSON.stringify({
               type: "shape:add",
-              roomId: this.roomId?.toString(),
+              roomName: this.roomId?.toString(),
               shape: s
             }));
             this.scheduleWrite(s);
@@ -1645,7 +1654,7 @@ if (this.selectedTool === "eraser" && this.clicked) {
         this.safeSend(
           JSON.stringify({
             type: "shape:delete",
-            roomId: this.roomId?.toString(),
+            roomName: this.roomId?.toString(),
             shapeId: shape.id,
           })
         );

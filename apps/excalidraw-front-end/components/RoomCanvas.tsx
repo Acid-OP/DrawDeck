@@ -19,6 +19,7 @@ export function RoomCanvas({ slug }: { slug: string }) {
     const ws = new WebSocket(`${WS_URL}?token=${token}`);
 
     ws.onopen = () => {
+      console.log("✅ WebSocket connected");
       ws.send(JSON.stringify({ type: "join_room", roomName: slug }));
       setSocket(ws);
     };
