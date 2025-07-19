@@ -119,6 +119,34 @@ importers:
         specifier: ^9.0.9
         version: 9.0.9
 
+  apps/rtc:
+    dependencies:
+      '@repo/backend-common':
+        specifier: workspace:*
+        version: link:../../packages/backend-common
+      '@types/jsonwebtoken':
+        specifier: ^9.0.9
+        version: 9.0.9
+      '@types/ws':
+        specifier: ^8.18.1
+        version: 8.18.1
+      jsonwebtoken:
+        specifier: ^9.0.2
+        version: 9.0.2
+      typescript:
+        specifier: ^5
+        version: 5.8.2
+      ws:
+        specifier: ^8.18.2
+        version: 8.18.2
+    devDependencies:
+      '@repo/db':
+        specifier: workspace:*
+        version: link:../../packages/db
+      '@types/bun':
+        specifier: latest
+        version: 1.2.18(@types/react@19.1.0)
+
   apps/ws-backend:
     dependencies:
       '@repo/backend-common':
@@ -1041,6 +1069,9 @@ packages:
   '@types/bun@1.2.13':
     resolution: {integrity: sha512-u6vXep/i9VBxoJl3GjZsl/BFIsvML8DfVDO0RYLEwtSZSp981kEO1V5NwRcO1CPJ7AmvpbnDCiMKo3JvbDEjAg==}
 
+  '@types/bun@1.2.18':
+    resolution: {integrity: sha512-Xf6RaWVheyemaThV0kUfaAUvCNokFr+bH8Jxp+tTZfx7dAPA8z9ePnP9S9+Vspzuxxx9JRAXhnyccRj3GyCMdQ==}
+
   '@types/connect@3.4.38':
     resolution: {integrity: sha512-K6uROf1LD88uDQqJCktA4yzL1YYAK6NgfsI0v/mTgyPKWsX1CnJ0XPSDhViejru1GcRkLWb8RlzFYJRqGUbaug==}
 
@@ -1485,6 +1516,11 @@ packages:
 
   bun-types@1.2.13:
     resolution: {integrity: sha512-rRjA1T6n7wto4gxhAO/ErZEtOXyEZEmnIHQfl0Dt1QQSB4QV0iP6BZ9/YB5fZaHFQ2dwHFrmPaRQ9GGMX01k9Q==}
+
+  bun-types@1.2.18:
+    resolution: {integrity: sha512-04+Eha5NP7Z0A9YgDAzMk5PHR16ZuLVa83b26kH5+cp1qZW4F6FmAURngE7INf4tKOvCE69vYvDEwoNl1tGiWw==}
+    peerDependencies:
+      '@types/react': ^19
 
   busboy@1.6.0:
     resolution: {integrity: sha512-8SFQbg/0hQ9xy3UNTB0YEnsNBbWfhf7RtnzpL7TkBiTBRfrQ9Fxcnz7VJsleJpyp6rVLvXiuORqjlHi5q+PYuA==}
@@ -4220,6 +4256,12 @@ snapshots:
     dependencies:
       bun-types: 1.2.13
 
+  '@types/bun@1.2.18(@types/react@19.1.0)':
+    dependencies:
+      bun-types: 1.2.18(@types/react@19.1.0)
+    transitivePeerDependencies:
+      - '@types/react'
+
   '@types/connect@3.4.38':
     dependencies:
       '@types/node': 22.16.3
@@ -4752,6 +4794,11 @@ snapshots:
   bun-types@1.2.13:
     dependencies:
       '@types/node': 22.16.3
+
+  bun-types@1.2.18(@types/react@19.1.0):
+    dependencies:
+      '@types/node': 22.16.3
+      '@types/react': 19.1.0
 
   busboy@1.6.0:
     dependencies:

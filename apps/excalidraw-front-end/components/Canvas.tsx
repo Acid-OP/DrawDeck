@@ -179,7 +179,6 @@ useEffect(() => {
         <LiveCollabModal onClose={() => setShowLiveModal(false)} />
         )}
         <ZoomBar zoom={zoom} setZoom={setZoom} theme={theme} />
-
     </div>
   );
 }

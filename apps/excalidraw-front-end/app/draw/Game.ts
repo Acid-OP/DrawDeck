@@ -62,7 +62,7 @@ interface StyleFields {
 export class Game {
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
-  private existingShapes: Shape[];
+  public existingShapes: Shape[];
   private roomId?: string | null;
   private roomName?: string | null;
   private clicked: boolean;
@@ -132,7 +132,6 @@ export class Game {
     const key = this.getLocalStorageKey();
 
     if (this.isSolo) {
-      // Solo mode — write to localStorage
       const existing = JSON.parse(localStorage.getItem(key) || "[]");
       const updated = [...existing, shape];
       localStorage.setItem(key, JSON.stringify(updated));
@@ -140,7 +139,6 @@ export class Game {
 
     this.existingShapes.push(shape);
 
-  // Multiplayer — send to server via socket
     this.safeSend?.({
       type: "shape:add",
       roomName: this.roomId?.toString(),
@@ -908,7 +906,7 @@ deleteShapeById(id: string) {
   this.saveToLocalStorage();
 }
 
-private deleteShapeByIndex(index: number) {
+public deleteShapeByIndex(index: number) {
   console.log("hellloooo")
   const shape = this.existingShapes[index];
   if (!shape) return;

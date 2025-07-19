@@ -3,19 +3,19 @@ import jwt, { type JwtPayload } from "jsonwebtoken";
 import { JWT_SECRET } from "@repo/backend-common/index";
 import WebSocket from "ws";
 
-const wss = new WebSocketServer({ port: 8080 });
+const wss = new WebSocketServer({ port: 8081 }); // Run RTC on a different port
 
 wss.on("listening", () => {
-  console.log("✅ WebSocket server is listening on ws://localhost:8080");
+  console.log("🎥 WebRTC signaling server running on ws://localhost:8081");
 });
 
-interface ClientInfo {
+interface RTCClient {
   ws: WebSocket;
   userId: string;
   rooms: Set<string>;
 }
 
-const clients: Set<ClientInfo> = new Set();
+const rtcClients: Set<RTCClient> = new Set();
 
 function verifyToken(token: string): string | null {
   try {
@@ -26,10 +26,10 @@ function verifyToken(token: string): string | null {
   }
 }
 
-function broadcastToRoom(roomName: string, payload: unknown) {
+function broadcastToRoom(roomName: string, sender: RTCClient, payload: any) {
   const msg = JSON.stringify(payload);
-  clients.forEach((client) => {
-    if (client.rooms.has(roomName)) {
+  rtcClients.forEach((client) => {
+    if (client !== sender && client.rooms.has(roomName)) {
       client.ws.send(msg);
     }
   });
@@ -43,8 +43,8 @@ wss.on("connection", (ws, request) => {
     return ws.close(4001, "invalidtoken");
   }
 
-  const client: ClientInfo = { ws, userId, rooms: new Set() };
-  clients.add(client);
+  const client: RTCClient = { ws, userId, rooms: new Set() };
+  rtcClients.add(client);
 
   ws.on("message", (raw) => {
     let payload: any;
@@ -67,33 +67,22 @@ wss.on("connection", (ws, request) => {
         break;
       }
 
-      case "shape:add": {
-        const { roomName, shape } = payload;
-        broadcastToRoom(String(roomName), {
-          type: "shape:add",
-          roomName,
-          shape,
-        });
-        break;
-      }
-
-      case "shape:delete": {
-        const { roomName, shapeId } = payload;
-        broadcastToRoom(String(roomName), {
-          type: "shape:delete",
-          roomName,
-          shapeId,
-        });
+      // Signaling messages
+      case "rtc:offer":
+      case "rtc:answer":
+      case "rtc:candidate": {
+        const { roomName } = payload;
+        broadcastToRoom(String(roomName), client, payload);
         break;
       }
 
       default: {
-        console.warn("Unknown message type:", type);
+        console.warn("Unknown RTC message type:", type);
       }
     }
   });
 
   ws.on("close", () => {
-    clients.delete(client);
+    rtcClients.delete(client);
   });
 });

@@ -1,0 +1,25 @@
+{
+  "name": "rtc",
+  "module": "index.ts",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "pnpm run build && pnpm run start",
+    "build": "tsc -b",
+    "start": "node ./dist/index.js"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@repo/db" : "workspace:*"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "@types/jsonwebtoken": "^9.0.9",
+    "@types/ws": "^8.18.1",
+    "@repo/backend-common" : "workspace:*",
+    "jsonwebtoken": "^9.0.2",
+    "ws": "^8.18.2"
+  }
+}
