@@ -43,7 +43,7 @@ export function RoomCanvas({ slug }: { slug: string }) {
   return (
     <div className="relative w-full h-full">
       <Canvas roomName={slug} socket={socket} />
-      <VideoCall roomName={slug} token={token} /> {/* ✅ RTC video layer */}
+      <VideoCall roomName={slug} token={token} /> 
     </div>
 
   );
