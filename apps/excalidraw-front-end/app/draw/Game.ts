@@ -860,6 +860,14 @@ if (shape.type === "line" || shape.type === "arrow") {
 
   this.clearCanvas();
 }
+public clearAllShapes() {
+  this.existingShapes = [];
+  if (this.isSolo) {
+    this.scheduleLocalSave();
+  }
+  this.clearCanvas();
+}
+
 
   initHandlers() {
     if (this.isSolo || !this.socket || !this.roomId) return;
@@ -897,7 +905,6 @@ deleteShapeById(id: string) {
 }
 
 public deleteShapeByIndex(index: number) {
-  console.log("hellloooo")
   const shape = this.existingShapes[index];
   if (!shape) return;
   this.existingShapes.splice(index, 1);

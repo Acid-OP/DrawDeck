@@ -7,9 +7,10 @@ import { MenuIcon } from "lucide-react";
 interface MenuProps {
   theme: 'light' | 'dark';
   onThemeToggle: () => void;
+  onClearCanvas: () => void; 
 }
 
-export function Menu({ theme, onThemeToggle }: MenuProps) {
+export function Menu({ theme, onThemeToggle , onClearCanvas }: MenuProps) {
   const [activated, setActivated] = useState(false);
   const [clicked, setClicked] = useState(false);
 
@@ -57,6 +58,7 @@ export function Menu({ theme, onThemeToggle }: MenuProps) {
           onClose={() => setActivated(false)}
           theme={theme}
           onThemeToggle={onThemeToggle}
+          onClearCanvas={onClearCanvas}
         />
       </div>
     )}

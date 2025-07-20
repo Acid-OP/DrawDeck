@@ -24,15 +24,15 @@ import { useRouter } from 'next/navigation';
 interface SidebarItemsProps {
   theme: 'light' | 'dark';
   onThemeToggle: () => void;
+  onClearCanvas: () => void;
 }
 
-export const SidebarItems: React.FC<SidebarItemsProps> = ({ theme, onThemeToggle }) => {
+export const SidebarItems: React.FC<SidebarItemsProps> = ({ theme, onThemeToggle , onClearCanvas }) => {
   const [showLiveModal, setShowLiveModal] = useState(false);
  const router = useRouter();
   const handleLiveClick = () => {
     setShowLiveModal(true);
   };
-
   const handleSignupClick = () => {
     router.push("/signup");
   };
@@ -53,6 +53,7 @@ export const SidebarItems: React.FC<SidebarItemsProps> = ({ theme, onThemeToggle
           <FeatureButton 
             icon={<Trash2 size={18} />} 
             label="Clear Canvas" 
+            onClick={onClearCanvas}
             theme={theme}
           />
           <FeatureButton 

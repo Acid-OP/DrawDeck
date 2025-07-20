@@ -66,6 +66,11 @@ export function Canvas({
   };
   const [zoom, setZoom] = useState(1);
 // minZoom, maxZoom, zoomStep can be left as defaults, or customized
+  const clearCanvasAndShapes = () => {
+    if (game) {
+      game.clearAllShapes(); // This should clear shapes + canvas + localStorage
+    }
+  };
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -129,7 +134,7 @@ useEffect(() => {
         style={{ backgroundColor: theme === "dark" ? "#121212" : "#ffffff" }}
       />
       <div className="absolute top-4 left-0 w-full flex justify-between items-center px-6">
-        <Menu theme={theme} onThemeToggle={toggleTheme} />
+        <Menu theme={theme} onThemeToggle={toggleTheme} onClearCanvas={clearCanvasAndShapes}/>
         <TopBar selectedTool={selectedTool} setSelectedTool={setSelectedTool} theme={theme} />
         {["rect", "diamond", "circle", "arrow", "line", "pencil", "text"].includes(selectedTool) && (
           <div className="absolute top-[72px] left-6 z-50">
@@ -168,7 +173,6 @@ useEffect(() => {
           onBlur={(e) => {
             if (game && e.target.value.trim()) {
               game.addTextShape(inputBox.x, inputBox.y, e.target.value);
-              game.clearCanvas();
             }
             (window as any).justBlurredTextInput = true;
             setInputBox(null);

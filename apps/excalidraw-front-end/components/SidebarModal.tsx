@@ -6,6 +6,7 @@ interface SidebarModalProps {
   onClose: () => void;
   theme: 'light' | 'dark';
   onThemeToggle: () => void;
+  onClearCanvas: () => void;
 }
 
 export const SidebarModal: React.FC<SidebarModalProps> = ({
@@ -13,6 +14,7 @@ export const SidebarModal: React.FC<SidebarModalProps> = ({
   onClose,
   theme,
   onThemeToggle,
+  onClearCanvas
 }) => {
   if (!isOpen) return null;
 
@@ -27,7 +29,7 @@ export const SidebarModal: React.FC<SidebarModalProps> = ({
       }}
     >
       <div className="p-3 pt-2">
-        <SidebarItems theme={theme} onThemeToggle={onThemeToggle} />
+        <SidebarItems theme={theme} onThemeToggle={onThemeToggle} onClearCanvas={onClearCanvas} />
       </div>
     </div>
   );
