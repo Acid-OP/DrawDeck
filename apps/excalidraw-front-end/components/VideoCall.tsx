@@ -10,8 +10,8 @@ export function VideoCall({ roomName, token }: { roomName: string; token: string
   const [rtcSocket, setRtcSocket] = useState<WebSocket | null>(null);
   const peerRef = useRef<RTCPeerConnection | null>(null);
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
-  const [isCameraOn, setIsCameraOn] = useState(false); // OFF by default
-  const [isMicOn, setIsMicOn] = useState(false);       // OFF by default
+  const [isCameraOn, setIsCameraOn] = useState(false); 
+  const [isMicOn, setIsMicOn] = useState(false);      
 
   useEffect(() => {
     const rtc = new WebSocket(`ws://localhost:8081?token=${token}`);
