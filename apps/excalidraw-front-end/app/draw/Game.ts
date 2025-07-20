@@ -1,7 +1,5 @@
 import { Tool } from "@/components/Canvas";
-
-
-    type BaseShape = { readonly id: string };
+type BaseShape = { readonly id: string };
 
 type Shape =
   | (BaseShape & StyleFields & {
@@ -691,6 +689,7 @@ if (shape.type === "line" || shape.type === "arrow") {
   } else {
     this.broadcastShape(shape);
   }
+  this.clearCanvas();
 }
 
 
@@ -821,9 +820,14 @@ if (shape.type === "line" || shape.type === "arrow") {
 
   }
   setTool(tool: Tool) {
-    this.selectedTool = tool;
-    this.hoveredForErase = [];
+  this.selectedTool = tool;
+  this.hoveredForErase = [];
+
+  if (tool !== "select") {
+    this.deselectShape();
   }
+}
+
   
   async init() {
   if (this.isSolo) {
@@ -959,7 +963,8 @@ public deleteShapeByIndex(index: number) {
         shape.height,
         r
       );
-        this.ctx.stroke();
+      this.ctx.fill();
+      this.ctx.stroke();
       } else if (shape.type === "diamond") {
         this.ctx.strokeStyle = strokeCol;
         this.ctx.fillStyle = fillCol;
@@ -999,6 +1004,7 @@ public deleteShapeByIndex(index: number) {
         0,
         Math.PI * 2
       );
+      this.ctx.fill();
         this.ctx.stroke();
         this.ctx.closePath();
       } else if (shape.type === "pencil") {
@@ -1035,19 +1041,18 @@ public deleteShapeByIndex(index: number) {
 
         }
       } else if (shape.type === "text") {
-        this.ctx.fillStyle = (shape as any).strokeColor ?? (this.theme === "dark" ? "#fff" : "#000");
-        this.ctx.font = "16px Arial";
+        this.ctx.font = "20px Virgil, Segoe UI, sans-serif"; 
+        this.ctx.textBaseline = "top";
+        this.ctx.fillStyle = shape.strokeColor ?? (this.theme === "dark" ? "#fff" : "#000");
         this.ctx.fillText(shape.text, shape.x - offsetX, shape.y - offsetY);
       }
- if (
-  this.selectedTool === "select" &&
-  this.selectedShapeIndex !== null &&
-  this.existingShapes[this.selectedShapeIndex] === shape
-) {
-  this.drawSelectionBox(shape);
-}
-
-
+      if (
+        this.selectedTool === "select" &&
+        this.selectedShapeIndex !== null &&
+        this.existingShapes[this.selectedShapeIndex] === shape
+      ) {
+        this.drawSelectionBox(shape);
+      }
       this.ctx.restore(); // Restore previous state (clears lineDash etc.)
       });
     }
@@ -1065,6 +1070,11 @@ public deleteShapeByIndex(index: number) {
       this.ctx.stroke();
       this.ctx.closePath();
     }
+    private deselectShape() {
+  this.selectedShapeIndex = null;
+  this.clearCanvas();
+}
+
   mouseDownHandler = (e: MouseEvent) => {
     if (this.selectedTool === "hand") {
       this.isPanning = true;
@@ -1139,8 +1149,7 @@ public deleteShapeByIndex(index: number) {
           return;
         }
       }
-      this.selectedShapeIndex = null;
-      this.clearCanvas();
+      this.deselectShape();
       return;
     }
   if (this.selectedTool === "eraser") {
@@ -1252,7 +1261,6 @@ private scheduleWriteAll() {
 }
 
 mouseUpHandler = async (e: MouseEvent) => {
-  console.log("[Debug] mouseUpHandler called. Current tool:", this.selectedTool);
   const pos = this.getMousePos(e);
 
   if (this.selectedTool === "hand" && this.isPanning) {
@@ -1283,21 +1291,20 @@ mouseUpHandler = async (e: MouseEvent) => {
   }
   this.clicked = false;
 
-// ---- Special handling: Pencil (FIX) ----
+
 if (this.selectedTool === "pencil") {
-  console.log("[Debug] mouseUp pencil. Points:", this.pencilPoints);
   if (!this.pencilPoints || this.pencilPoints.length < 2) {
     this.pencilPoints = [];
     return;
   }
 
-  // Compose and commit the pencil shape
+
   const adjustedPoints = this.pencilPoints.map(p => ({
     x: p.x + this.panOffsetX,
     y: p.y + this.panOffsetY,
   }));
 
-  // Ensure last mouse position is included
+
   const last = adjustedPoints[adjustedPoints.length - 1];
   if (last.x !== pos.x + this.panOffsetX || last.y !== pos.y + this.panOffsetY) {
     adjustedPoints.push({
@@ -1318,11 +1325,11 @@ if (this.selectedTool === "pencil") {
   };
 
   this.existingShapes.push(pencilShape);
-  console.log("[Debug] Pencil shape committed to array", pencilShape);
+
 
   if (!this.isSolo) {
     this.broadcastShape(pencilShape);
-    console.log("[Debug] Pencil shape broadcasted", pencilShape);
+
   }
 
   this.scheduleLocalSave();
@@ -1452,6 +1459,7 @@ if (this.selectedTool === "pencil") {
     setTimeout(() => {
       if (this.onTextInsert) {
         this.onTextInsert(pos.x + this.panOffsetX, pos.y + this.panOffsetY);
+        this.clearCanvas();
       }
     }, 0);
     return;

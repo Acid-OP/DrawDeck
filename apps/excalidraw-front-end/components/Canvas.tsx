@@ -157,7 +157,9 @@ useEffect(() => {
           rows={1}
           className="absolute text-white bg-transparent px-0 py-0 m-0 border-none outline-none resize-none font-[16px] leading-[1.2] font-[Arial] whitespace-pre-wrap break-words"
           style={{
-            top: inputBox.y,
+            color: strokeColors[strokeIndex],
+            font: "20px Virgil, Segoe UI, sans-serif",
+            top: inputBox.y - 4,
             left: inputBox.x,
             minWidth: "1ch",
             maxWidth: "500px",
@@ -166,6 +168,7 @@ useEffect(() => {
           onBlur={(e) => {
             if (game && e.target.value.trim()) {
               game.addTextShape(inputBox.x, inputBox.y, e.target.value);
+              game.clearCanvas();
             }
             (window as any).justBlurredTextInput = true;
             setInputBox(null);
