@@ -1039,13 +1039,14 @@ public deleteShapeByIndex(index: number) {
         this.ctx.font = "16px Arial";
         this.ctx.fillText(shape.text, shape.x - offsetX, shape.y - offsetY);
       }
-      // Draw selection box if selected
-      if (
-        this.selectedTool === "select" &&
-        this.selectedShapeIndex === this.existingShapes.indexOf(shape)
-      ) {
-        this.drawSelectionBox(shape);
-      }
+ if (
+  this.selectedTool === "select" &&
+  this.selectedShapeIndex !== null &&
+  this.existingShapes[this.selectedShapeIndex] === shape
+) {
+  this.drawSelectionBox(shape);
+}
+
 
       this.ctx.restore(); // Restore previous state (clears lineDash etc.)
       });
@@ -1282,55 +1283,66 @@ mouseUpHandler = async (e: MouseEvent) => {
   }
   this.clicked = false;
 
-  // ---- Special handling: Pencil (FIX) ----
-  if (this.selectedTool === "pencil") {
-    console.log("[Debug] mouseUp pencil. Points:", this.pencilPoints);
-    if (!this.pencilPoints || this.pencilPoints.length < 2) {
-      this.pencilPoints = [];
-      return;
-    }
-
-    // Compose and commit the pencil shape
-    const adjustedPoints = this.pencilPoints.map(p => ({
-      x: p.x + this.panOffsetX,
-      y: p.y + this.panOffsetY,
-    }));
-
-    // Ensure last mouse position is included
-    const last = adjustedPoints[adjustedPoints.length - 1];
-    if (last.x !== pos.x + this.panOffsetX || last.y !== pos.y + this.panOffsetY) {
-      adjustedPoints.push({
-        x: pos.x + this.panOffsetX,
-        y: pos.y + this.panOffsetY
-      });
-    }
-
-    const pencilShape: Shape = {
-      id: this.genId(),
-      type: "pencil",
-      points: [...adjustedPoints],
-      strokeColor: this.currentStrokeColor,
-      backgroundColor: this.currentBackgroundColor,
-      strokeWidth: this.currentStrokeWidth,
-      strokeStyle: this.currentStrokeStyle,
-      fillStyle: this.currentFillStyle,
-    };
-
-    this.existingShapes.push(pencilShape);
-    console.log("[Debug] Pencil shape committed to array", pencilShape);
-
-    if (!this.isSolo) {
-      this.broadcastShape(pencilShape);
-      console.log("[Debug] Pencil shape broadcasted", pencilShape);
-    }
-    this.scheduleLocalSave();
-    this.startX = null;
-    this.startY = null;
-    this.endX = null;
-    this.endY = null;
+// ---- Special handling: Pencil (FIX) ----
+if (this.selectedTool === "pencil") {
+  console.log("[Debug] mouseUp pencil. Points:", this.pencilPoints);
+  if (!this.pencilPoints || this.pencilPoints.length < 2) {
     this.pencilPoints = [];
     return;
   }
+
+  // Compose and commit the pencil shape
+  const adjustedPoints = this.pencilPoints.map(p => ({
+    x: p.x + this.panOffsetX,
+    y: p.y + this.panOffsetY,
+  }));
+
+  // Ensure last mouse position is included
+  const last = adjustedPoints[adjustedPoints.length - 1];
+  if (last.x !== pos.x + this.panOffsetX || last.y !== pos.y + this.panOffsetY) {
+    adjustedPoints.push({
+      x: pos.x + this.panOffsetX,
+      y: pos.y + this.panOffsetY
+    });
+  }
+
+  const pencilShape: Shape = {
+    id: this.genId(),
+    type: "pencil",
+    points: [...adjustedPoints],
+    strokeColor: this.currentStrokeColor,
+    backgroundColor: this.currentBackgroundColor,
+    strokeWidth: this.currentStrokeWidth,
+    strokeStyle: this.currentStrokeStyle,
+    fillStyle: this.currentFillStyle,
+  };
+
+  this.existingShapes.push(pencilShape);
+  console.log("[Debug] Pencil shape committed to array", pencilShape);
+
+  if (!this.isSolo) {
+    this.broadcastShape(pencilShape);
+    console.log("[Debug] Pencil shape broadcasted", pencilShape);
+  }
+
+  this.scheduleLocalSave();
+
+  // ✅ Auto-select the newly drawn pencil
+  this.selectedTool = "select";
+  this.selectedShapeIndex = this.existingShapes.length - 1; // Index, not ID
+  if (this.onToolChange) this.onToolChange("select");
+  this.clearCanvas(); // Force redraw to show bounding box
+
+  // Reset drawing state
+  this.startX = null;
+  this.startY = null;
+  this.endX = null;
+  this.endY = null;
+  this.pencilPoints = [];
+
+  return;
+}
+
 
   // ---- All other tool logic remains as previous ----
   if (this.startX == null || this.startY == null) return;
@@ -1445,20 +1457,28 @@ mouseUpHandler = async (e: MouseEvent) => {
     return;
   }
 
-  if (!shape) return;
-  this.existingShapes.push(shape);
-  console.log("added shapes", shape);
-  if (!this.isSolo) {
-    this.broadcastShape(shape);
-    console.log("broadcasted shapes", shape);
-  }
-  this.scheduleLocalSave();
-  this.startX = null;
-  this.startY = null;
-  this.endX = null;
-  this.endY = null;
-  this.pencilPoints = [];
-  return;
+if (!shape) return;
+
+this.existingShapes.push(shape);
+
+if (!this.isSolo) {
+  this.broadcastShape(shape);
+}
+this.scheduleLocalSave();
+
+// ✅ Auto-select the shape (except for arrow/line, handled above)
+this.selectedShapeIndex = this.existingShapes.length - 1;
+this.selectedTool = "select";
+if (this.onToolChange) this.onToolChange("select");
+this.clearCanvas(); // to show the selection box
+
+this.startX = null;
+this.startY = null;
+this.endX = null;
+this.endY = null;
+this.pencilPoints = [];
+return;
+
 };
 
 
