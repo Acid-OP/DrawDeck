@@ -8,6 +8,9 @@ import { Menu } from "./Menu";
 import { ExcalidrawPropertiesPanel } from "./PropertiesPanel";
 import { LiveCollabModal } from "./modal/LiveCollabModal";
 import { ZoomBar } from "./ZoomBar";
+import { Header } from "./Header";
+import { ArrowIcon } from "./ArrowIcon";
+import { WelcomeButtons } from "./WelcomeButton";
 
 export type Tool =
   | "hand"
@@ -93,21 +96,22 @@ export function Canvas({
       game.setTheme(theme);
     }
   }, [theme, game]);
-useEffect(() => {
-  if (!game) return;
-  game.setStrokeColor(strokeColors[strokeIndex]);
-  game.setBackgroundColor(backgroundColors[backgroundIndex]);
-  game.setStrokeWidth(strokeWidths[strokeWidthIndex]);
-  game.setStrokeStyle(strokeStyleIndex); // Map index to line style if needed
-  game.setFillStyle(fillIndex);           // Map index to fill style if needed
-}, [
-  game,
-  strokeIndex,
-  backgroundIndex,
-  strokeWidthIndex,
-  strokeStyleIndex,
-  fillIndex
-]);
+  
+  useEffect(() => {
+    if (!game) return;
+    game.setStrokeColor(strokeColors[strokeIndex]);
+    game.setBackgroundColor(backgroundColors[backgroundIndex]);
+    game.setStrokeWidth(strokeWidths[strokeWidthIndex]);
+    game.setStrokeStyle(strokeStyleIndex); // Map index to line style if needed
+    game.setFillStyle(fillIndex);           // Map index to fill style if needed
+  }, [
+    game,
+    strokeIndex,
+    backgroundIndex,
+    strokeWidthIndex,
+    strokeStyleIndex,
+    fillIndex
+  ]);
 
   useEffect(() => {
     if (canvasRef.current && dimensions.width !== 0 && dimensions.height !== 0) {
@@ -133,6 +137,12 @@ useEffect(() => {
         height={dimensions.height}
         style={{ backgroundColor: theme === "dark" ? "#121212" : "#ffffff" }}
       />
+      <div className="absolute top-50 left-0 w-full h-full pointer-events-none z-50">
+              <div className="absolute top-50 left-1/2 -translate-x-1/2">
+               <Header/>
+      </div>
+ 
+      </div>
       <div className="absolute top-4 left-0 w-full flex justify-between items-center px-6">
         <Menu theme={theme} onThemeToggle={toggleTheme} onClearCanvas={clearCanvasAndShapes}/>
         <TopBar selectedTool={selectedTool} setSelectedTool={setSelectedTool} theme={theme} />

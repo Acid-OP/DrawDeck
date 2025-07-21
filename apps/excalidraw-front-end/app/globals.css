@@ -9,3 +9,11 @@
  * you can always add it with the @source directive.
  */
 @source "../../../node_modules/@repo/ui";
+
+.caveat {
+  font-family: var(--font-caveat);
+}
+
+.excalifont {
+  font-family: var(--font-excalifont);
+}
