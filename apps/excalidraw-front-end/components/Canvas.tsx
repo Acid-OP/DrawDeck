@@ -9,8 +9,10 @@ import { ExcalidrawPropertiesPanel } from "./PropertiesPanel";
 import { LiveCollabModal } from "./modal/LiveCollabModal";
 import { ZoomBar } from "./ZoomBar";
 import { Header } from "./Header";
-import { ArrowIcon } from "./ArrowIcon";
-import { WelcomeButtons } from "./WelcomeButton";
+import CurvedArrow from "./CurveArrow";
+import LocalSaveNotice from "./menuiconpointer";
+import ToolbarIcon from "./ToolBarIcon";
+import ToolIconPointer from "./toolbariconpointer";
 
 export type Tool =
   | "hand"
@@ -137,15 +139,27 @@ export function Canvas({
         height={dimensions.height}
         style={{ backgroundColor: theme === "dark" ? "#121212" : "#ffffff" }}
       />
-      <div className="absolute top-50 left-0 w-full h-full pointer-events-none z-50">
-              <div className="absolute top-50 left-1/2 -translate-x-1/2">
-               <Header/>
-      </div>
+      <div className="absolute top-50 left-0 w-full h-full pointer-events-none z-50 cursor-pointer">
+        <div className="absolute top-50 left-1/2 -translate-x-1/2 cursor-pointer">
+        <Header/>
+        </div>
  
       </div>
       <div className="absolute top-4 left-0 w-full flex justify-between items-center px-6">
         <Menu theme={theme} onThemeToggle={toggleTheme} onClearCanvas={clearCanvasAndShapes}/>
+        <div className="absolute top-15 left-15 -translate-x-1/2 cursor-pointer">
+        <CurvedArrow/> 
+        </div>
+        <div className="absolute top-38 left-65 -translate-x-1/2 cursor-pointer">
+        <LocalSaveNotice/>
+        </div>
         <TopBar selectedTool={selectedTool} setSelectedTool={setSelectedTool} theme={theme} />
+        <div className="absolute top-20 left-1/2 pl-4 -translate-x-1/2 cursor-pointer">
+        <ToolbarIcon/> 
+        </div>
+        <div className="absolute top-40 pr-50 left-1/2 -translate-x-1/2 cursor-pointer">
+        <ToolIconPointer/> 
+        </div>
         {["rect", "diamond", "circle", "arrow", "line", "pencil", "text"].includes(selectedTool) && (
           <div className="absolute top-[72px] left-6 z-50">
             <ExcalidrawPropertiesPanel

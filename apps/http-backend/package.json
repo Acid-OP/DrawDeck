@@ -8,6 +8,7 @@
     "dev": "pnpm run build && pnpm run start"
   },
   "dependencies": {
+    "@clerk/clerk-sdk-node": "^5.1.6",
     "@repo/db": "workspace:*",
     "@types/cors": "^2.8.18",
     "bcrypt": "^6.0.0",

@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { SidebarModal } from "./SidebarModal";
 import { MenuIcon } from "lucide-react";
+import CurvedArrow from "./CurveArrow";
 
 interface MenuProps {
   theme: 'light' | 'dark';

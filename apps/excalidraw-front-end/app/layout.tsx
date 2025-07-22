@@ -8,6 +8,11 @@ const excalifont = localFont({
   display: "swap",
   variable: "--font-excalifont",
 });
+const virgil = localFont({
+  src: "../public/fonts/virgil.woff2",
+  display: "swap",
+  variable: "--font-virgil",
+});
 
 const caveat = Caveat({
   variable : "--font-caveat",
@@ -26,7 +31,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={`${caveat.variable} ${excalifont.variable} antialiased`}>{children}</body>
+      <body className={`${caveat.variable} ${excalifont.variable} ${virgil.variable}  antialiased`}>{children}</body>
     </html>
   );
   // return (
