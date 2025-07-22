@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { Game } from "@/app/draw/Game";
 import { ShareButton } from "./ShareButton";
 import { TopBar } from "./TopBar";
@@ -26,27 +26,31 @@ export type Tool =
   | "text"
   | "eraser";
 
-export function Canvas({
-  roomName,
-  socket,
-  isSolo = false,
-}: {
+interface CanvasProps {
   roomName: string;
   socket: WebSocket | null;
   isSolo?: boolean;
-}) {
+}
+
+export function Canvas({ roomName, socket, isSolo = false }: CanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [game, setGame] = useState<Game>();
   const [selectedTool, setSelectedTool] = useState<Tool>("hand");
   const [inputBox, setInputBox] = useState<{ x: number; y: number } | null>(null);
-  const [dimensions, setDimensions] = useState<{ width: number; height: number }>({width: 0,height: 0,});
+  const [dimensions, setDimensions] = useState<{ width: number; height: number }>({
+    width: 0,
+    height: 0,
+  });
   const [showLiveModal, setShowLiveModal] = useState(false);
-  const [strokeIndex, setStrokeIndex] = useState(0);           // e.g., black
-  const [backgroundIndex, setBackgroundIndex] = useState(0);   // e.g., transparent
-  const [strokeWidthIndex, setStrokeWidthIndex] = useState(1); // e.g., medium
-  const [strokeStyleIndex, setStrokeStyleIndex] = useState(0); // solid
-  const [fillIndex, setFillIndex] = useState(0);               // hachure
+  const [strokeIndex, setStrokeIndex] = useState(0);
+  const [backgroundIndex, setBackgroundIndex] = useState(0);
+  const [strokeWidthIndex, setStrokeWidthIndex] = useState(1);
+  const [strokeStyleIndex, setStrokeStyleIndex] = useState(0);
+  const [fillIndex, setFillIndex] = useState(0);
   const [theme, setTheme] = useState<"light" | "dark">("dark");
+  const [zoom, setZoom] = useState(1);
+  const [isMobile, setIsMobile] = useState(false);
+
   const strokeColors = [
     '#1e1e1e', // Black
     '#e03131', // Red
@@ -63,61 +67,73 @@ export function Canvas({
     '#ffec99'  // Light Yellow
   ];
 
-  const strokeWidths = [2, 3.5, 6]; // px
-  // Add style/fill arrays if needed!
+  const strokeWidths = [2, 3.5, 6];
 
-  const toggleTheme = () => {
+  // Debounced resize handler for better performance
+  const updateSize = useCallback(() => {
+    if (typeof window === "undefined") return;
+    
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+    const mobile = width < 768; // Tailwind md breakpoint
+    
+    setDimensions({ width, height });
+    setIsMobile(mobile);
+  }, []);
+
+  const toggleTheme = useCallback(() => {
     setTheme((prev) => (prev === "dark" ? "light" : "dark"));
-  };
-  const [zoom, setZoom] = useState(1);
-// minZoom, maxZoom, zoomStep can be left as defaults, or customized
-  const clearCanvasAndShapes = () => {
-    if (game) {
-      game.clearAllShapes(); // This should clear shapes + canvas + localStorage
-    }
-  };
+  }, []);
 
+  const clearCanvasAndShapes = useCallback(() => {
+    if (game) {
+      game.clearAllShapes();
+    }
+  }, [game]);
+
+  // Responsive resize handling
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    const updateSize = () => {
-      setDimensions({ width: window.innerWidth, height: window.innerHeight });
+    updateSize();
+    
+    let timeoutId: NodeJS.Timeout;
+    const debouncedResize = () => {
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(updateSize, 150);
     };
 
-    updateSize();
-    window.addEventListener("resize", updateSize);
-    return () => window.removeEventListener("resize", updateSize);
-  }, []);
+    window.addEventListener("resize", debouncedResize);
+    return () => {
+      window.removeEventListener("resize", debouncedResize);
+      clearTimeout(timeoutId);
+    };
+  }, [updateSize]);
 
+  // Game state effects
   useEffect(() => {
     game?.setTool(selectedTool);
   }, [selectedTool, game]);
-  
+
   useEffect(() => {
     if (game) {
       game.setTheme(theme);
     }
   }, [theme, game]);
-  
+
   useEffect(() => {
     if (!game) return;
     game.setStrokeColor(strokeColors[strokeIndex]);
     game.setBackgroundColor(backgroundColors[backgroundIndex]);
     game.setStrokeWidth(strokeWidths[strokeWidthIndex]);
-    game.setStrokeStyle(strokeStyleIndex); // Map index to line style if needed
-    game.setFillStyle(fillIndex);           // Map index to fill style if needed
-  }, [
-    game,
-    strokeIndex,
-    backgroundIndex,
-    strokeWidthIndex,
-    strokeStyleIndex,
-    fillIndex
-  ]);
+    game.setStrokeStyle(strokeStyleIndex);
+    game.setFillStyle(fillIndex);
+  }, [game, strokeIndex, backgroundIndex, strokeWidthIndex, strokeStyleIndex, fillIndex]);
 
+  // Game initialization
   useEffect(() => {
     if (canvasRef.current && dimensions.width !== 0 && dimensions.height !== 0) {
-      const g = new Game(canvasRef.current, roomName, socket, isSolo , theme);
+      const g = new Game(canvasRef.current, roomName, socket, isSolo, theme);
       g.onToolChange = (tool) => setSelectedTool(tool);
       g.onTextInsert = (x, y) => {
         if ((window as any).justBlurredTextInput) return;
@@ -127,42 +143,72 @@ export function Canvas({
 
       return () => g.destroy();
     }
-  }, [canvasRef, isSolo, roomName, socket, dimensions]);
+  }, [canvasRef, isSolo, roomName, socket, dimensions, theme]);
 
-
+  const shouldShowPropertiesPanel = ["rect", "diamond", "circle", "arrow", "line", "pencil", "text"].includes(selectedTool);
 
   return (
     <div className={`w-screen h-screen overflow-hidden relative ${theme === "dark" ? "bg-[#121212]" : "bg-white"}`}>
+      {/* Canvas */}
       <canvas
         ref={canvasRef}
         width={dimensions.width}
         height={dimensions.height}
+        className="touch-none"
         style={{ backgroundColor: theme === "dark" ? "#121212" : "#ffffff" }}
       />
-      <div className="absolute top-50 left-0 w-full h-full pointer-events-none z-50 cursor-pointer">
-        <div className="absolute top-50 left-1/2 -translate-x-1/2 cursor-pointer">
-        <Header/>
+
+      {/* Header - Perfect center of screen */}
+      <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 pointer-events-none z-50">
+        <div className="pointer-events-auto">
+          <Header />
         </div>
- 
       </div>
+
+      {/* Top UI Row - Maintaining original spacing */}
       <div className="absolute top-4 left-0 w-full flex justify-between items-center px-6">
-        <Menu theme={theme} onThemeToggle={toggleTheme} onClearCanvas={clearCanvasAndShapes}/>
-        <div className="absolute top-15 left-15 -translate-x-1/2 cursor-pointer">
-        <CurvedArrow/> 
-        </div>
-        <div className="absolute top-38 left-65 -translate-x-1/2 cursor-pointer">
-        <LocalSaveNotice/>
-        </div>
-        <TopBar selectedTool={selectedTool} setSelectedTool={setSelectedTool} theme={theme} />
-        <div className="absolute top-20 left-1/2 pl-4 -translate-x-1/2 cursor-pointer">
-        <ToolbarIcon/> 
-        </div>
-        <div className="absolute top-40 pr-50 left-1/2 -translate-x-1/2 cursor-pointer">
-        <ToolIconPointer/> 
-        </div>
-        {["rect", "diamond", "circle", "arrow", "line", "pencil", "text"].includes(selectedTool) && (
-          <div className="absolute top-[72px] left-6 z-50">
-            <ExcalidrawPropertiesPanel
+        {/* Left: Menu */}
+        <Menu 
+          theme={theme} 
+          onThemeToggle={toggleTheme} 
+          onClearCanvas={clearCanvasAndShapes}
+        />
+
+        {/* Center: TopBar */}
+        <TopBar 
+          selectedTool={selectedTool} 
+          setSelectedTool={setSelectedTool} 
+          theme={theme} 
+        />
+
+        {/* Right: ShareButton */}
+        <ShareButton onClick={() => setShowLiveModal(true)} />
+      </div>
+
+      {/* Curved Arrow - Fixed position relative to menu */}
+      <div className="absolute top-16 left-15 transform -translate-x-1/2 pointer-events-none z-40">
+        <CurvedArrow />
+      </div>
+
+      {/* Local Save Notice - Fixed position */}
+      <div className="absolute top-40 left-66 transform -translate-x-1/2 pointer-events-none z-40">
+        <LocalSaveNotice />
+      </div>
+
+      {/* Toolbar Icon - Below TopBar, centered */}
+      <div className="absolute top-22 left-1/2 transform -translate-x-1/2 pl-8 pointer-events-none z-40">
+        <ToolbarIcon />
+      </div>
+
+      {/* Tool Icon Pointer - Below Toolbar Icon, shifted left responsively */}
+      <div className="absolute top-40 left-1/2 transform -translate-x-1/2 sm:-translate-x-32 md:-translate-x-40 lg:-translate-x-44 pointer-events-none z-40">
+        <ToolIconPointer />
+      </div>
+
+      {/* Properties Panel - Maintaining original position */}
+      {shouldShowPropertiesPanel && (
+        <div className="absolute top-[72px] left-6 z-50">
+          <ExcalidrawPropertiesPanel
             strokeSelectedIndex={strokeIndex}
             backgroundSelectedIndex={backgroundIndex}
             strokeWidthSelectedIndex={strokeWidthIndex}
@@ -176,22 +222,22 @@ export function Canvas({
             theme={theme}
             onThemeToggle={toggleTheme}
           />
-          </div>
-        )}
-        <ShareButton onClick={() => setShowLiveModal(true)} />
-      </div>
+        </div>
+      )}
+
+      {/* Text Input - responsive sizing */}
       {inputBox && (
         <textarea
           autoFocus
           rows={1}
-          className="absolute text-white bg-transparent px-0 py-0 m-0 border-none outline-none resize-none font-[16px] leading-[1.2] font-[Arial] whitespace-pre-wrap break-words"
+          className="absolute bg-transparent px-0 py-0 m-0 border-none outline-none resize-none whitespace-pre-wrap break-words"
           style={{
             color: strokeColors[strokeIndex],
-            font: "20px Virgil, Segoe UI, sans-serif",
+            font: `${isMobile ? '16px' : '20px'} Virgil, Segoe UI, sans-serif`,
             top: inputBox.y - 4,
             left: inputBox.x,
             minWidth: "1ch",
-            maxWidth: "500px",
+            maxWidth: isMobile ? "280px" : "500px",
             overflow: "hidden",
           }}
           onBlur={(e) => {
@@ -206,10 +252,16 @@ export function Canvas({
           }}
         />
       )}
+
+      {/* Zoom Bar - Bottom right corner */}
+      <div className="absolute bottom-4 right-4">
+        <ZoomBar zoom={zoom} setZoom={setZoom} theme={theme} />
+      </div>
+
+      {/* Live Collab Modal */}
       {showLiveModal && (
         <LiveCollabModal onClose={() => setShowLiveModal(false)} />
-        )}
-        <ZoomBar zoom={zoom} setZoom={setZoom} theme={theme} />
+      )}
     </div>
   );
 }
