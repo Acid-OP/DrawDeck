@@ -1,16 +1,16 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { AlertCircle, ArrowRight, UserPlus } from "lucide-react";
-
+import { AlertCircle, ArrowRight, User } from "lucide-react";
 import { useSignIn } from "@clerk/nextjs";
 import { useErrorHandler } from "@/app/hooks/hooks";
 
-interface SignupFormProps {
+
+interface SignInFormProps {
   isDark: boolean;
 }
 
-const SignupForm: React.FC<SignupFormProps> = ({ isDark }) => {
+const SignInForm: React.FC<SignInFormProps> = ({ isDark }) => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const router = useRouter();
   const { error, handleError, clearError } = useErrorHandler();
@@ -48,7 +48,7 @@ const SignupForm: React.FC<SignupFormProps> = ({ isDark }) => {
       <div className="text-center mb-8">
         <div className="flex justify-center mb-4">
           <div className="animate-bounce">
-            <UserPlus
+            <User
               size={48}
               style={{ color: isDark ? "#a8a5ff" : "#6965db" }}
             />
@@ -61,13 +61,13 @@ const SignupForm: React.FC<SignupFormProps> = ({ isDark }) => {
             fontFamily: "Comic Sans MS, cursive",
           }}
         >
-          Hi there!
+          Welcome back!
         </h2>
         <p
           className="text-md pt-2 opacity-80"
           style={{ color: isDark ? "#ced4da" : "#363c41" }}
         >
-          Join the creative community in seconds
+          Sign in to your account
         </p>
       </div>
 
@@ -88,7 +88,7 @@ const SignupForm: React.FC<SignupFormProps> = ({ isDark }) => {
         </div>
       )}
 
-      {/* Social Sign Up Buttons */}
+      {/* Social Sign In Buttons */}
       <div className="space-y-4 mb-6">
         <button
           onClick={() => handleOAuth("oauth_google")}
@@ -162,14 +162,14 @@ const SignupForm: React.FC<SignupFormProps> = ({ isDark }) => {
 
       <div className="mt-6 text-center">
         <p className="text-sm font-medium" style={{ color: isDark ? "#ced4da" : "#363c41" }}>
-          Already have an account?{" "}
+          Don’t have an account?{" "}
           <button
             className="underline cursor-pointer hover:no-underline transition-all duration-300"
             style={{ color: isDark ? "#a8a5ff" : "#6965db" }}
-            onClick={() => router.push("/signin")}
+            onClick={() => router.push("/signup")}
             suppressHydrationWarning
           >
-            Sign in instead
+            Sign up instead
           </button>
         </p>
       </div>
@@ -177,4 +177,4 @@ const SignupForm: React.FC<SignupFormProps> = ({ isDark }) => {
   );
 };
 
-export default SignupForm;
+export default SignInForm;
