@@ -35,6 +35,7 @@ interface CanvasProps {
 export function Canvas({ roomName, socket, isSolo = false }: CanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [game, setGame] = useState<Game>();
+  const [hasInteracted, setHasInteracted] = useState(false);
   const [selectedTool, setSelectedTool] = useState<Tool>("hand");
   const [inputBox, setInputBox] = useState<{ x: number; y: number } | null>(null);
   const [dimensions, setDimensions] = useState<{ width: number; height: number }>({
@@ -112,8 +113,15 @@ export function Canvas({ roomName, socket, isSolo = false }: CanvasProps) {
 
   // Game state effects
   useEffect(() => {
-    game?.setTool(selectedTool);
-  }, [selectedTool, game]);
+  game?.setTool(selectedTool);
+}, [selectedTool, game]);
+
+
+useEffect(() => {
+  if (selectedTool !== "hand" && !hasInteracted) {
+    setHasInteracted(true);
+  }
+}, [selectedTool]);
 
   useEffect(() => {
     if (game) {
@@ -157,13 +165,16 @@ export function Canvas({ roomName, socket, isSolo = false }: CanvasProps) {
         className="touch-none"
         style={{ backgroundColor: theme === "dark" ? "#121212" : "#ffffff" }}
       />
-
+      
       {/* Header - Perfect center of screen */}
-      <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 pointer-events-none z-50">
-        <div className="pointer-events-auto">
-          <Header />
+      {!hasInteracted && (
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 pointer-events-none z-50">
+          <div className="pointer-events-auto">
+            <Header />
+          </div>
         </div>
-      </div>
+      )}
+
 
       {/* Top UI Row - Maintaining original spacing */}
       <div className="absolute top-4 left-0 w-full flex justify-between items-center px-6">
@@ -184,28 +195,31 @@ export function Canvas({ roomName, socket, isSolo = false }: CanvasProps) {
         {/* Right: ShareButton */}
         <ShareButton onClick={() => setShowLiveModal(true)} />
       </div>
-
-      {/* Curved Arrow - Fixed position relative to menu */}
-      <div className="absolute top-16 left-15 transform -translate-x-1/2 pointer-events-none z-40">
+      
+      {!hasInteracted && (
+        <>
+        {/* Curved Arrow - Fixed position relative to menu */}
+        <div className="absolute top-16 left-15 transform -translate-x-1/2 pointer-events-none z-40">
         <CurvedArrow />
-      </div>
-
-      {/* Local Save Notice - Fixed position */}
-      <div className="absolute top-40 left-66 transform -translate-x-1/2 pointer-events-none z-40">
+        </div>
+        {/* Local Save Notice - Fixed position */}
+        <div className="absolute top-40 left-66 transform -translate-x-1/2 pointer-events-none z-40">
         <LocalSaveNotice />
-      </div>
+        </div>
 
-      {/* Toolbar Icon - Below TopBar, centered */}
-      <div className="absolute top-22 left-1/2 transform -translate-x-1/2 pl-8 pointer-events-none z-40">
+        {/* Toolbar Icon - Below TopBar, centered */}
+        <div className="absolute top-22 left-1/2 transform -translate-x-1/2 pl-8 pointer-events-none z-40">
         <ToolbarIcon />
-      </div>
+        </div>
 
-      {/* Tool Icon Pointer - Below Toolbar Icon, shifted left responsively */}
-      <div className="absolute top-40 left-1/2 transform -translate-x-1/2 sm:-translate-x-32 md:-translate-x-40 lg:-translate-x-44 pointer-events-none z-40">
+        {/* Tool Icon Pointer - Below Toolbar Icon, shifted left responsively */}
+        <div className="absolute top-40 left-1/2 transform -translate-x-1/2 sm:-translate-x-32 md:-translate-x-40 lg:-translate-x-44 pointer-events-none z-40">
         <ToolIconPointer />
-      </div>
+        </div>
+        </>
+      )}
 
-      {/* Properties Panel - Maintaining original position */}
+      
       {shouldShowPropertiesPanel && (
         <div className="absolute top-[72px] left-6 z-50">
           <ExcalidrawPropertiesPanel
@@ -225,7 +239,7 @@ export function Canvas({ roomName, socket, isSolo = false }: CanvasProps) {
         </div>
       )}
 
-      {/* Text Input - responsive sizing */}
+      
       {inputBox && (
         <textarea
           autoFocus

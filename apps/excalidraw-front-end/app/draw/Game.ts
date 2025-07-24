@@ -112,6 +112,7 @@ export class Game {
     try {
       const key = this.getLocalStorageKey();
       localStorage.setItem(key, JSON.stringify(this.existingShapes));
+      localStorage.setItem("hasDrawn", "true");
     } catch (err) {
       console.error("Failed to save shapes to localStorage", err);
     }
