@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@clerk/nextjs": "^6.25.4",
     "@repo/ui": "workspace:*",
     "axios": "^1.9.0",
     "framer-motion": "^12.23.6",
