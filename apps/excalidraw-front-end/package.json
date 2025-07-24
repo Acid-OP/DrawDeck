@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@clerk/nextjs": "^6.25.4",
+    "@clerk/types": "^4.70.0",
     "@repo/ui": "workspace:*",
     "axios": "^1.9.0",
     "framer-motion": "^12.23.6",
@@ -27,7 +28,7 @@
     "@tailwindcss/postcss": "^4.1.11",
     "@types/next-auth": "^3.15.0",
     "@types/node": "^22.15.3",
-    "@types/react": "^19",
+    "@types/react": "^19.1.0",
     "@types/react-dom": "^19",
     "autoprefixer": "^10.4.21",
     "eslint": "^9",
