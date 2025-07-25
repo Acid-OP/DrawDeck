@@ -154,7 +154,7 @@ useEffect(() => {
   }, [canvasRef, isSolo, roomName, socket, dimensions, theme]);
 
   const shouldShowPropertiesPanel = ["rect", "diamond", "circle", "arrow", "line", "pencil", "text"].includes(selectedTool);
-
+  const shouldShowWelcome =  game && !hasInteracted && !game.hasShapes();
   return (
     <div className={`w-screen h-screen overflow-hidden relative ${theme === "dark" ? "bg-[#121212]" : "bg-white"}`}>
       {/* Canvas */}
@@ -167,7 +167,7 @@ useEffect(() => {
       />
       
       {/* Header - Perfect center of screen */}
-      {!hasInteracted && (
+      {shouldShowWelcome && (
         <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 pointer-events-none z-50">
           <div className="pointer-events-auto">
             <Header />
@@ -196,7 +196,7 @@ useEffect(() => {
         <ShareButton onClick={() => setShowLiveModal(true)} />
       </div>
       
-      {!hasInteracted && (
+      {shouldShowWelcome && (
         <>
         {/* Curved Arrow - Fixed position relative to menu */}
         <div className="absolute top-16 left-15 transform -translate-x-1/2 pointer-events-none z-40">

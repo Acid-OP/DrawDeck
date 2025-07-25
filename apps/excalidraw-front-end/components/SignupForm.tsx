@@ -2,8 +2,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { AlertCircle, ArrowRight, UserPlus } from "lucide-react";
-
-import { useSignIn } from "@clerk/nextjs";
+import { useSignUp } from "@clerk/nextjs";
 import { useErrorHandler } from "@/app/hooks/hooks";
 
 interface SignupFormProps {
@@ -14,28 +13,37 @@ const SignupForm: React.FC<SignupFormProps> = ({ isDark }) => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const router = useRouter();
   const { error, handleError, clearError } = useErrorHandler();
-  const { signIn } = useSignIn();
+const { signUp } = useSignUp();
 
-  const handleOAuth = async (provider: "oauth_google" | "oauth_github" | "oauth_facebook") => {
-    if (!signIn) {
-      handleError("Authentication service is not available");
-      return;
-    }
 
-    setIsLoading(true);
-    clearError();
+ const handleOAuth = async (provider: "oauth_google" | "oauth_github" | "oauth_facebook") => {
+  console.log("🚀 Starting OAuth with", provider);
+  console.log("🔍 SignUp object:", signUp);
+  
+  if (!signUp) {
+    console.error("❌ SignUp not available");
+    handleError("Authentication service is not available");
+    return;
+  }
 
-    try {
-      await signIn.authenticateWithRedirect({
-        strategy: provider,
-        redirectUrl: "/",
-        redirectUrlComplete: "/",
-      });
-    } catch (err) {
-      handleError("Failed to authenticate with " + provider.replace("oauth_", ""));
-      setIsLoading(false);
-    }
-  };
+  setIsLoading(true);
+  clearError();
+
+  try {
+    console.log("🔄 Calling authenticateWithRedirect...");
+    const result = await signUp.authenticateWithRedirect({
+      strategy: provider,
+      redirectUrl: "/sso-callback",
+      redirectUrlComplete: "/",
+    });
+    console.log("✅ Redirect result:", result);
+  } catch (err) {
+    console.error("❌ OAuth error:", err);
+    console.error("❌ Error details:", JSON.stringify(err, null, 2));
+    handleError("Failed to authenticate with " + provider.replace("oauth_", ""));
+    setIsLoading(false);
+  }
+};
 
   return (
     <div
@@ -87,6 +95,8 @@ const SignupForm: React.FC<SignupFormProps> = ({ isDark }) => {
           </div>
         </div>
       )}
+      {/* Fix for Clerk CAPTCHA fallback warning */}
+<div id="clerk-captcha" style={{ display: "none" }} />
 
       {/* Social Sign Up Buttons */}
       <div className="space-y-4 mb-6">

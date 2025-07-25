@@ -99,6 +99,9 @@ export class Game {
   this.theme = theme;
   this.clearCanvas(); // Optional: re-render shapes with new theme colors if needed
 }
+public hasShapes(): boolean {
+  return this.existingShapes.length > 0;
+}
   private theme: 'light' | 'dark' = 'dark';
   private localStorageTimeout: any = null;
   private isInit = false;
@@ -112,7 +115,6 @@ export class Game {
     try {
       const key = this.getLocalStorageKey();
       localStorage.setItem(key, JSON.stringify(this.existingShapes));
-      localStorage.setItem("hasDrawn", "true");
     } catch (err) {
       console.error("Failed to save shapes to localStorage", err);
     }
