@@ -1,50 +1,138 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useAuth } from '@clerk/nextjs';
 import { WS_URL } from '@/config';
 import { Canvas } from './Canvas';
 import { VideoCall } from './VideoCall';
 
-
 export function RoomCanvas({ slug }: { slug: string }) {
   const [socket, setSocket] = useState<WebSocket | null>(null);
-  const [token, setToken] = useState<string>('');
+  const [isConnecting, setIsConnecting] = useState(false);
+  const [connectionError, setConnectionError] = useState<string | null>(null);
+  const { isSignedIn, isLoaded, getToken } = useAuth();
 
   useEffect(() => {
-    const storedToken = localStorage.getItem('token') ?? '';
-    setToken(storedToken);
-  }, []);
+    if (!isLoaded || !isSignedIn || !slug) return;
 
-  useEffect(() => {
-    if (!slug || !token) return;
+    const connectWebSocket = async () => {
+      try {
+        setIsConnecting(true);
+        setConnectionError(null);
+        const ws = new WebSocket(WS_URL);
 
-    const ws = new WebSocket(`${WS_URL}?token=${token}`);
+        ws.onopen = () => {
+          console.log('✅ WebSocket connected');
+          ws.send(JSON.stringify({ type: 'join_room', roomName: slug }));
+          setSocket(ws);
+          setIsConnecting(false);
+        };
 
-    ws.onopen = () => {
-      console.log('✅ WebSocket connected');
-      ws.send(JSON.stringify({ type: 'join_room', roomName: slug }));
-      setSocket(ws);
-    };
+        ws.onerror = (err) => {
+          console.error('❌ WebSocket error:', err);
+          setConnectionError('Failed to connect to room');
+          setIsConnecting(false);
+        };
 
-    ws.onerror = (err) => {
-      console.error('❌ WebSocket error:', err);
-    };
+        ws.onclose = (event) => {
+          console.log('🔌 WebSocket disconnected:', event.code, event.reason);
+          setSocket(null);
+          setIsConnecting(false);
+          
+          // Handle specific close codes
+          if (event.code === 4001) {
+            setConnectionError('Authentication failed. Please refresh the page.');
+          } else if (event.code === 4002) {
+            setConnectionError('Invalid session. Please sign in again.');
+          }
+        };
 
-    return () => {
-      if (ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({ type: 'leave_room', roomName: slug }));
-        ws.close();
+        ws.onmessage = (event) => {
+          // Handle incoming messages if needed
+          const data = JSON.parse(event.data);
+          console.log('📨 Received:', data);
+        };
+
+      } catch (error) {
+        console.error('❌ Failed to connect:', error);
+        setConnectionError(error instanceof Error ? error.message : 'Connection failed');
+        setIsConnecting(false);
       }
     };
-  }, [slug, token]);
 
-  if (!socket) return <div className="p-6">Connecting to socket…</div>;
+    connectWebSocket();
+
+    return () => {
+      if (socket?.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({ type: 'leave_room', roomName: slug }));
+        socket.close();
+      }
+    };
+  }, [slug, isSignedIn, isLoaded]);
+
+  // Show loading state while Clerk is loading
+  if (!isLoaded) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="p-6 text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p>Loading authentication...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show sign-in prompt if user is not authenticated
+  if (!isSignedIn) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="p-6 text-center">
+          <p className="text-lg mb-4">Please sign in to join the room</p>
+          <a 
+            href="/signin" 
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            Sign In
+          </a>
+        </div>
+      </div>
+    );
+  }
+
+  // Show connection error
+  if (connectionError) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="p-6 text-center">
+          <div className="text-red-600 mb-4">❌ {connectionError}</div>
+          <button 
+            onClick={() => window.location.reload()} 
+            className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Show connecting state
+  if (isConnecting || !socket) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="p-6 text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600 mx-auto mb-4"></div>
+          <p>Connecting to room "{slug}"...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="relative w-full h-full">
       <Canvas roomName={slug} socket={socket} />
-      <VideoCall roomName={slug} token={token} /> 
+      {/* VideoCall now handles its own authentication */}
+      <VideoCall roomName={slug} />
     </div>
-
   );
 }

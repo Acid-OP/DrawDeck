@@ -3,48 +3,58 @@
 import { useEffect, useRef, useState } from "react";
 import { Video, VideoOff, Mic, MicOff } from "lucide-react";
 import { motion } from "framer-motion";
+import { useAuth } from '@clerk/nextjs';
 
-export function VideoCall({ roomName, token }: { roomName: string; token: string }) {
+interface VideoCallProps {
+  roomName: string;
+  token?: string; // Keep this optional for backward compatibility
+}
+
+export function VideoCall({ roomName, token }: VideoCallProps) {
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
   const [rtcSocket, setRtcSocket] = useState<WebSocket | null>(null);
   const peerRef = useRef<RTCPeerConnection | null>(null);
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
   const [isCameraOn, setIsCameraOn] = useState(false); 
-  const [isMicOn, setIsMicOn] = useState(false);      
+  const [isMicOn, setIsMicOn] = useState(false);
+  const { isSignedIn, isLoaded } = useAuth();
 
-  useEffect(() => {
-    const rtc = new WebSocket(`ws://localhost:8081?token=${token}`);
-    setRtcSocket(rtc);
+useEffect(() => {
+  if (!isLoaded || !isSignedIn) return;
 
-    rtc.onopen = () => {
-      rtc.send(JSON.stringify({ type: "join_room", roomName }));
-    };
+  const rtc = new WebSocket('ws://localhost:8081');
+  setRtcSocket(rtc);
 
-    rtc.onmessage = async (event) => {
-      const msg = JSON.parse(event.data);
-      if (!peerRef.current) return;
+  rtc.onopen = () => {
+    rtc.send(JSON.stringify({ type: "join_room", roomName }));
+  };
 
-      switch (msg.type) {
-        case "rtc:offer":
-          await peerRef.current.setRemoteDescription(new RTCSessionDescription(msg.data));
-          const answer = await peerRef.current.createAnswer();
-          await peerRef.current.setLocalDescription(answer);
-          rtc.send(JSON.stringify({ type: "rtc:answer", roomName, data: answer }));
-          break;
+  rtc.onmessage = async (event) => {
+    const msg = JSON.parse(event.data);
+    if (!peerRef.current) return;
 
-        case "rtc:answer":
-          await peerRef.current.setRemoteDescription(new RTCSessionDescription(msg.data));
-          break;
+    switch (msg.type) {
+      case "rtc:offer":
+        await peerRef.current.setRemoteDescription(new RTCSessionDescription(msg.data));
+        const answer = await peerRef.current.createAnswer();
+        await peerRef.current.setLocalDescription(answer);
+        rtc.send(JSON.stringify({ type: "rtc:answer", roomName, data: answer }));
+        break;
 
-        case "rtc:candidate":
-          await peerRef.current.addIceCandidate(new RTCIceCandidate(msg.data));
-          break;
-      }
-    };
+      case "rtc:answer":
+        await peerRef.current.setRemoteDescription(new RTCSessionDescription(msg.data));
+        break;
 
-    return () => rtc.close();
-  }, [roomName, token]);
+      case "rtc:candidate":
+        await peerRef.current.addIceCandidate(new RTCIceCandidate(msg.data));
+        break;
+    }
+  };
+
+  return () => rtc.close();
+}, [roomName, isLoaded, isSignedIn]);
+
 
   useEffect(() => {
     if (!rtcSocket) return;

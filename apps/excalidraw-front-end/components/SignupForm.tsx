@@ -9,41 +9,87 @@ interface SignupFormProps {
   isDark: boolean;
 }
 
+// Enhanced error handling function
+const getOAuthErrorMessage = (error: any): string => {
+  const errorCode = error?.errors?.[0]?.code || error?.code || error?.message;
+  
+  switch (errorCode) {
+    case 'form_identifier_exists':
+    case 'external_account_exists':
+      return "An account with this email already exists. Try signing in instead, or use a different provider.";
+    
+    case 'identifier_already_signed_up':
+      return "This email is already registered. Please sign in instead.";
+    
+    case 'oauth_access_denied':
+    case 'access_denied':
+      return "Access was denied. Please try again or use a different sign-in method.";
+    
+    case 'oauth_email_domain_reserved_by_saml':
+      return "This email domain is managed by your organization. Please contact your admin.";
+    
+    case 'session_exists':
+      return "You're already signed in. Redirecting...";
+    
+    case 'clerk_js_not_loaded':
+      return "Authentication service is loading. Please wait and try again.";
+    
+    case 'network_error':
+      return "Network error. Please check your connection and try again.";
+    
+    case 'oauth_callback_invalid_state':
+      return "Authentication failed. Please try signing in again.";
+    
+    default:
+      console.error('Unhandled OAuth error:', error);
+      return "Something went wrong. Please try again.";
+  }
+};
+
 const SignupForm: React.FC<SignupFormProps> = ({ isDark }) => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const router = useRouter();
   const { error, handleError, clearError } = useErrorHandler();
-const { signUp } = useSignUp();
+  const { signUp } = useSignUp();
 
+  // Enhanced OAuth handler for SIGNUP
+  const handleOAuth = async (provider: "oauth_google" | "oauth_github" | "oauth_facebook") => {
+    console.log("🚀 Starting OAuth with", provider);
+    console.log("🔍 SignUp object:", signUp);
+    
+    if (!signUp) {
+      console.error("❌ SignUp not available");
+      handleError("Authentication service is not available");
+      return;
+    }
 
- const handleOAuth = async (provider: "oauth_google" | "oauth_github" | "oauth_facebook") => {
-  console.log("🚀 Starting OAuth with", provider);
-  console.log("🔍 SignUp object:", signUp);
-  
-  if (!signUp) {
-    console.error("❌ SignUp not available");
-    handleError("Authentication service is not available");
-    return;
-  }
+    setIsLoading(true);
+    clearError();
 
-  setIsLoading(true);
-  clearError();
-
-  try {
-    console.log("🔄 Calling authenticateWithRedirect...");
-    const result = await signUp.authenticateWithRedirect({
-      strategy: provider,
-      redirectUrl: "/sso-callback",
-      redirectUrlComplete: "/",
-    });
-    console.log("✅ Redirect result:", result);
-  } catch (err) {
-    console.error("❌ OAuth error:", err);
-    console.error("❌ Error details:", JSON.stringify(err, null, 2));
-    handleError("Failed to authenticate with " + provider.replace("oauth_", ""));
-    setIsLoading(false);
-  }
-};
+    try {
+      console.log("🔄 Calling authenticateWithRedirect...");
+      await signUp.authenticateWithRedirect({
+        strategy: provider,
+        redirectUrl: "/sso-callback",
+        redirectUrlComplete: "/",
+      });
+      console.log("✅ Redirect initiated successfully");
+    } catch (err: any) {
+      console.log('OAuth signup error (this is normal for handled cases):', err);
+      console.error("❌ Error details:", JSON.stringify(err, null, 2));
+      
+      // Special handling for "account exists" - redirect to signin
+      const errorCode = err?.errors?.[0]?.code || err?.code;
+      if (errorCode === 'form_identifier_exists' || errorCode === 'identifier_already_signed_up') {
+        handleError("This email already has an account. Redirecting to sign in...");
+        setTimeout(() => router.push('/signin'), 2000);
+        return;
+      }
+      
+      handleError(getOAuthErrorMessage(err));
+      setIsLoading(false);
+    }
+  };
 
   return (
     <div
@@ -95,9 +141,10 @@ const { signUp } = useSignUp();
           </div>
         </div>
       )}
-      {/* Fix for Clerk CAPTCHA fallback warning */}
-<div id="clerk-captcha" style={{ display: "none" }} />
 
+      {/* Fix for Clerk CAPTCHA fallback warning */}
+      <div id="clerk-captcha" style={{ display: "none" }} />
+      
       {/* Social Sign Up Buttons */}
       <div className="space-y-4 mb-6">
         <button

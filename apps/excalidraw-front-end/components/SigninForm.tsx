@@ -9,7 +9,41 @@ import { useErrorHandler } from "@/app/hooks/hooks";
 interface SignInFormProps {
   isDark: boolean;
 }
-
+const getOAuthErrorMessage = (error: any): string => {
+  const errorCode = error?.errors?.[0]?.code || error?.code || error?.message;
+  
+  switch (errorCode) {
+    case 'form_identifier_exists':
+    case 'external_account_exists':
+      return "An account with this email already exists. Try signing in instead, or use a different provider.";
+    
+    case 'identifier_already_signed_up':
+      return "This email is already registered. Please sign in instead.";
+    
+    case 'oauth_access_denied':
+    case 'access_denied':
+      return "Access was denied. Please try again or use a different sign-in method.";
+    
+    case 'oauth_email_domain_reserved_by_saml':
+      return "This email domain is managed by your organization. Please contact your admin.";
+    
+    case 'session_exists':
+      return "You're already signed in. Redirecting...";
+    
+    case 'clerk_js_not_loaded':
+      return "Authentication service is loading. Please wait and try again.";
+    
+    case 'network_error':
+      return "Network error. Please check your connection and try again.";
+    
+    case 'oauth_callback_invalid_state':
+      return "Authentication failed. Please try signing in again.";
+    
+    default:
+      console.error('Unhandled OAuth error:', error);
+      return "Something went wrong. Please try again.";
+  }
+};
 const SignInForm: React.FC<SignInFormProps> = ({ isDark }) => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const router = useRouter();
@@ -28,11 +62,18 @@ const SignInForm: React.FC<SignInFormProps> = ({ isDark }) => {
     try {
       await signIn.authenticateWithRedirect({
         strategy: provider,
-        redirectUrl: "/",
+        redirectUrl: "/sso-callback",
         redirectUrlComplete: "/",
       });
-    } catch (err) {
-      handleError("Failed to authenticate with " + provider.replace("oauth_", ""));
+    } catch (err:any) {
+      const errorCode = err?.errors?.[0]?.code || err?.code;
+      if (errorCode === 'form_identifier_not_found' || errorCode === 'identifier_not_found') {
+        handleError("No account found with this email. Redirecting to sign up...");
+        setTimeout(() => router.push('/signup'), 2000);
+        return;
+      }
+      
+      handleError(getOAuthErrorMessage(err));
       setIsLoading(false);
     }
   };
