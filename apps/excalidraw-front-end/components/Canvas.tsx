@@ -129,6 +129,13 @@ useEffect(() => {
       setHasInteracted(true);
     }
   }, [game, hasInteracted]);
+useEffect(() => {
+  if (game) {
+    game.zoom = zoom;
+    game.clearCanvas();
+  }
+}, [zoom, game]);
+
 
   useEffect(() => {
     if (game) {

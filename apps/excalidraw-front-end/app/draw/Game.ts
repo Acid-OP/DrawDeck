@@ -84,9 +84,10 @@ export class Game {
   private activeHandle: "tl" | "tr" | "bl" | "br" | "start" | "end" | null = null;
   private offsetX = 0;
   private offsetY = 0;
+  public zoom: number = 1;
   private readonly MAX_CORNER_RADIUS = 10;
   private isSolo: boolean;
-  public currentStrokeColor: string = '#1e1e1e';      // default black
+  public currentStrokeColor: string = '#1e1e1e';    
   public currentBackgroundColor: string = 'transparent';
   public currentStrokeWidth: number = 2;
   public currentStrokeStyle: number = 0;
@@ -97,11 +98,21 @@ export class Game {
   }
   public setTheme(theme: "light" | "dark") {
   this.theme = theme;
-  this.clearCanvas(); // Optional: re-render shapes with new theme colors if needed
-}
-public hasShapes(): boolean {
-  return this.existingShapes.length > 0;
-}
+  this.clearCanvas(); 
+  }
+  public hasShapes(): boolean {
+    return this.existingShapes.length > 0;
+  }
+  public zoomIn() {
+  this.zoom = Math.min(this.zoom + 0.1, 5); // Max zoom 5x
+  this.clearCanvas();
+  }
+
+  public zoomOut() {
+    this.zoom = Math.max(this.zoom - 0.1, 0.2); // Min zoom 0.2x
+    this.clearCanvas();
+  }
+
   private theme: 'light' | 'dark' = 'dark';
   private localStorageTimeout: any = null;
   private isInit = false;
@@ -557,12 +568,31 @@ if (shape.type === "line" || shape.type === "arrow") {
     this.socket = socket;
     this.theme = theme;
     this.clearCanvas();
+    this.panOffsetX = 0; 
+    this.panOffsetY = 0;
     this.clicked = false;
     this.init();
     if (!this.isSolo && this.socket) {
     this.initHandlers(); 
     }
     this.initMouseHandlers();
+    window.addEventListener("keydown", (e: KeyboardEvent) => {
+  if (e.ctrlKey || e.metaKey) {
+    // Zoom In: Ctrl + '=' or Ctrl + '+'
+    if (e.key === "=" || e.key === "+" || e.code === "Equal") {
+      e.preventDefault();
+      this.zoom = Math.min(this.zoom + 0.1, 5);
+      this.clearCanvas();
+    }
+    // Zoom Out: Ctrl + '-'
+    if (e.key === "-" || e.code === "Minus") {
+      e.preventDefault();
+      this.zoom = Math.max(this.zoom - 0.1, 0.2);
+      this.clearCanvas();
+    }
+  }
+});
+
   }
   setStrokeColor(color: string) {
     this.currentStrokeColor = color;
@@ -698,8 +728,8 @@ if (shape.type === "line" || shape.type === "arrow") {
   getMousePos = (e: MouseEvent) => {
     const rect = this.canvas.getBoundingClientRect();
     return {
-      x: e.clientX - rect.left + this.panOffsetX,
-      y: e.clientY - rect.top + this.panOffsetY,
+      x: (e.clientX - rect.left + this.panOffsetX) / this.zoom,
+      y: (e.clientY - rect.top + this.panOffsetY) / this.zoom,
     };
   };
   
@@ -936,12 +966,15 @@ public deleteShapeByIndex(index: number) {
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
     this.ctx.fillStyle = this.theme === "dark" ? "#121212" : "#ffffff";
     this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
-      // Util: map style index/enum to dash arrays
     function getDashArray(style: number | string): number[] {
       if (style === 1 || style === "dashed") return [8, 6];
       if (style === 2 || style === "dotted") return [2, 6];
       return [];
     }
+    this.ctx.save();                          
+    this.ctx.setTransform(1, 0, 0, 1, 0, 0);     
+    this.ctx.translate(this.panOffsetX, this.panOffsetY); 
+    this.ctx.scale(this.zoom, this.zoom);         
     this.existingShapes.forEach((shape , idx) => {
       const isHovered = this.selectedTool === "eraser" &&
       this.hoveredForErase?.includes(idx); 
