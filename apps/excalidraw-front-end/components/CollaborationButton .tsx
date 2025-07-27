@@ -4,23 +4,26 @@ import { Users } from 'lucide-react';
 interface LiveCollaborationButtonProps {
   onClick?: () => void;
   className?: string;
+  theme : "light" | "dark";
 }
 
 const LiveCollaborationButton: React.FC<LiveCollaborationButtonProps> = ({ 
   onClick, 
-  className = '' 
+  className = '' ,
+  theme
 }) => {
   const [isHovered, setIsHovered] = useState<boolean>(false);
-
+   const bgColor =
+    theme === 'dark'
+      ? (isHovered ? 'bg-[#232329]' : 'bg-[#121212]')
+      : (isHovered ? 'bg-[#f1f0ff]' : 'bg-white');
   return (
     <button
       className={`
         flex items-center justify-start gap-2 px-5 py-4 w-full cursor-pointer rounded-lg
         font-medium text-sm
         transition-all duration-200 ease-in-out
-        shadow-sm hover:shadow-md
-        transform hover:-translate-y-0.5
-        ${isHovered ? 'bg-[#232329]' : 'bg-[#121212]'}
+        ${bgColor}
         ${className}
       `}
       onMouseEnter={() => setIsHovered(true)}

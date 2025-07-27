@@ -18,8 +18,9 @@ import { ThemeToggle } from './sidebar/ThemeToggle';
 import { CanvasBackgroundPicker } from './sidebar/CanvasBackgroundPicker';
 import { SidebarSeparator } from './sidebar/SidebarSeparator';
 import { LiveCollabModal } from './modal/LiveCollabModal';
-import { Router } from 'next/router';
 import { useRouter } from 'next/navigation';
+import { ConfirmModal } from './modal/ConfirmModal';
+
 
 interface SidebarItemsProps {
   theme: 'light' | 'dark';
@@ -27,9 +28,12 @@ interface SidebarItemsProps {
   onClearCanvas: () => void;
 }
 
+
 export const SidebarItems: React.FC<SidebarItemsProps> = ({ theme, onThemeToggle , onClearCanvas }) => {
   const [showLiveModal, setShowLiveModal] = useState(false);
- const router = useRouter();
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const router = useRouter();
+
   const handleLiveClick = () => {
     setShowLiveModal(true);
   };
@@ -40,6 +44,9 @@ export const SidebarItems: React.FC<SidebarItemsProps> = ({ theme, onThemeToggle
     const roomSlug = generateRoomIdAndKey();
     window.location.href = `/canvas/${roomSlug}`;
   };
+
+  const openClearConfirm = () => setShowClearConfirm(true);
+  const closeClearConfirm = () => setShowClearConfirm(false);
 
   return (
     <>
@@ -53,7 +60,7 @@ export const SidebarItems: React.FC<SidebarItemsProps> = ({ theme, onThemeToggle
           <FeatureButton 
             icon={<Trash2 size={18} />} 
             label="Clear Canvas" 
-            onClick={onClearCanvas}
+            onClick={openClearConfirm}  
             theme={theme}
           />
           <FeatureButton 
@@ -82,6 +89,7 @@ export const SidebarItems: React.FC<SidebarItemsProps> = ({ theme, onThemeToggle
         </div>
         <SidebarSeparator theme={theme} />
 
+
         <div className="space-y-1">
           <SocialButton 
             icon={<Github size={18} />} 
@@ -102,12 +110,19 @@ export const SidebarItems: React.FC<SidebarItemsProps> = ({ theme, onThemeToggle
         </div>
         <SidebarSeparator theme={theme} className="my-2" />
 
+
         <div>
           <ThemeToggle theme={theme} onThemeChange={onThemeToggle} />
         </div>
-
-        <CanvasBackgroundPicker theme={theme} />
       </div>
+
+      {showClearConfirm && ( <ConfirmModal
+  open={showClearConfirm}
+  setOpen={setShowClearConfirm}
+  onConfirm={onClearCanvas} 
+  theme = {theme}
+/>
+      )}
 
       {showLiveModal && (
         <LiveCollabModal 
@@ -117,6 +132,7 @@ export const SidebarItems: React.FC<SidebarItemsProps> = ({ theme, onThemeToggle
     </>
   );
 };
+
 
 function generateRoomIdAndKey(): string {
   const roomId = crypto.randomUUID().replace(/-/g, "").slice(0, 20);

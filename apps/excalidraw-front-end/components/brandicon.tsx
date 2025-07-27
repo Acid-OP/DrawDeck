@@ -4,13 +4,16 @@ interface BrandIconProps {
  size?: number;
  strokeWidth?: number;
  className?: string;
+ theme : "light" | "dark";
 }
 
 const BrandIcon: React.FC<BrandIconProps> = ({
  size = 24,
  strokeWidth = 2,
- className = ''
+ className = '',
+ theme
 }) => {
+  const iconColor = theme === "dark" ? "#a8a5ff" : "#6965db";
  return (
    <svg
      xmlns="http://www.w3.org/2000/svg"
@@ -18,7 +21,7 @@ const BrandIcon: React.FC<BrandIconProps> = ({
      height={size}
      viewBox="0 0 24 24"
      fill="none"
-     stroke="#a8a5ff"
+     stroke={iconColor}
      strokeWidth={strokeWidth}
      strokeLinecap="round"
      strokeLinejoin="round"

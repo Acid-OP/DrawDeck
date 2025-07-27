@@ -104,12 +104,12 @@ export class Game {
     return this.existingShapes.length > 0;
   }
   public zoomIn() {
-  this.zoom = Math.min(this.zoom + 0.1, 5); // Max zoom 5x
+  this.zoom = Math.min(this.zoom + 0.1, 5); 
   this.clearCanvas();
   }
 
   public zoomOut() {
-    this.zoom = Math.max(this.zoom - 0.1, 0.2); // Min zoom 0.2x
+    this.zoom = Math.max(this.zoom - 0.1, 0.2); 
     this.clearCanvas();
   }
 
@@ -893,14 +893,14 @@ if (shape.type === "line" || shape.type === "arrow") {
   this.clearCanvas();
 }
 public clearAllShapes() {
-  this.existingShapes = [];
   if (this.isSolo) {
-    this.scheduleLocalSave();
+    this.existingShapes = [];
+    const key = this.getLocalStorageKey(); 
+    localStorage.removeItem(key);
+ 
+    this.clearCanvas();
   }
-  this.clearCanvas();
 }
-
-
   initHandlers() {
     if (this.isSolo || !this.socket || !this.roomId) return;
 

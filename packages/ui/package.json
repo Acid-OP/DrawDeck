@@ -36,6 +36,7 @@
     "typescript": "5.8.2"
   },
   "dependencies": {
+    "@radix-ui/react-dialog": "^1.1.14",
     "@radix-ui/react-slot": "^1.1.2",
     "@radix-ui/react-switch": "^1.2.5",
     "@radix-ui/react-toggle-group": "^1.1.10",

@@ -185,7 +185,7 @@ useEffect(() => {
       {shouldShowWelcome && (
         <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 pointer-events-none z-50">
           <div className="pointer-events-auto">
-            <Header />
+            <Header theme = {theme}/>
           </div>
         </div>
       )}
