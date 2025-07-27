@@ -10,10 +10,10 @@ export function RoomCanvas({ slug }: { slug: string }) {
   const [socket, setSocket] = useState<WebSocket | null>(null);
   const [isConnecting, setIsConnecting] = useState(false);
   const [connectionError, setConnectionError] = useState<string | null>(null);
-  const { isSignedIn, isLoaded, getToken } = useAuth();
+  const { getToken } = useAuth(); // Keep only getToken for WS backend
 
   useEffect(() => {
-    if (!isLoaded || !isSignedIn || !slug) return;
+    if (!slug) return;
 
     const connectWebSocket = async () => {
       try {
@@ -68,36 +68,7 @@ export function RoomCanvas({ slug }: { slug: string }) {
         socket.close();
       }
     };
-  }, [slug, isSignedIn, isLoaded]);
-
-  // Show loading state while Clerk is loading
-  if (!isLoaded) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="p-6 text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p>Loading authentication...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Show sign-in prompt if user is not authenticated
-  if (!isSignedIn) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="p-6 text-center">
-          <p className="text-lg mb-4">Please sign in to join the room</p>
-          <a 
-            href="/signin" 
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            Sign In
-          </a>
-        </div>
-      </div>
-    );
-  }
+  }, [slug, getToken]);
 
   // Show connection error
   if (connectionError) {
@@ -131,7 +102,6 @@ export function RoomCanvas({ slug }: { slug: string }) {
   return (
     <div className="relative w-full h-full">
       <Canvas roomName={slug} socket={socket} />
-      {/* VideoCall now handles its own authentication */}
       <VideoCall roomName={slug} />
     </div>
   );

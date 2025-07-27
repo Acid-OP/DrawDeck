@@ -7,7 +7,7 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 const wss = new WebSocketServer({ port: 8080 });
-console.log('CLERK_SECRET_KEY loaded:', process.env.CLERK_SECRET_KEY ? 'YES' : 'NO');
+
 wss.on("listening", () => {
   console.log("✅ WebSocket server is listening on ws://localhost:8080");
 });
@@ -20,24 +20,18 @@ interface ClientInfo {
 
 const clients: Set<ClientInfo> = new Set();
 
-// Verify Clerk session token from cookies
 async function verifyClerkSession(sessionToken: string): Promise<string | null> {
   try {
-    // Method 1: Try verifyToken (for JWT tokens)
     try {
       const payload = await clerkClient.verifyToken(sessionToken, {
         secretKey: process.env.CLERK_SECRET_KEY!,
       });
-      return payload.sub; // This is the user ID
+      return payload.sub; 
     } catch (tokenError) {
       console.log("⚠️ verifyToken failed, trying verifySession...");
     }
-
-    // Method 2: Try verifySession if verifyToken fails
-    // We need to extract session ID from the token
     const tokenParts = sessionToken.split('.');
     if (tokenParts.length === 3 && tokenParts[1]) {
-      // Decode JWT payload to get session ID
       const payload = JSON.parse(Buffer.from(tokenParts[1], 'base64').toString());
       const sessionId = payload.sid;
       
@@ -54,7 +48,7 @@ async function verifyClerkSession(sessionToken: string): Promise<string | null> 
   }
 }
 
-// Extract authentication from cookies
+
 async function authenticateUser(request: IncomingMessage): Promise<string | null> {
   const cookieHeader = request.headers.cookie;
   console.log('🍪 Raw cookies:', cookieHeader);
@@ -65,7 +59,7 @@ async function authenticateUser(request: IncomingMessage): Promise<string | null
   }
 
   const cookies = parse(cookieHeader);
-  const sessionToken = cookies['__session']; // Clerk's default session cookie
+  const sessionToken = cookies['__session']; 
   
   console.log('📝 Session token:', sessionToken ? 'Present' : 'Missing');
   console.log('🔍 Token preview:', sessionToken ? sessionToken.substring(0, 50) + '...' : 'None');

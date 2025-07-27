@@ -52,8 +52,8 @@ export function Canvas({ roomName, socket, isSolo = false }: CanvasProps) {
   const [zoom, setZoom] = useState(1);
   const [isMobile, setIsMobile] = useState(false);
 
-  const strokeColors = [
-    '#1e1e1e', // Black
+  const getStrokeColors = (theme: "light" | "dark") => [
+    theme === "dark" ? '#ffffff' : '#1e1e1e', // Theme-based default (white for dark, black for light)
     '#e03131', // Red
     '#2f9e44', // Green
     '#1971c2', // Blue
@@ -123,6 +123,13 @@ useEffect(() => {
   }
 }, [selectedTool]);
 
+  // NEW: Check if shapes exist when game initializes
+  useEffect(() => {
+    if (game && !hasInteracted && game.hasShapes()) {
+      setHasInteracted(true);
+    }
+  }, [game, hasInteracted]);
+
   useEffect(() => {
     if (game) {
       game.setTheme(theme);
@@ -131,7 +138,8 @@ useEffect(() => {
 
   useEffect(() => {
     if (!game) return;
-    game.setStrokeColor(strokeColors[strokeIndex]);
+    const currentStrokeColors = getStrokeColors(theme);
+    game.setStrokeColor(currentStrokeColors[strokeIndex]);
     game.setBackgroundColor(backgroundColors[backgroundIndex]);
     game.setStrokeWidth(strokeWidths[strokeWidthIndex]);
     game.setStrokeStyle(strokeStyleIndex);
@@ -246,7 +254,7 @@ useEffect(() => {
           rows={1}
           className="absolute bg-transparent px-0 py-0 m-0 border-none outline-none resize-none whitespace-pre-wrap break-words"
           style={{
-            color: strokeColors[strokeIndex],
+            color:  getStrokeColors(theme)[strokeIndex],
             font: `${isMobile ? '16px' : '20px'} Virgil, Segoe UI, sans-serif`,
             top: inputBox.y - 4,
             left: inputBox.x,

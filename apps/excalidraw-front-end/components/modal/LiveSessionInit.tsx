@@ -3,6 +3,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { SquareSlash } from "lucide-react";
+import { useAuth } from "@clerk/nextjs"; 
 
 interface Props {
   onClose: () => void;
@@ -12,10 +13,16 @@ export const LiveSessionInitModal: React.FC<Props> = ({ onClose }) => {
   const modalRef = useRef<HTMLDivElement>(null);
   const [roomName, setRoomName] = useState("");
   const router = useRouter();
+  const { isSignedIn } = useAuth(); 
 
   const handleCreateRoom = (e: React.FormEvent) => {
     e.preventDefault();
     const trimmed = roomName.trim();
+
+    if (!isSignedIn) {
+      router.push("/signin"); 
+      return;
+    }
 
     if (!trimmed) {
       alert("Please enter a room name");
@@ -25,7 +32,7 @@ export const LiveSessionInitModal: React.FC<Props> = ({ onClose }) => {
     router.push(`/canvas/${trimmed}`);
   };
 
-  // Escape key
+ 
   useEffect(() => {
     const esc = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
@@ -34,7 +41,7 @@ export const LiveSessionInitModal: React.FC<Props> = ({ onClose }) => {
     return () => window.removeEventListener("keydown", esc);
   }, [onClose]);
 
-  // Outside click
+  
   useEffect(() => {
     const click = (e: MouseEvent) => {
       if (modalRef.current && !modalRef.current.contains(e.target as Node)) {

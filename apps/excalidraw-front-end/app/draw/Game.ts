@@ -210,7 +210,6 @@ public hasShapes(): boolean {
     return null;
   }
 
-
   private cursorForHandle(h:"tl"|"tr"|"bl"|"br"|"move"|"none"){
     switch(h){
       case "tl":case "br": return "nwse-resize";

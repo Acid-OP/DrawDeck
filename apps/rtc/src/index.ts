@@ -6,8 +6,7 @@ import { parse } from "cookie";
 import dotenv from 'dotenv';
 dotenv.config();
 
-const wss = new WebSocketServer({ port: 8081 }); // Run RTC on a different port
-console.log('CLERK_SECRET_KEY loaded:', process.env.CLERK_SECRET_KEY ? 'YES' : 'NO');
+const wss = new WebSocketServer({ port: 8081 }); 
 wss.on("listening", () => {
   console.log("🎥 WebRTC signaling server running on ws://localhost:8081");
 });
@@ -28,16 +27,12 @@ async function verifyClerkSession(sessionToken: string): Promise<string | null> 
       const payload = await clerkClient.verifyToken(sessionToken, {
         secretKey: process.env.CLERK_SECRET_KEY!,
       });
-      return payload.sub; // This is the user ID
+      return payload.sub; 
     } catch (tokenError) {
-      console.log("⚠️ verifyToken failed, trying verifySession...");
     }
 
-    // Method 2: Try verifySession if verifyToken fails
-    // We need to extract session ID from the token
     const tokenParts = sessionToken.split('.');
     if (tokenParts.length === 3 && tokenParts[1]) {
-      // Decode JWT payload to get session ID
       const payload = JSON.parse(Buffer.from(tokenParts[1], 'base64').toString());
       const sessionId = payload.sid;
       
@@ -54,29 +49,22 @@ async function verifyClerkSession(sessionToken: string): Promise<string | null> 
   }
 }
 
-// Extract authentication from cookies
 async function authenticateUser(request: IncomingMessage): Promise<string | null> {
   const cookieHeader = request.headers.cookie;
-  console.log('🍪 RTC Raw cookies:', cookieHeader);
   
   if (!cookieHeader) {
-    console.log('❌ No cookies found');
     return null;
   }
 
   const cookies = parse(cookieHeader);
-  const sessionToken = cookies['__session']; // Clerk's default session cookie
-  
-  console.log('📝 RTC Session token:', sessionToken ? 'Present' : 'Missing');
+  const sessionToken = cookies['__session']; 
   
   if (!sessionToken) {
-    console.log('❌ No __session cookie found');
     console.log('🔍 Available cookies:', Object.keys(cookies));
     return null;
   }
 
   const userId = await verifyClerkSession(sessionToken);
-  console.log('🔐 RTC Verification result:', userId ? `Success: ${userId}` : 'Failed');
   return userId;
 }
 
@@ -89,7 +77,7 @@ function broadcastToRoom(roomName: string, sender: RTCClient, payload: any) {
           client.ws.send(msg);
         }
       } catch (error) {
-        // Clean up dead connections
+        
         rtcClients.delete(client);
       }
     }
@@ -127,7 +115,6 @@ wss.on("connection", async (ws, request) => {
         break;
       }
 
-      // Signaling messages
       case "rtc:offer":
       case "rtc:answer":
       case "rtc:candidate": {
