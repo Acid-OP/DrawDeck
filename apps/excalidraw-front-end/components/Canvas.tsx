@@ -260,25 +260,26 @@ useEffect(() => {
           autoFocus
           rows={1}
           className="absolute bg-transparent px-0 py-0 m-0 border-none outline-none resize-none whitespace-pre-wrap break-words"
-          style={{
-            color:  getStrokeColors(theme)[strokeIndex],
-            font: `${isMobile ? '16px' : '20px'} Virgil, Segoe UI, sans-serif`,
-            top: inputBox.y - 4,
-            left: inputBox.x,
-            minWidth: "1ch",
-            maxWidth: isMobile ? "280px" : "500px",
-            overflow: "hidden",
-          }}
-          onBlur={(e) => {
-            if (game && e.target.value.trim()) {
-              game.addTextShape(inputBox.x, inputBox.y, e.target.value);
-            }
-            (window as any).justBlurredTextInput = true;
-            setInputBox(null);
-            setTimeout(() => {
-              (window as any).justBlurredTextInput = false;
-            }, 300);
-          }}
+style={{
+  color: getStrokeColors(theme)[strokeIndex],
+  font: `${isMobile ? '16px' : '20px'} Virgil, Segoe UI, sans-serif`,
+  top: inputBox.y, // Remove the -4 offset to match textBaseline: "top"
+  left: inputBox.x,
+  minWidth: "1ch",
+  maxWidth: isMobile ? "280px" : "500px",
+  overflow: "hidden",
+}}
+onBlur={(e) => {
+  if (game && e.target.value.trim()) {
+    // This will create the text and auto-select it
+    game.addTextShape(inputBox.x, inputBox.y, e.target.value);
+  }
+  (window as any).justBlurredTextInput = true;
+  setInputBox(null);
+  setTimeout(() => {
+    (window as any).justBlurredTextInput = false;
+  }, 300);
+}}
         />
       )}
 

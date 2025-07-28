@@ -184,11 +184,18 @@ export class Game {
       width = maxX - minX;
       height = maxY - minY;
     } else if (shape.type === "text") {
-      x = shape.x;
-      y = shape.y;
-      width = 100;
-      height = 30;
-    } else if (shape.type === "pencil") {
+  // Measure text dimensions for accurate handles
+  this.ctx.font = "20px Virgil, Segoe UI, sans-serif";
+  const metrics = this.ctx.measureText(shape.text);
+  const textWidth = metrics.width;
+  const textHeight = 20;
+  
+  x = shape.x;
+  y = shape.y; // y is already at top of text
+  width = textWidth;
+  height = textHeight;
+}
+ else if (shape.type === "pencil") {
       const xs = shape.points.map(p => p.x);
       const ys = shape.points.map(p => p.y);
       x = Math.min(...xs);
@@ -455,10 +462,15 @@ if (shape.type === "diamond") {
   return;
 }
 if (shape.type === "text") {
-  const width = this.ctx.measureText(shape.text).width;
-  const height = 20;
+  // Use actual text measurements for accurate selection box
+  this.ctx.font = "20px Virgil, Segoe UI, sans-serif";
+  const metrics = this.ctx.measureText(shape.text);
+  const width = metrics.width;
+  const height = 20; // Font size
+  
+  // Text coordinates: x,y is top-left of text (textBaseline: "top")
   const x = shape.x - pad / 2;
-  const y = shape.y - height + pad / 2;
+  const y = shape.y - pad / 2; // y is already at top of text
   const w = width + pad;
   const h = height + pad;
 
@@ -680,13 +692,14 @@ if (shape.type === "line" || shape.type === "arrow") {
       boxW = maxX - minX;
       boxH = maxY - minY;
     } else if (shape.type === "text") {
-      const width = 100;
-      const height = 30;
-      boxX = shape.x - pad / 2;
-      boxY = shape.y - height + pad / 2;
-      boxW = width + pad;
-      boxH = height + pad;
-    } else if (shape.type === "pencil") {
+  const metrics = this.ctx.measureText(shape.text);
+  const width = metrics.width;
+  const height = 20;
+  boxX = shape.x - pad / 2;
+  boxY = shape.y - pad / 2; // y is top of text
+  boxW = width + pad;
+  boxH = height + pad;
+} else if (shape.type === "pencil") {
       const xs = shape.points.map(p => p.x);
       const ys = shape.points.map(p => p.y);
       const minX = Math.min(...xs) - pad;
@@ -702,7 +715,7 @@ if (shape.type === "line" || shape.type === "arrow") {
     return x >= boxX && x <= boxX + boxW && y >= boxY && y <= boxY + boxH;
   }  
 
-  addTextShape(x: number, y: number, text: string) {
+addTextShape(x: number, y: number, text: string) {
   const shape = {
     id: this.genId(),
     type: "text" as const,
@@ -715,15 +728,22 @@ if (shape.type === "line" || shape.type === "arrow") {
     strokeStyle: this.currentStrokeStyle,
     fillStyle: this.currentFillStyle,
   };
+  
   this.existingShapes.push(shape);
+  
   if (this.isSolo) {
     this.scheduleLocalSave();
   } else {
     this.broadcastShape(shape);
   }
+  
+  // ✅ Auto-select the newly created text
+  this.selectedShapeIndex = this.existingShapes.length - 1;
+  this.selectedTool = "select";
+  if (this.onToolChange) this.onToolChange("select");
+  
   this.clearCanvas();
 }
-
 
   getMousePos = (e: MouseEvent) => {
     const rect = this.canvas.getBoundingClientRect();
@@ -736,7 +756,6 @@ if (shape.type === "line" || shape.type === "arrow") {
   private isPointInsideShape(x: number, y: number, shape: Shape): boolean {
     const pad = 6;
 
-    // ✅ Convert screen coords to world coords
     x -= this.panOffsetX;
     y -= this.panOffsetY;
 
@@ -770,17 +789,25 @@ if (shape.type === "line" || shape.type === "arrow") {
       const maxY = Math.max(...ys) + pad;
       return x >= minX && x <= maxX && y >= minY && y <= maxY;
     }
+    
+if (shape.type === "text") {
+  // Measure actual text dimensions
+  this.ctx.font = "20px Virgil, Segoe UI, sans-serif";
+  const metrics = this.ctx.measureText(shape.text);
+  const textWidth = metrics.width;
+  const textHeight = 20; // Font size
+  
+  const pad = 6;
+  
+  // Text is drawn with textBaseline: "top", so y is the top of the text
+  return (
+    x >= shape.x - pad &&
+    x <= shape.x + textWidth + pad &&
+    y >= shape.y - pad && // y is top of text
+    y <= shape.y + textHeight + pad
+  );
+}
 
-    if (shape.type === "text") {
-      const width = 100;
-      const height = 30;
-      return (
-        x >= shape.x &&
-        x <= shape.x + width &&
-        y <= shape.y &&
-        y >= shape.y - height
-      );
-    }
 
     if (shape.type === "pencil") {
       for (let i = 0; i < shape.points.length - 1; i++) {
@@ -1395,6 +1422,20 @@ if (this.selectedTool === "pencil") {
 
   // ---- All other tool logic remains as previous ----
   if (this.startX == null || this.startY == null) return;
+  const minDistance = 5; // pixels
+const distance = Math.hypot(pos.x - this.startX, pos.y - this.startY);
+
+// List of tools that should check for minimum distance
+const toolsRequiringMovement = ["line", "arrow", "rect", "circle", "diamond"];
+
+if (distance < minDistance && toolsRequiringMovement.includes(this.selectedTool)) {
+  // No significant movement detected, don't create shape
+  this.startX = null;
+  this.startY = null;
+  this.endX = null;
+  this.endY = null;
+  return;
+}
   if (this.selectedTool === "line" || this.selectedTool === "arrow") {
     const shape: Shape = {
       id: this.genId(),
@@ -1497,15 +1538,15 @@ if (this.selectedTool === "pencil") {
       fillStyle: this.currentFillStyle,
     };
   } else if (this.selectedTool === "text") {
-    if ((window as any).justBlurredTextInput) return;
-    setTimeout(() => {
-      if (this.onTextInsert) {
-        this.onTextInsert(pos.x + this.panOffsetX, pos.y + this.panOffsetY);
-        this.clearCanvas();
-      }
-    }, 0);
-    return;
-  }
+  if ((window as any).justBlurredTextInput) return;
+  setTimeout(() => {
+    if (this.onTextInsert) {
+      this.onTextInsert(pos.x + this.panOffsetX, pos.y + this.panOffsetY);
+      this.clearCanvas();
+    }
+  }, 0);
+  return;
+}
 
 if (!shape) return;
 
@@ -1681,15 +1722,88 @@ return;
               s.rx = Math.abs(p.x - s.centerX);
               s.ry = Math.abs(p.y - s.centerY);
 
-            } else if (s.type === "line" || s.type === "arrow") {
-              if (this.activeHandle === "start") {
-                s.startX = p.x;
-                s.startY = p.y;
-              } else if (this.activeHandle === "end") {
-                s.endX = p.x;
-                s.endY = p.y;
-              }
-            }
+            }  else if (s.type === "diamond") {
+  // Calculate current center and dimensions
+  const currentCenterX = (s.top.x + s.bottom.x) / 2;
+  const currentCenterY = (s.left.y + s.right.y) / 2;
+  const currentWidth = Math.abs(s.right.x - s.left.x);
+  const currentHeight = Math.abs(s.bottom.y - s.top.y);
+
+  // Calculate new dimensions based on which handle is being dragged
+  let newWidth = currentWidth;
+  let newHeight = currentHeight;
+  let newCenterX = currentCenterX;
+  let newCenterY = currentCenterY;
+
+  const h = this.activeHandle;
+  
+  if (h === "tl") {
+    // Top-left: moving both top and left edges
+    newCenterX = (p.x + s.right.x) / 2;
+    newCenterY = (p.y + s.bottom.y) / 2;
+    newWidth = Math.abs(s.right.x - p.x);
+    newHeight = Math.abs(s.bottom.y - p.y);
+  } else if (h === "tr") {
+    // Top-right: moving top and right edges
+    newCenterX = (s.left.x + p.x) / 2;
+    newCenterY = (p.y + s.bottom.y) / 2;
+    newWidth = Math.abs(p.x - s.left.x);
+    newHeight = Math.abs(s.bottom.y - p.y);
+  } else if (h === "bl") {
+    // Bottom-left: moving bottom and left edges
+    newCenterX = (p.x + s.right.x) / 2;
+    newCenterY = (s.top.y + p.y) / 2;
+    newWidth = Math.abs(s.right.x - p.x);
+    newHeight = Math.abs(p.y - s.top.y);
+  } else if (h === "br") {
+    // Bottom-right: moving bottom and right edges
+    newCenterX = (s.left.x + p.x) / 2;
+    newCenterY = (s.top.y + p.y) / 2;
+    newWidth = Math.abs(p.x - s.left.x);
+    newHeight = Math.abs(p.y - s.top.y);
+  }
+
+  // Update all four diamond points based on new center and dimensions
+  s.top.x = newCenterX;
+  s.top.y = newCenterY - newHeight / 2;
+  
+  s.right.x = newCenterX + newWidth / 2;
+  s.right.y = newCenterY;
+  
+  s.bottom.x = newCenterX;
+  s.bottom.y = newCenterY + newHeight / 2;
+  
+  s.left.x = newCenterX - newWidth / 2;
+  s.left.y = newCenterY;
+
+}  else if (s.type === "text") {
+  const h = this.activeHandle;
+  
+  // Get current text dimensions
+  this.ctx.font = "20px Virgil, Segoe UI, sans-serif";
+  const metrics = this.ctx.measureText(s.text);
+  const textWidth = metrics.width;
+  const textHeight = 20;
+  
+  // Handle corner resizing - for text, we'll mainly move position
+  // but keep the resize behavior consistent with other shapes
+  if (h === "tl") {
+    // Top-left: move the text position
+    s.x = p.x;
+    s.y = p.y;
+  } else if (h === "tr") {
+    // Top-right: adjust x to maintain right edge, move y
+    s.x = p.x - textWidth;
+    s.y = p.y;
+  } else if (h === "bl") {
+    // Bottom-left: move x, adjust y to maintain bottom edge
+    s.x = p.x;
+    s.y = p.y - textHeight;
+  } else if (h === "br") {
+    // Bottom-right: adjust both x and y to maintain bottom-right edge
+    s.x = p.x - textWidth;
+    s.y = p.y - textHeight;
+  }}
           }
           this.clearCanvas();
           if (this.isSolo) {

@@ -37,11 +37,9 @@ export const ConfirmModal = ({
     <Dialog
       open={open}
       onOpenChange={setOpen}
-      // Dialog overlay closes modal on click-outside by default if DialogContent has no Close button.
     >
       <DialogContent
         className={`sm:max-w-[470px] min-w-[370px] py-10 px-8 rounded-2xl ${modalBg} flex flex-col items-center border-none`}
-        // border-none removes ANY border, even one in the shadcn/ui DialogContent.
       >
         <DialogHeader className="space-y-4 w-full text-center">
           <DialogTitle className={`text-2xl font-bold ${theme === "dark" ? "text-white" : "text-black"}`}>
