@@ -1,35 +1,29 @@
-import { auth, currentUser } from "@clerk/nextjs/server";
-import { headers } from "next/headers";
+"use client";
 
-export default async function HomePage() {
-  // Fix: await the headers
-  const headersList = await headers();
-  const cookies = headersList.get('cookie');
+import { useAuth } from '@clerk/nextjs';
+import { Canvas } from "@/components/Canvas";
+
+export default function HomePage() {
+  const { isSignedIn, isLoaded } = useAuth();
   
-  console.log("🍪 Raw cookies:", cookies);
-  
-  const { userId, sessionId, sessionClaims } = await auth();
-  const user = await currentUser();
-  
-  console.log("✅ Auth result:", { userId, sessionId, sessionClaims });
-  console.log("✅ Current user:", user);
-  
-  if (!userId) {
+  // Show loading until auth state is determined to prevent flash
+  if (!isLoaded) {
     return (
-      <div>
-        <h1>Debug Info</h1>
-        <p>No user signed in</p>
-        <p>Cookies: {cookies ? "Present" : "None"}</p>
-        <pre>{JSON.stringify({ userId, sessionId }, null, 2)}</pre>
+      <div className="flex items-center justify-center h-screen bg-[#121212]">
+        <div className="p-6 text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-white">Loading...</p>
+        </div>
       </div>
     );
   }
-
+  
   return (
-    <div>
-      <h1>Welcome, {user?.firstName ?? "User"}!</h1>
-      <p>Your ID: {userId}</p>
-      <pre>{JSON.stringify(user, null, 2)}</pre>
-    </div>
+    <Canvas 
+      roomName="__solo" 
+      socket={null} 
+      isSolo={true} 
+      isUserAuthenticated={isSignedIn}
+    />
   );
 }

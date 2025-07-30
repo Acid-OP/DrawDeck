@@ -30,9 +30,10 @@ interface CanvasProps {
   roomName: string;
   socket: WebSocket | null;
   isSolo?: boolean;
+  isUserAuthenticated?: boolean; 
 }
 
-export function Canvas({ roomName, socket, isSolo = false }: CanvasProps) {
+export function Canvas({ roomName, socket, isSolo = false, isUserAuthenticated = false }: CanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [game, setGame] = useState<Game>();
   const [hasInteracted, setHasInteracted] = useState(false);
@@ -169,7 +170,9 @@ useEffect(() => {
   }, [canvasRef, isSolo, roomName, socket, dimensions, theme]);
 
   const shouldShowPropertiesPanel = ["rect", "diamond", "circle", "arrow", "line", "pencil", "text"].includes(selectedTool);
-  const shouldShowWelcome =  game && !hasInteracted && !game.hasShapes();
+  
+  const shouldShowWelcome = game && !hasInteracted && !game.hasShapes() && !isUserAuthenticated;
+  
   return (
     <div className={`w-screen h-screen overflow-hidden relative ${theme === "dark" ? "bg-[#121212]" : "bg-white"}`}>
       {/* Canvas */}

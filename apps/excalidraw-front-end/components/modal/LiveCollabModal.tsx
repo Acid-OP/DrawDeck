@@ -1,9 +1,8 @@
 "use client";
-
 import React, { useEffect, useRef, useState } from "react";
 import { Play } from "lucide-react";
-import { LiveSessionInitModal } from "./LiveSessionInit";
-// Make sure this path is correct
+import { useRouter } from "next/navigation";
+import { useAuth } from "@clerk/nextjs";
 
 interface Props {
   onClose: () => void;
@@ -11,18 +10,25 @@ interface Props {
 
 export const LiveCollabModal: React.FC<Props> = ({ onClose }) => {
   const modalRef = useRef<HTMLDivElement>(null);
-  const [showSessionModal, setShowSessionModal] = useState(false);
-  const [roomId, setRoomId] = useState("");
-  const [slug, setSlug] = useState("");
+  const router = useRouter();
+  const { isSignedIn } = useAuth();
 
   const handleStartSession = () => {
-    const newRoomId = Math.random().toString(36).slice(2, 10);
-    const secret = Math.random().toString(36).slice(2, 12);
-    const newSlug = `${newRoomId},${secret}`;
+    // Check if user is signed in
+    if (!isSignedIn) {
+      // Redirect to sign in page
+      router.push('/signin');
+      return;
+    }
 
-    setRoomId(newRoomId);
-    setSlug(newSlug);
-    setShowSessionModal(true);
+    // Generate a random URL-safe string
+    const randomId = Math.random().toString(36).slice(2, 10) + Math.random().toString(36).slice(2, 6);
+    
+    // Close current modal and navigate to the room
+    onClose();
+    
+    // Navigate to the collaborative room
+    router.push(`/${randomId}`);
   };
 
   // ESC key
@@ -44,16 +50,6 @@ export const LiveCollabModal: React.FC<Props> = ({ onClose }) => {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [onClose]);
-
-  if (showSessionModal) {
-    return (
-      <LiveSessionInitModal
-        onClose={() => {
-          setShowSessionModal(false);
-        }}
-      />
-    );
-  }
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">

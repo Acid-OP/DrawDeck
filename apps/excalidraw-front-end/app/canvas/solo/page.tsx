@@ -1,7 +1,7 @@
-"use client";
+// "use client";
 
-import { Canvas } from "@/components/Canvas";
+// import { Canvas } from "@/components/Canvas";
 
-export default function SoloCanvas() {
-  return <Canvas roomName="__solo" socket={null} isSolo={true} />;
-}
+// export default function SoloCanvas() {
+//   return <Canvas roomName="__solo" socket={null} isSolo={true} />;
+// }
