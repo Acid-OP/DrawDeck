@@ -3,6 +3,7 @@ import { useAuth } from '@clerk/nextjs';
 import { RoomCanvas } from "@/components/RoomCanvas";
 import { useParams } from 'next/navigation';
 import { ShareLinkModal } from '@/components/modal/SharelinkModal';
+import { LoadingScreen } from '@/components/Loader';
 
 export default function CanvasPage() {
   const params = useParams();
@@ -16,14 +17,7 @@ function AuthWrapper({ roomName }: { roomName: string }) {
 
   // Show loading while Clerk loads
   if (!isLoaded) {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="p-6 text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p>Loading...</p>
-        </div>
-      </div>
-    );
+    return <LoadingScreen/>
   }
 
   // Redirect to sign-in if not authenticated

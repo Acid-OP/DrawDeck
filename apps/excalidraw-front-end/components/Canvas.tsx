@@ -52,30 +52,29 @@ export function Canvas({ roomName, socket, isSolo = false, isUserAuthenticated =
   const [theme, setTheme] = useState<"light" | "dark">("dark");
   const [zoom, setZoom] = useState(1);
   const [isMobile, setIsMobile] = useState(false);
+  // const [isLoading, setIsLoading] = useState(true);
 
   const getStrokeColors = (theme: "light" | "dark") => [
-    theme === "dark" ? '#ffffff' : '#1e1e1e', // Theme-based default (white for dark, black for light)
-    '#e03131', // Red
-    '#2f9e44', // Green
-    '#1971c2', // Blue
-    '#f08c00'  // Orange
+    theme === "dark" ? '#ffffff' : '#1e1e1e',
+    '#e03131',
+    '#2f9e44',
+    '#1971c2',
+    '#f08c00'
   ];
 
   const backgroundColors = [
     'transparent',
-    '#ffc9c9', // Light Red
-    '#b2f2bb', // Light Green
-    '#a5d8ff', // Light Blue
-    '#ffec99'  // Light Yellow
+    '#ffc9c9',
+    '#b2f2bb',
+    '#a5d8ff',
+    '#ffec99'
   ];
 
   const strokeWidths = [2, 3.5, 6];
 
-  // Check for first-time visit and show modal accordingly
   useEffect(() => {
     if (typeof window === "undefined") return;
     
-    // Only show modal for solo mode and if it hasn't been shown in this session
     if (isSolo) {
       const modalShown = sessionStorage.getItem('collabModalShown');
       if (!modalShown) {
@@ -84,13 +83,12 @@ export function Canvas({ roomName, socket, isSolo = false, isUserAuthenticated =
     }
   }, [isSolo]);
 
-  // Debounced resize handler for better performance
   const updateSize = useCallback(() => {
     if (typeof window === "undefined") return;
     
     const width = window.innerWidth;
     const height = window.innerHeight;
-    const mobile = width < 768; // Tailwind md breakpoint
+    const mobile = width < 768;
     
     setDimensions({ width, height });
     setIsMobile(mobile);
@@ -106,18 +104,15 @@ export function Canvas({ roomName, socket, isSolo = false, isUserAuthenticated =
     }
   }, [game]);
 
-  // Handle modal close with session storage
   const handleCloseModal = useCallback(() => {
     sessionStorage.setItem('collabModalShown', 'true');
     setShowLiveModal(false);
   }, []);
 
-  // Handle share button click - this will always show the modal
   const handleShareButtonClick = useCallback(() => {
     setShowLiveModal(true);
   }, []);
 
-  // Responsive resize handling
   useEffect(() => {
     if (typeof window === "undefined") return;
 
@@ -136,7 +131,6 @@ export function Canvas({ roomName, socket, isSolo = false, isUserAuthenticated =
     };
   }, [updateSize]);
 
-  // Game state effects
   useEffect(() => {
     game?.setTool(selectedTool);
   }, [selectedTool, game]);
@@ -147,7 +141,6 @@ export function Canvas({ roomName, socket, isSolo = false, isUserAuthenticated =
     }
   }, [selectedTool]);
 
-  // NEW: Check if shapes exist when game initializes
   useEffect(() => {
     if (game && !hasInteracted && game.hasShapes()) {
       setHasInteracted(true);
@@ -177,7 +170,6 @@ export function Canvas({ roomName, socket, isSolo = false, isUserAuthenticated =
     game.setFillStyle(fillIndex);
   }, [game, strokeIndex, backgroundIndex, strokeWidthIndex, strokeStyleIndex, fillIndex]);
 
-  // Game initialization
   useEffect(() => {
     if (canvasRef.current && dimensions.width !== 0 && dimensions.height !== 0) {
       const g = new Game(canvasRef.current, roomName, socket, isSolo, theme);
@@ -187,6 +179,7 @@ export function Canvas({ roomName, socket, isSolo = false, isUserAuthenticated =
         setInputBox({ x, y });
       };
       setGame(g);
+      // setIsLoading(false);
 
       return () => g.destroy();
     }
@@ -195,10 +188,13 @@ export function Canvas({ roomName, socket, isSolo = false, isUserAuthenticated =
   const shouldShowPropertiesPanel = ["rect", "diamond", "circle", "arrow", "line", "pencil", "text"].includes(selectedTool);
   
   const shouldShowWelcome = game && !hasInteracted && !game.hasShapes();
+
+  // if (isLoading) {
+  //   return <LoadingScreen/>;
+  // }
   
   return (
     <div className={`w-screen h-screen overflow-hidden relative ${theme === "dark" ? "bg-[#121212]" : "bg-white"}`}>
-      {/* Canvas */}
       <canvas
         ref={canvasRef}
         width={dimensions.width}
@@ -207,7 +203,6 @@ export function Canvas({ roomName, socket, isSolo = false, isUserAuthenticated =
         style={{ backgroundColor: theme === "dark" ? "#121212" : "#ffffff" }}
       />
       
-      {/* Header - Perfect center of screen */}
       {shouldShowWelcome && (
         <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 pointer-events-none z-50">
           <div className="pointer-events-auto">
@@ -216,43 +211,35 @@ export function Canvas({ roomName, socket, isSolo = false, isUserAuthenticated =
         </div>
       )}
 
-      {/* Top UI Row - Maintaining original spacing */}
       <div className="absolute top-4 left-0 w-full flex justify-between items-center px-6">
-        {/* Left: Menu */}
         <Menu 
           theme={theme} 
           onThemeToggle={toggleTheme} 
           onClearCanvas={clearCanvasAndShapes}
         />
 
-        {/* Center: TopBar */}
         <TopBar 
           selectedTool={selectedTool} 
           setSelectedTool={setSelectedTool} 
           theme={theme} 
         />
 
-        {/* Right: ShareButton */}
         <ShareButton onClick={handleShareButtonClick} />
       </div>
       
       {shouldShowWelcome && (
         <>
-          {/* Curved Arrow - Fixed position relative to menu */}
           <div className="absolute top-16 left-15 transform -translate-x-1/2 pointer-events-none z-40">
             <CurvedArrow />
           </div>
-          {/* Local Save Notice - Fixed position */}
           <div className="absolute top-40 left-66 transform -translate-x-1/2 pointer-events-none z-40">
             <LocalSaveNotice />
           </div>
 
-          {/* Toolbar Icon - Below TopBar, centered */}
           <div className="absolute top-22 left-1/2 transform -translate-x-1/2 pl-8 pointer-events-none z-40">
             <ToolbarIcon />
           </div>
 
-          {/* Tool Icon Pointer - Below Toolbar Icon, shifted left responsively */}
           <div className="absolute top-40 left-1/2 transform -translate-x-1/2 sm:-translate-x-32 md:-translate-x-40 lg:-translate-x-44 pointer-events-none z-40">
             <ToolIconPointer />
           </div>
@@ -286,7 +273,7 @@ export function Canvas({ roomName, socket, isSolo = false, isUserAuthenticated =
           style={{
             color: getStrokeColors(theme)[strokeIndex],
             font: `${isMobile ? '16px' : '20px'} Virgil, Segoe UI, sans-serif`,
-            top: inputBox.y, // Remove the -4 offset to match textBaseline: "top"
+            top: inputBox.y,
             left: inputBox.x,
             minWidth: "1ch",
             maxWidth: isMobile ? "280px" : "500px",
@@ -294,7 +281,6 @@ export function Canvas({ roomName, socket, isSolo = false, isUserAuthenticated =
           }}
           onBlur={(e) => {
             if (game && e.target.value.trim()) {
-              // This will create the text and auto-select it
               game.addTextShape(inputBox.x, inputBox.y, e.target.value);
             }
             (window as any).justBlurredTextInput = true;
@@ -306,12 +292,10 @@ export function Canvas({ roomName, socket, isSolo = false, isUserAuthenticated =
         />
       )}
 
-      {/* Zoom Bar - Bottom right corner */}
       <div className="absolute bottom-4 right-4">
         <ZoomBar zoom={zoom} setZoom={setZoom} theme={theme} />
       </div>
 
-      {/* Live Collab Modal */}
       {showLiveModal && (
         <LiveCollabModal onClose={handleCloseModal} />
       )}
