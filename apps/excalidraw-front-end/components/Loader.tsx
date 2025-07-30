@@ -1,154 +1,166 @@
-import React from 'react';
-import { motion } from 'framer-motion';
+"use client";
+import React, { useEffect, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 
-export const LoadingScreen: React.FC = () => {
-  // Animation for the circles
-  const getCircleAnimation = (delay: number) => ({
-    scale: [1, 1.2, 1],
-    opacity: [0.7, 1, 0.7],
-    transition: {
-      delay,
-      duration: 2,
-      repeat: Infinity,
-      ease: "easeInOut" as const
-    }
+const ballSize = 64;
+const spacing = 100; // spacing between icons
+
+const IconWrapper = ({ children }: { children: React.ReactNode }) => (
+  <div
+    style={{
+      width: ballSize,
+      height: ballSize,
+      position: "absolute",
+    }}
+  >
+    {children}
+  </div>
+);
+
+const GreenSquare = () => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 640 640"
+    style={{
+      width: "100%",
+      height: "100%",
+    }}
+  >
+    <path
+      fill="#55e76e"
+      stroke="black"
+      strokeWidth="8"
+      d="M160 96L480 96C515.3 96 544 124.7 544 160L544 480C544 515.3 515.3 544 480 544L160 544C124.7 544 96 515.3 96 480L96 160C96 124.7 124.7 96 160 96z"
+    />
+  </svg>
+);
+
+const YellowDiamond = () => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 640 640"
+    style={{
+      width: "100%",
+      height: "100%",
+    }}
+  >
+    <path
+      fill="#f9d144"
+      stroke="black"
+      strokeWidth="8"
+      d="M81 279L279 81C289.9 70.1 304.6 64 320 64C335.4 64 350.1 70.1 361 81L559 279C569.9 289.9 576 304.6 576 320C576 335.4 569.9 350.1 559 361L361 559C350.1 569.9 335.4 576 320 576C304.6 576 289.9 569.9 279 559L81 361C70.1 350.1 64 335.4 64 320C64 304.6 70.1 289.9 81 279z"
+    />
+  </svg>
+);
+
+const RedCircle = () => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 640 640"
+    style={{
+      width: "100%",
+      height: "100%",
+    }}
+  >
+    <path
+      fill="#ff7d7d"
+      stroke="black"
+      strokeWidth="8"
+      d="M64 320C64 178.6 178.6 64 320 64C461.4 64 576 178.6 576 320C576 461.4 461.4 576 320 576C178.6 576 64 461.4 64 320z"
+    />
+  </svg>
+);
+
+const LoaderAnimation = () => {
+  const [step, setStep] = useState<"blue-gray" | "blue-purple" | "done">("blue-gray");
+
+  const [positions, setPositions] = useState({
+    blue: 0,
+    gray: 1,
+    purple: 2,
   });
 
-  // Container animation for the circular motion
-  const containerAnimation = {
-    rotate: 360,
-    transition: {
-      duration: 3,
-      repeat: Infinity,
-      ease: "linear" as const
-    }
+  const getX = (index: number) => {
+    return index * spacing;
   };
 
-  // Individual circle positions and animations
-  const circlePositions = [
-    { x: 0, y: -40, color: "#3B82F6", delay: 0 },     // Blue - Top
-    { x: -35, y: 20, color: "#EF4444", delay: 0.5 },  // Red - Bottom Left  
-    { x: 35, y: 20, color: "#10B981", delay: 1 }      // Green - Bottom Right
-  ];
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      if (step === "blue-gray") {
+        setPositions((prev) => ({
+          ...prev,
+          blue: 1,
+          gray: 0,
+        }));
+        setStep("blue-purple");
+      } else if (step === "blue-purple") {
+        setPositions((prev) => ({
+          ...prev,
+          blue: 2,
+          purple: 1,
+        }));
+        setStep("done");
+      }
+    }, 600);
+
+    return () => clearTimeout(timeout);
+  }, [step]);
+
+  const renderBall = (
+    key: string,
+    index: number,
+    type: "square" | "diamond" | "circle"
+  ) => {
+    const Icon =
+      type === "square"
+        ? GreenSquare
+        : type === "diamond"
+        ? YellowDiamond
+        : RedCircle;
+
+    return (
+      <motion.div
+        key={key}
+        initial={false}
+        animate={{
+          x: getX(index),
+          y: type === "diamond" ? [0, 20, 20, 0] : [0, -50, -50, 0],
+        }}
+        transition={{ duration: 0.9, ease: "easeInOut" }}
+        style={{
+          width: ballSize,
+          height: ballSize,
+          position: "absolute",
+        }}
+      >
+        <IconWrapper>
+          <Icon />
+        </IconWrapper>
+      </motion.div>
+    );
+  };
 
   return (
-    <div className="fixed inset-0 bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center z-50">
-      <div className="flex flex-col items-center space-y-8">
-        
-        {/* Main animated container */}
-        <motion.div
-          className="relative w-32 h-32 flex items-center justify-center"
-          animate={containerAnimation}
-        >
-          {circlePositions.map((circle, index) => (
-            <motion.div
-              key={index}
-              className="absolute w-6 h-6 rounded-full shadow-lg"
-              style={{
-                backgroundColor: circle.color,
-                x: circle.x,
-                y: circle.y,
-              }}
-              initial={{ scale: 1, opacity: 0.7 }}
-              animate={getCircleAnimation(circle.delay)}
-            />
-          ))}
-          
-          {/* Center dot for reference */}
-          <motion.div 
-            className="w-2 h-2 bg-gray-400 rounded-full opacity-30"
-            animate={{
-              scale: [1, 1.5, 1],
-              opacity: [0.3, 0.6, 0.3]
-            }}
-            transition={{
-              duration: 2,
-              repeat: Infinity,
-              ease: "easeInOut"
-            }}
-          />
-        </motion.div>
-
-        {/* Loading text with staggered animation */}
-        <motion.div 
-          className="flex flex-col items-center space-y-3"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5, duration: 0.8 }}
-        >
-          <motion.h2 
-            className="text-xl font-semibold text-gray-700"
-            animate={{
-              opacity: [0.7, 1, 0.7]
-            }}
-            transition={{
-              duration: 2,
-              repeat: Infinity,
-              ease: "easeInOut"
-            }}
-          >
-            Loading Canvas
-          </motion.h2>
-          
-          {/* Animated dots */}
-          <div className="flex space-x-1">
-            {[0, 1, 2].map((index) => (
-              <motion.div
-                key={index}
-                className="w-2 h-2 bg-gray-500 rounded-full"
-                animate={{
-                  y: [0, -8, 0],
-                  opacity: [0.5, 1, 0.5]
-                }}
-                transition={{
-                  duration: 1.5,
-                  repeat: Infinity,
-                  delay: index * 0.2,
-                  ease: "easeInOut"
-                }}
-              />
-            ))}
-          </div>
-        </motion.div>
-
-        {/* Progress indicator */}
-        <motion.div 
-          className="w-48 h-1 bg-gray-200 rounded-full overflow-hidden"
-          initial={{ opacity: 0, width: 0 }}
-          animate={{ opacity: 1, width: 192 }}
-          transition={{ delay: 0.8, duration: 0.6 }}
-        >
-          <motion.div 
-            className="h-full bg-gradient-to-r from-blue-500 via-red-500 to-green-500 rounded-full"
-            animate={{
-              x: [-192, 192],
-              opacity: [0.8, 1, 0.8]
-            }}
-            transition={{
-              duration: 2.5,
-              repeat: Infinity,
-              ease: "easeInOut"
-            }}
-          />
-        </motion.div>
-
-        {/* Subtle background animation */}
-        <motion.div 
-          className="absolute inset-0 pointer-events-none"
-          style={{
-            background: "radial-gradient(circle at center, rgba(59, 130, 246, 0.03) 0%, transparent 70%)"
-          }}
-          animate={{
-            scale: [1, 1.1, 1],
-            opacity: [0.3, 0.6, 0.3]
-          }}
-          transition={{
-            duration: 4,
-            repeat: Infinity,
-            ease: "easeInOut"
-          }}
-        />
+    <div
+      style={{
+        position: "relative",
+        width: "100vw",
+        height: "100vh",
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        background: "white",
+      }}
+    >
+      <div style={{ position: "relative", width: spacing * 3, height: ballSize * 2 }}>
+        <AnimatePresence>
+          {renderBall("blue", positions.blue, "square")}
+          {renderBall("gray", positions.gray, "diamond")}
+          {renderBall("purple", positions.purple, "circle")}
+        </AnimatePresence>
       </div>
     </div>
   );
 };
+
+export default LoaderAnimation;

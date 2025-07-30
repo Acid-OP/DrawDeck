@@ -1,22 +1,32 @@
 "use client";
-
 import { useAuth } from '@clerk/nextjs';
 import { Canvas } from "@/components/Canvas";
-import { LoadingScreen } from '@/components/Loader';
+import LoaderAnimation from '@/components/Loader';
+import { useEffect, useState } from 'react';
 
 export default function HomePage() {
   const { isSignedIn, isLoaded } = useAuth();
+  const [minTimeElapsed, setMinTimeElapsed] = useState(false);
   
-  // Show loading until auth state is determined to prevent flash
-  if (!isLoaded) {
-    return <LoadingScreen/>
+  const MIN_LOADING_TIME = 2300; 
+  
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setMinTimeElapsed(true);
+    }, MIN_LOADING_TIME);
+    
+    return () => clearTimeout(timer);
+  }, []);
+  
+  if (!isLoaded || !minTimeElapsed) {
+    return <LoaderAnimation />
   }
   
   return (
     <Canvas 
-      roomName="__solo" 
-      socket={null} 
-      isSolo={true} 
+      roomName="__solo"
+      socket={null}
+      isSolo={true}
       isUserAuthenticated={isSignedIn}
     />
   );
