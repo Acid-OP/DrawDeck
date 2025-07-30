@@ -71,6 +71,19 @@ export function Canvas({ roomName, socket, isSolo = false, isUserAuthenticated =
 
   const strokeWidths = [2, 3.5, 6];
 
+  // Check for first-time visit and show modal accordingly
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    
+    // Only show modal for solo mode and if it hasn't been shown in this session
+    if (isSolo) {
+      const modalShown = sessionStorage.getItem('collabModalShown');
+      if (!modalShown) {
+        setShowLiveModal(true);
+      }
+    }
+  }, [isSolo]);
+
   // Debounced resize handler for better performance
   const updateSize = useCallback(() => {
     if (typeof window === "undefined") return;
@@ -93,6 +106,17 @@ export function Canvas({ roomName, socket, isSolo = false, isUserAuthenticated =
     }
   }, [game]);
 
+  // Handle modal close with session storage
+  const handleCloseModal = useCallback(() => {
+    sessionStorage.setItem('collabModalShown', 'true');
+    setShowLiveModal(false);
+  }, []);
+
+  // Handle share button click - this will always show the modal
+  const handleShareButtonClick = useCallback(() => {
+    setShowLiveModal(true);
+  }, []);
+
   // Responsive resize handling
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -114,15 +138,14 @@ export function Canvas({ roomName, socket, isSolo = false, isUserAuthenticated =
 
   // Game state effects
   useEffect(() => {
-  game?.setTool(selectedTool);
-}, [selectedTool, game]);
+    game?.setTool(selectedTool);
+  }, [selectedTool, game]);
 
-
-useEffect(() => {
-  if (selectedTool !== "hand" && !hasInteracted) {
-    setHasInteracted(true);
-  }
-}, [selectedTool]);
+  useEffect(() => {
+    if (selectedTool !== "hand" && !hasInteracted) {
+      setHasInteracted(true);
+    }
+  }, [selectedTool]);
 
   // NEW: Check if shapes exist when game initializes
   useEffect(() => {
@@ -130,13 +153,13 @@ useEffect(() => {
       setHasInteracted(true);
     }
   }, [game, hasInteracted]);
-useEffect(() => {
-  if (game) {
-    game.zoom = zoom;
-    game.clearCanvas();
-  }
-}, [zoom, game]);
 
+  useEffect(() => {
+    if (game) {
+      game.zoom = zoom;
+      game.clearCanvas();
+    }
+  }, [zoom, game]);
 
   useEffect(() => {
     if (game) {
@@ -171,7 +194,7 @@ useEffect(() => {
 
   const shouldShowPropertiesPanel = ["rect", "diamond", "circle", "arrow", "line", "pencil", "text"].includes(selectedTool);
   
-  const shouldShowWelcome = game && !hasInteracted && !game.hasShapes() && !isUserAuthenticated;
+  const shouldShowWelcome = game && !hasInteracted && !game.hasShapes();
   
   return (
     <div className={`w-screen h-screen overflow-hidden relative ${theme === "dark" ? "bg-[#121212]" : "bg-white"}`}>
@@ -188,11 +211,10 @@ useEffect(() => {
       {shouldShowWelcome && (
         <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 pointer-events-none z-50">
           <div className="pointer-events-auto">
-            <Header theme = {theme}/>
+            <Header theme={theme}/>
           </div>
         </div>
       )}
-
 
       {/* Top UI Row - Maintaining original spacing */}
       <div className="absolute top-4 left-0 w-full flex justify-between items-center px-6">
@@ -211,33 +233,32 @@ useEffect(() => {
         />
 
         {/* Right: ShareButton */}
-        <ShareButton onClick={() => setShowLiveModal(true)} />
+        <ShareButton onClick={handleShareButtonClick} />
       </div>
       
       {shouldShowWelcome && (
         <>
-        {/* Curved Arrow - Fixed position relative to menu */}
-        <div className="absolute top-16 left-15 transform -translate-x-1/2 pointer-events-none z-40">
-        <CurvedArrow />
-        </div>
-        {/* Local Save Notice - Fixed position */}
-        <div className="absolute top-40 left-66 transform -translate-x-1/2 pointer-events-none z-40">
-        <LocalSaveNotice />
-        </div>
+          {/* Curved Arrow - Fixed position relative to menu */}
+          <div className="absolute top-16 left-15 transform -translate-x-1/2 pointer-events-none z-40">
+            <CurvedArrow />
+          </div>
+          {/* Local Save Notice - Fixed position */}
+          <div className="absolute top-40 left-66 transform -translate-x-1/2 pointer-events-none z-40">
+            <LocalSaveNotice />
+          </div>
 
-        {/* Toolbar Icon - Below TopBar, centered */}
-        <div className="absolute top-22 left-1/2 transform -translate-x-1/2 pl-8 pointer-events-none z-40">
-        <ToolbarIcon />
-        </div>
+          {/* Toolbar Icon - Below TopBar, centered */}
+          <div className="absolute top-22 left-1/2 transform -translate-x-1/2 pl-8 pointer-events-none z-40">
+            <ToolbarIcon />
+          </div>
 
-        {/* Tool Icon Pointer - Below Toolbar Icon, shifted left responsively */}
-        <div className="absolute top-40 left-1/2 transform -translate-x-1/2 sm:-translate-x-32 md:-translate-x-40 lg:-translate-x-44 pointer-events-none z-40">
-        <ToolIconPointer />
-        </div>
+          {/* Tool Icon Pointer - Below Toolbar Icon, shifted left responsively */}
+          <div className="absolute top-40 left-1/2 transform -translate-x-1/2 sm:-translate-x-32 md:-translate-x-40 lg:-translate-x-44 pointer-events-none z-40">
+            <ToolIconPointer />
+          </div>
         </>
       )}
 
-      
       {shouldShowPropertiesPanel && (
         <div className="absolute top-[72px] left-6 z-50">
           <ExcalidrawPropertiesPanel
@@ -257,32 +278,31 @@ useEffect(() => {
         </div>
       )}
 
-      
       {inputBox && (
         <textarea
           autoFocus
           rows={1}
           className="absolute bg-transparent px-0 py-0 m-0 border-none outline-none resize-none whitespace-pre-wrap break-words"
-style={{
-  color: getStrokeColors(theme)[strokeIndex],
-  font: `${isMobile ? '16px' : '20px'} Virgil, Segoe UI, sans-serif`,
-  top: inputBox.y, // Remove the -4 offset to match textBaseline: "top"
-  left: inputBox.x,
-  minWidth: "1ch",
-  maxWidth: isMobile ? "280px" : "500px",
-  overflow: "hidden",
-}}
-onBlur={(e) => {
-  if (game && e.target.value.trim()) {
-    // This will create the text and auto-select it
-    game.addTextShape(inputBox.x, inputBox.y, e.target.value);
-  }
-  (window as any).justBlurredTextInput = true;
-  setInputBox(null);
-  setTimeout(() => {
-    (window as any).justBlurredTextInput = false;
-  }, 300);
-}}
+          style={{
+            color: getStrokeColors(theme)[strokeIndex],
+            font: `${isMobile ? '16px' : '20px'} Virgil, Segoe UI, sans-serif`,
+            top: inputBox.y, // Remove the -4 offset to match textBaseline: "top"
+            left: inputBox.x,
+            minWidth: "1ch",
+            maxWidth: isMobile ? "280px" : "500px",
+            overflow: "hidden",
+          }}
+          onBlur={(e) => {
+            if (game && e.target.value.trim()) {
+              // This will create the text and auto-select it
+              game.addTextShape(inputBox.x, inputBox.y, e.target.value);
+            }
+            (window as any).justBlurredTextInput = true;
+            setInputBox(null);
+            setTimeout(() => {
+              (window as any).justBlurredTextInput = false;
+            }, 300);
+          }}
         />
       )}
 
@@ -293,7 +313,7 @@ onBlur={(e) => {
 
       {/* Live Collab Modal */}
       {showLiveModal && (
-        <LiveCollabModal onClose={() => setShowLiveModal(false)} />
+        <LiveCollabModal onClose={handleCloseModal} />
       )}
     </div>
   );

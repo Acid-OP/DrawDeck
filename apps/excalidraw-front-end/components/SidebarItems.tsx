@@ -8,10 +8,12 @@ import {
   Upload, 
   Users, 
   UserPlus, 
+  LogOut,
   Github, 
   Twitter, 
   Linkedin
 } from 'lucide-react';
+import { useAuth, useClerk } from '@clerk/nextjs';
 import { FeatureButton } from './sidebar/FeatureButton';
 import { SocialButton } from './sidebar/SocialButton';
 import { ThemeToggle } from './sidebar/ThemeToggle';
@@ -21,29 +23,33 @@ import { LiveCollabModal } from './modal/LiveCollabModal';
 import { useRouter } from 'next/navigation';
 import { ConfirmModal } from './modal/ConfirmModal';
 
-
 interface SidebarItemsProps {
   theme: 'light' | 'dark';
   onThemeToggle: () => void;
   onClearCanvas: () => void;
 }
 
-
-export const SidebarItems: React.FC<SidebarItemsProps> = ({ theme, onThemeToggle , onClearCanvas }) => {
+export const SidebarItems: React.FC<SidebarItemsProps> = ({ theme, onThemeToggle, onClearCanvas }) => {
   const [showLiveModal, setShowLiveModal] = useState(false);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const router = useRouter();
+  const { isSignedIn } = useAuth();
+  const { signOut } = useClerk();
 
   const handleLiveClick = () => {
     setShowLiveModal(true);
   };
-  const handleSignupClick = () => {
-    router.push("/signup");
+
+  const handleAuthClick = async () => {
+    if (isSignedIn) {
+      // User is signed in, so log them out
+      await signOut();
+    } else {
+      // User is not signed in, redirect to signup
+      router.push("/signup");
+    }
   };
-  const handleCreateRoom = () => {
-    const roomSlug = generateRoomIdAndKey();
-    window.location.href = `/canvas/${roomSlug}`;
-  };
+
 
   const openClearConfirm = () => setShowClearConfirm(true);
   const closeClearConfirm = () => setShowClearConfirm(false);
@@ -80,15 +86,14 @@ export const SidebarItems: React.FC<SidebarItemsProps> = ({ theme, onThemeToggle
             theme={theme}
           />
           <FeatureButton 
-            icon={<UserPlus size={18} />} 
-            label="Sign Up" 
-            variant="primary"
+            icon={isSignedIn ? <LogOut size={18} /> : <UserPlus size={18} />} 
+            label={isSignedIn ? "Logout" : "Sign Up"} 
+            variant={isSignedIn ? "primary" : "primary"}
             theme={theme}
-            onClick={handleSignupClick}
+            onClick={handleAuthClick}
           />
         </div>
         <SidebarSeparator theme={theme} />
-
 
         <div className="space-y-1">
           <SocialButton 
@@ -110,18 +115,18 @@ export const SidebarItems: React.FC<SidebarItemsProps> = ({ theme, onThemeToggle
         </div>
         <SidebarSeparator theme={theme} className="my-2" />
 
-
         <div>
           <ThemeToggle theme={theme} onThemeChange={onThemeToggle} />
         </div>
       </div>
 
-      {showClearConfirm && ( <ConfirmModal
-  open={showClearConfirm}
-  setOpen={setShowClearConfirm}
-  onConfirm={onClearCanvas} 
-  theme = {theme}
-/>
+      {showClearConfirm && ( 
+        <ConfirmModal 
+          open={showClearConfirm}
+          setOpen={setShowClearConfirm}
+          onConfirm={onClearCanvas}
+          theme={theme}
+        />
       )}
 
       {showLiveModal && (
@@ -133,11 +138,3 @@ export const SidebarItems: React.FC<SidebarItemsProps> = ({ theme, onThemeToggle
   );
 };
 
-
-function generateRoomIdAndKey(): string {
-  const roomId = crypto.randomUUID().replace(/-/g, "").slice(0, 20);
-  const roomKey = Array.from(crypto.getRandomValues(new Uint8Array(16)))
-    .map((b) => b.toString(36).padStart(2, '0'))
-    .join('');
-  return `${roomId},${roomKey}`;
-}
