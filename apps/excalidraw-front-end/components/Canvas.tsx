@@ -52,7 +52,6 @@ export function Canvas({ roomName, socket, isSolo = false, isUserAuthenticated =
   const [theme, setTheme] = useState<"light" | "dark">("dark");
   const [zoom, setZoom] = useState(1);
   const [isMobile, setIsMobile] = useState(false);
-  // const [isLoading, setIsLoading] = useState(true);
 
   const getStrokeColors = (theme: "light" | "dark") => [
     theme === "dark" ? '#ffffff' : '#1e1e1e',
@@ -71,17 +70,6 @@ export function Canvas({ roomName, socket, isSolo = false, isUserAuthenticated =
   ];
 
   const strokeWidths = [2, 3.5, 6];
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    
-    if (isSolo) {
-      const modalShown = sessionStorage.getItem('collabModalShown');
-      if (!modalShown) {
-        setShowLiveModal(true);
-      }
-    }
-  }, [isSolo]);
 
   const updateSize = useCallback(() => {
     if (typeof window === "undefined") return;
@@ -179,7 +167,7 @@ export function Canvas({ roomName, socket, isSolo = false, isUserAuthenticated =
         setInputBox({ x, y });
       };
       setGame(g);
-      // setIsLoading(false);
+      
 
       return () => g.destroy();
     }
@@ -187,11 +175,7 @@ export function Canvas({ roomName, socket, isSolo = false, isUserAuthenticated =
 
   const shouldShowPropertiesPanel = ["rect", "diamond", "circle", "arrow", "line", "pencil", "text"].includes(selectedTool);
   
-  const shouldShowWelcome = game && !hasInteracted && !game.hasShapes();
-
-  // if (isLoading) {
-  //   return <LoadingScreen/>;
-  // }
+  const shouldShowWelcome = game && !hasInteracted && !game.hasShapes() && isSolo;
   
   return (
     <div className={`w-screen h-screen overflow-hidden relative ${theme === "dark" ? "bg-[#121212]" : "bg-white"}`}>

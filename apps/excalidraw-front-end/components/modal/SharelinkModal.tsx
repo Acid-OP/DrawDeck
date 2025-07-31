@@ -1,4 +1,5 @@
 "use client";
+
 import React, { useState, useRef, useEffect } from "react";
 import { Copy, Check, X } from "lucide-react";
 
@@ -10,8 +11,6 @@ export const ShareLinkModal: React.FC<Props> = ({ roomId }) => {
   const [isVisible, setIsVisible] = useState(true);
   const [copied, setCopied] = useState(false);
   const modalRef = useRef<HTMLDivElement>(null);
-  
-  // Generate the shareable link
   const shareableLink = `${window.location.origin}/${roomId}`;
 
   const handleCopy = async () => {
@@ -20,7 +19,7 @@ export const ShareLinkModal: React.FC<Props> = ({ roomId }) => {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
-      console.error('Failed to copy link:', err);
+      console.error("Failed to copy link:", err);
     }
   };
 
@@ -28,7 +27,6 @@ export const ShareLinkModal: React.FC<Props> = ({ roomId }) => {
     setIsVisible(false);
   };
 
-  // ESC key handler
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") handleClose();
@@ -37,7 +35,6 @@ export const ShareLinkModal: React.FC<Props> = ({ roomId }) => {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
-  // Click outside handler
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (modalRef.current && !modalRef.current.contains(e.target as Node)) {
@@ -51,41 +48,41 @@ export const ShareLinkModal: React.FC<Props> = ({ roomId }) => {
   if (!isVisible) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
       <div
         ref={modalRef}
-        className="relative bg-[#232329] text-white w-[600px] p-8 rounded-2xl shadow-2xl border border-[#333]"
+        className="relative bg-[#232329] text-white w-[720px] max-w-[90%] p-10 rounded-2xl shadow-[0_0_40px_rgba(0,0,0,0.6)] border border-[#444] transition-all"
       >
-        {/* Close button */}
+        {/* Close Button */}
         <button
           onClick={handleClose}
-          className="absolute top-4 right-4 text-white/60 hover:text-white transition-colors"
+          className="absolute top-5 right-5 text-white/70 hover:text-white transition-colors cursor-pointer"
         >
-          <X size={20} />
+          <X size={24} />
         </button>
 
-        <h2 className="text-2xl font-bold mb-2" style={{ color: "#9e9aea" }}>
+        {/* Heading */}
+        <h2 className="text-3xl font-bold mb-4" style={{ color: "#9e9aea" }}>
           Share Collaboration Link
         </h2>
-        
-        <p className="text-white/80 mb-6">
-          Share this link with others to collaborate on your drawing in real-time.
+
+        <p className="text-white/80 mb-8 leading-relaxed">
+          Send this link to anyone you want to collaborate with. They'll be able to draw with you in real-time.
         </p>
 
+        {/* Input & Copy */}
         <div className="mb-6">
-          <label className="block text-sm font-medium text-white/90 mb-2">
-            Link
-          </label>
-          <div className="flex items-center gap-2">
+          <label className="block text-sm font-medium text-white/90 mb-2">Link</label>
+          <div className="flex items-center gap-3">
             <input
               type="text"
               readOnly
               value={shareableLink}
-              className="flex-1 bg-[#1a1a1f] border border-[#333] rounded-lg px-4 py-3 text-white/90 text-sm font-mono"
+              className="flex-1 bg-[#1a1a1f] border border-[#333] rounded-lg px-4 py-3 text-white/90 text-sm font-mono cursor-default"
             />
             <button
               onClick={handleCopy}
-              className="bg-[#a8a5ff] text-black px-4 py-3 rounded-lg hover:bg-[#bbb8ff] transition-colors flex items-center gap-2"
+              className="bg-[#a8a5ff] text-black px-4 py-3 rounded-lg hover:bg-[#bbb8ff] transition-colors flex items-center gap-2 cursor-pointer font-semibold"
             >
               {copied ? (
                 <>
@@ -102,7 +99,8 @@ export const ShareLinkModal: React.FC<Props> = ({ roomId }) => {
           </div>
         </div>
 
-        <div className="text-sm text-white/60">
+        {/* Footer Info */}
+        <div className="text-sm text-white/60 space-y-1">
           <p>💡 Anyone with this link can join your collaborative session.</p>
           <p>🔒 Your session is end-to-end encrypted and private.</p>
         </div>

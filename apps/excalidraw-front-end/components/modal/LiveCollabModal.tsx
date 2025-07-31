@@ -1,5 +1,6 @@
 "use client";
-import React, { useEffect, useRef, useState } from "react";
+
+import React, { useEffect, useRef } from "react";
 import { Play } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@clerk/nextjs";
@@ -14,28 +15,25 @@ export const LiveCollabModal: React.FC<Props> = ({ onClose }) => {
   const { isSignedIn } = useAuth();
 
   const handleStartSession = () => {
-    // Check if user is signed in
     if (!isSignedIn) {
-      // Redirect to sign in page
-      router.push('/signin');
+      router.push("/signin");
       return;
     }
 
-    // Generate a random URL-safe string
-    const randomId = Math.random().toString(36).slice(2, 10) + Math.random().toString(36).slice(2, 6);
-    
-    // Close current modal and navigate to the room
+    const randomId =
+      Math.random().toString(36).slice(2, 10) +
+      Math.random().toString(36).slice(2, 6);
     onClose();
-    
-    // Navigate to the collaborative room
-    router.push(`/${randomId}`);
+
+    setTimeout(() => {
+      router.push(`/${randomId}`);
+    }, 100);
   };
 
   const handleClose = () => {
     onClose();
   };
 
-  // ESC key
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") handleClose();
@@ -44,7 +42,6 @@ export const LiveCollabModal: React.FC<Props> = ({ onClose }) => {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
-  // Outside click
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (modalRef.current && !modalRef.current.contains(e.target as Node)) {
@@ -66,9 +63,11 @@ export const LiveCollabModal: React.FC<Props> = ({ onClose }) => {
         </h2>
 
         <p className="text-lg text-white/80 font-light leading-6 mb-6">
-          <br />Invite people to collaborate on your drawing. <br />
-          <br />Don't worry, the session is end-to-end encrypted, and fully
-          private. Not even our server can see what you draw.
+          <br />
+          Invite people to collaborate on your drawing. <br />
+          <br />
+          Don't worry, the session is end-to-end encrypted, and fully private.
+          Not even our server can see what you draw.
         </p>
 
         <button

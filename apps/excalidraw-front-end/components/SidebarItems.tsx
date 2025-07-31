@@ -42,15 +42,12 @@ export const SidebarItems: React.FC<SidebarItemsProps> = ({ theme, onThemeToggle
 
   const handleAuthClick = async () => {
     if (isSignedIn) {
-      // User is signed in, so log them out
       await signOut();
     } else {
-      // User is not signed in, redirect to signup
       router.push("/signup");
     }
   };
-
-
+  
   const openClearConfirm = () => setShowClearConfirm(true);
   const closeClearConfirm = () => setShowClearConfirm(false);
 
