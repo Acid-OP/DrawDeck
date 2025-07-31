@@ -38,7 +38,12 @@ export function Canvas({ roomName, socket, isSolo = false, isUserAuthenticated =
   const [game, setGame] = useState<Game>();
   const [hasInteracted, setHasInteracted] = useState(false);
   const [selectedTool, setSelectedTool] = useState<Tool>("hand");
-  const [inputBox, setInputBox] = useState<{ x: number; y: number } | null>(null);
+  const [inputBox, setInputBox] = useState<{ 
+  x: number; 
+  y: number; 
+  logicalX: number; 
+  logicalY: number; 
+} | null>(null);
   const [dimensions, setDimensions] = useState<{ width: number; height: number }>({
     width: 0,
     height: 0,
@@ -162,10 +167,14 @@ export function Canvas({ roomName, socket, isSolo = false, isUserAuthenticated =
     if (canvasRef.current && dimensions.width !== 0 && dimensions.height !== 0) {
       const g = new Game(canvasRef.current, roomName, socket, isSolo, theme);
       g.onToolChange = (tool) => setSelectedTool(tool);
-      g.onTextInsert = (x, y) => {
-        if ((window as any).justBlurredTextInput) return;
-        setInputBox({ x, y });
-      };
+  g.onTextInsert = (logicalX, logicalY) => {
+  if ((window as any).justBlurredTextInput) return;
+  
+  // Convert logical coordinates to screen coordinates
+  const screenX = logicalX * g.zoom + g.panOffsetX;
+  const screenY = logicalY * g.zoom + g.panOffsetY;
+  setInputBox({ x: screenX, y: screenY, logicalX, logicalY });
+};
       setGame(g);
       
 
@@ -265,7 +274,7 @@ export function Canvas({ roomName, socket, isSolo = false, isUserAuthenticated =
           }}
           onBlur={(e) => {
             if (game && e.target.value.trim()) {
-              game.addTextShape(inputBox.x, inputBox.y, e.target.value);
+               game.addTextShape(inputBox.logicalX, inputBox.logicalY, e.target.value);
             }
             (window as any).justBlurredTextInput = true;
             setInputBox(null);

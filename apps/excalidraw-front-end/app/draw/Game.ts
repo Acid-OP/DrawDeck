@@ -47,6 +47,7 @@ type Shape =
       x: number;
       y: number;
       text: string;
+      fontSize?: number;
     });
 
 interface StyleFields {
@@ -69,8 +70,8 @@ export class Game {
   private endX: number | null = null;
   private endY: number | null = null;
   private selectedTool: Tool = "circle";
-  private panOffsetX = 0;
-  private panOffsetY = 0;
+  public panOffsetX = 0;
+  public panOffsetY = 0;
   private isPanning = false;
   private lastPanX = 0;
   private lastPanY = 0;
@@ -184,18 +185,16 @@ export class Game {
       width = maxX - minX;
       height = maxY - minY;
     } else if (shape.type === "text") {
-  // Measure text dimensions for accurate handles
-  this.ctx.font = "20px Virgil, Segoe UI, sans-serif";
-  const metrics = this.ctx.measureText(shape.text);
-  const textWidth = metrics.width;
-  const textHeight = 20;
-  
-  x = shape.x;
-  y = shape.y; // y is already at top of text
-  width = textWidth;
-  height = textHeight;
-}
- else if (shape.type === "pencil") {
+      const fontSize = shape.fontSize || 20;
+      this.ctx.font = `${fontSize}px Virgil, Segoe UI, sans-serif`;
+      const metrics = this.ctx.measureText(shape.text);
+      const textWidth = metrics.width;
+      const textHeight = fontSize;
+      x = shape.x;
+      y = shape.y;
+      width = textWidth;
+      height = textHeight;
+    } else if (shape.type === "pencil") {
       const xs = shape.points.map(p => p.x);
       const ys = shape.points.map(p => p.y);
       x = Math.min(...xs);
@@ -211,19 +210,17 @@ export class Game {
       bl: { x: x - pad, y: y + height + pad - handleSize },
       br: { x: x + width + pad - handleSize, y: y + height + pad - handleSize },
     };
-
-for (const [handle, pt] of Object.entries(handles)) {
-  if (
-    mouseX >= pt.x &&
-    mouseX <= pt.x + handleSize &&
-    mouseY >= pt.y &&
-    mouseY <= pt.y + handleSize
-  ){
+    
+    for (const [handle, pt] of Object.entries(handles)) {
+      if (
+        mouseX >= pt.x &&
+        mouseX <= pt.x + handleSize &&
+        mouseY >= pt.y &&
+        mouseY <= pt.y + handleSize
+      ){
     return handle as "tl" | "tr" | "bl" | "br";
-  }
-}
-
-
+      }
+    }
     return null;
   }
 
@@ -456,15 +453,14 @@ if (shape.type === "diamond") {
   return;
 }
 if (shape.type === "text") {
-  // Use actual text measurements for accurate selection box
-  this.ctx.font = "20px Virgil, Segoe UI, sans-serif";
+  const fontSize = shape.fontSize || 20;
+  this.ctx.font = `${fontSize}px Virgil, Segoe UI, sans-serif`;
   const metrics = this.ctx.measureText(shape.text);
   const width = metrics.width;
-  const height = 20; // Font size
+  const height = fontSize; // Use fontSize instead of hardcoded 20
   
-  // Text coordinates: x,y is top-left of text (textBaseline: "top")
   const x = shape.x - pad / 2;
-  const y = shape.y - pad / 2; // y is already at top of text
+  const y = shape.y - pad / 2;
   const w = width + pad;
   const h = height + pad;
 
@@ -505,17 +501,26 @@ if (shape.type === "pencil") {
   const maxX = Math.max(...xs) + pad;
   const minY = Math.min(...ys) - pad;
   const maxY = Math.max(...ys) + pad;
+  
   const inset = handleSize / 2;
 
-  this.ctx.save(); // Save context before making drawing state changes
-
-  // Draw selection rectangle
   this.ctx.beginPath();
-  this.ctx.moveTo(minX + inset, minY + inset);
-  this.ctx.lineTo(maxX - inset, minY + inset);
-  this.ctx.lineTo(maxX - inset, maxY - inset);
-  this.ctx.lineTo(minX + inset, maxY - inset);
-  this.ctx.closePath();
+  
+  this.ctx.moveTo(minX + inset, minY);
+  this.ctx.lineTo(maxX - inset, minY);
+  
+  // Right line  
+  this.ctx.moveTo(maxX, minY + inset);
+  this.ctx.lineTo(maxX, maxY - inset);
+  
+  // Bottom line
+  this.ctx.moveTo(maxX - inset, maxY);
+  this.ctx.lineTo(minX + inset, maxY);
+  
+  // Left line
+  this.ctx.moveTo(minX, maxY - inset);
+  this.ctx.lineTo(minX, minY + inset);
+  
   this.ctx.stroke();
 
   // Draw selection handles at corners
@@ -687,17 +692,18 @@ if (shape.type === "line" || shape.type === "arrow") {
   boxW = width + pad;
   boxH = height + pad;
 } else if (shape.type === "pencil") {
-      const xs = shape.points.map(p => p.x);
-      const ys = shape.points.map(p => p.y);
-      const minX = Math.min(...xs) - pad;
-      const maxX = Math.max(...xs) + pad;
-      const minY = Math.min(...ys) - pad;
-      const maxY = Math.max(...ys) + pad;
-      boxX = minX;
-      boxY = minY;
-      boxW = maxX - minX;
-      boxH = maxY - minY;
-    }
+  const xs = shape.points.map(p => p.x);
+  const ys = shape.points.map(p => p.y);
+  const minX = Math.min(...xs) - pad;
+  const maxX = Math.max(...xs) + pad;
+  const minY = Math.min(...ys) - pad;
+  const maxY = Math.max(...ys) + pad;
+  boxX = minX;
+  boxY = minY;
+  boxW = maxX - minX;
+  boxH = maxY - minY;
+}
+
 
     return x >= boxX && x <= boxX + boxW && y >= boxY && y <= boxY + boxH;
   }  
@@ -709,6 +715,7 @@ addTextShape(x: number, y: number, text: string) {
     x,
     y,
     text,
+    fontSize: 20, 
     strokeColor: this.currentStrokeColor,
     backgroundColor: this.currentBackgroundColor,
     strokeWidth: this.currentStrokeWidth,
@@ -774,19 +781,18 @@ getMousePos = (e: MouseEvent) => {
     }
     
 if (shape.type === "text") {
-  // Measure actual text dimensions
-  this.ctx.font = "20px Virgil, Segoe UI, sans-serif";
+  const fontSize = shape.fontSize || 20;
+  this.ctx.font = `${fontSize}px Virgil, Segoe UI, sans-serif`;
   const metrics = this.ctx.measureText(shape.text);
   const textWidth = metrics.width;
-  const textHeight = 20; // Font size
+  const textHeight = fontSize; // Use fontSize instead of hardcoded 20
   
   const pad = 6;
   
-  // Text is drawn with textBaseline: "top", so y is the top of the text
   return (
     x >= shape.x - pad &&
     x <= shape.x + textWidth + pad &&
-    y >= shape.y - pad && // y is top of text
+    y >= shape.y - pad &&
     y <= shape.y + textHeight + pad
   );
 }
@@ -1097,11 +1103,12 @@ public deleteShapeByIndex(index: number) {
 
         }
       } else if (shape.type === "text") {
-        this.ctx.font = "20px Virgil, Segoe UI, sans-serif"; 
-        this.ctx.textBaseline = "top";
-        this.ctx.fillStyle = shape.strokeColor ?? (this.theme === "dark" ? "#fff" : "#000");
-        this.ctx.fillText(shape.text, shape.x , shape.y );
-      }
+  const fontSize = shape.fontSize || 20;
+  this.ctx.font = `${fontSize}px Virgil, Segoe UI, sans-serif`; 
+  this.ctx.textBaseline = "top";
+  this.ctx.fillStyle = shape.strokeColor ?? (this.theme === "dark" ? "#fff" : "#000");
+  this.ctx.fillText(shape.text, shape.x, shape.y);
+}
       if (
         this.selectedTool === "select" &&
         this.selectedShapeIndex !== null &&
@@ -1596,7 +1603,12 @@ private getPanStorageKey(): string {
   return this.isSolo ? "solo_pan_data" : `pan_data_${this.roomId}`;
 }
 
-
+public getScreenCoordinates(logicalX: number, logicalY: number): { x: number; y: number } {
+  return {
+    x: logicalX * this.zoom + this.panOffsetX,
+    y: logicalY * this.zoom + this.panOffsetY
+  };
+}
   mouseMoveHandler = (e: MouseEvent) => {
    if (this.selectedTool === "hand" && this.isPanning) {
     // Remove the zoom division - pan offset should be in screen pixels
@@ -1742,90 +1754,110 @@ private getPanStorageKey(): string {
               s.ry = Math.abs(p.y - s.centerY);
 
             }  else if (s.type === "diamond") {
-  // Calculate current center and dimensions
-  const currentCenterX = (s.top.x + s.bottom.x) / 2;
-  const currentCenterY = (s.left.y + s.right.y) / 2;
-  const currentWidth = Math.abs(s.right.x - s.left.x);
-  const currentHeight = Math.abs(s.bottom.y - s.top.y);
+              const currentCenterX = (s.top.x + s.bottom.x) / 2;
+              const currentCenterY = (s.left.y + s.right.y) / 2;
+              const currentWidth = Math.abs(s.right.x - s.left.x);
+              const currentHeight = Math.abs(s.bottom.y - s.top.y);
 
   // Calculate new dimensions based on which handle is being dragged
-  let newWidth = currentWidth;
-  let newHeight = currentHeight;
-  let newCenterX = currentCenterX;
-  let newCenterY = currentCenterY;
+              let newWidth = currentWidth;
+              let newHeight = currentHeight;
+              let newCenterX = currentCenterX;
+              let newCenterY = currentCenterY;
 
-  const h = this.activeHandle;
+              const h = this.activeHandle;
   
-  if (h === "tl") {
+              if (h === "tl") {
     // Top-left: moving both top and left edges
-    newCenterX = (p.x + s.right.x) / 2;
-    newCenterY = (p.y + s.bottom.y) / 2;
-    newWidth = Math.abs(s.right.x - p.x);
-    newHeight = Math.abs(s.bottom.y - p.y);
-  } else if (h === "tr") {
+                newCenterX = (p.x + s.right.x) / 2;
+                newCenterY = (p.y + s.bottom.y) / 2;
+                newWidth = Math.abs(s.right.x - p.x);
+                newHeight = Math.abs(s.bottom.y - p.y);
+              } else if (h === "tr") {
     // Top-right: moving top and right edges
-    newCenterX = (s.left.x + p.x) / 2;
-    newCenterY = (p.y + s.bottom.y) / 2;
-    newWidth = Math.abs(p.x - s.left.x);
-    newHeight = Math.abs(s.bottom.y - p.y);
-  } else if (h === "bl") {
-    // Bottom-left: moving bottom and left edges
-    newCenterX = (p.x + s.right.x) / 2;
-    newCenterY = (s.top.y + p.y) / 2;
-    newWidth = Math.abs(s.right.x - p.x);
-    newHeight = Math.abs(p.y - s.top.y);
-  } else if (h === "br") {
+                newCenterX = (s.left.x + p.x) / 2;
+                newCenterY = (p.y + s.bottom.y) / 2;
+                newWidth = Math.abs(p.x - s.left.x);
+                newHeight = Math.abs(s.bottom.y - p.y);
+              } else if (h === "bl") {
+                newCenterX = (p.x + s.right.x) / 2;
+                newCenterY = (s.top.y + p.y) / 2;
+                newWidth = Math.abs(s.right.x - p.x);
+                newHeight = Math.abs(p.y - s.top.y);
+              } else if (h === "br") {
     // Bottom-right: moving bottom and right edges
-    newCenterX = (s.left.x + p.x) / 2;
-    newCenterY = (s.top.y + p.y) / 2;
-    newWidth = Math.abs(p.x - s.left.x);
-    newHeight = Math.abs(p.y - s.top.y);
-  }
+                newCenterX = (s.left.x + p.x) / 2;
+                newCenterY = (s.top.y + p.y) / 2;
+                newWidth = Math.abs(p.x - s.left.x);
+                newHeight = Math.abs(p.y - s.top.y);
+              }
 
   // Update all four diamond points based on new center and dimensions
-  s.top.x = newCenterX;
-  s.top.y = newCenterY - newHeight / 2;
+              s.top.x = newCenterX;
+              s.top.y = newCenterY - newHeight / 2;
   
-  s.right.x = newCenterX + newWidth / 2;
-  s.right.y = newCenterY;
+              s.right.x = newCenterX + newWidth / 2;
+              s.right.y = newCenterY;
   
-  s.bottom.x = newCenterX;
-  s.bottom.y = newCenterY + newHeight / 2;
+              s.bottom.x = newCenterX;
+              s.bottom.y = newCenterY + newHeight / 2;
   
-  s.left.x = newCenterX - newWidth / 2;
-  s.left.y = newCenterY;
+              s.left.x = newCenterX - newWidth / 2;
+              s.left.y = newCenterY;
 
-}  else if (s.type === "text") {
-  const h = this.activeHandle;
-  
-  // Get current text dimensions
-  this.ctx.font = "20px Virgil, Segoe UI, sans-serif";
-  const metrics = this.ctx.measureText(s.text);
-  const textWidth = metrics.width;
-  const textHeight = 20;
-  
-  // Handle corner resizing - for text, we'll mainly move position
-  // but keep the resize behavior consistent with other shapes
+            }  else if ((s.type === "line" || s.type === "arrow") && this.activeHandle) {
+              if (this.activeHandle === "start") {
+      s.startX = p.x;
+      s.startY = p.y;
+    } else if (this.activeHandle === "end") {
+      s.endX = p.x;
+      s.endY = p.y;
+    }
+  }  else if (s.type === "text") {
+              const h = this.activeHandle;
+              const fontSize = s.fontSize || 20;
+              this.ctx.font = `${fontSize}px Virgil, Segoe UI, sans-serif`;
+              const metrics = this.ctx.measureText(s.text);
+              const textWidth = metrics.width;
+              const textHeight = fontSize;
+              let scaleX = 1;
+              let scaleY = 1;
   if (h === "tl") {
-    // Top-left: move the text position
-    s.x = p.x;
-    s.y = p.y;
+    // Top-left: calculate scale based on distance from bottom-right
+    const originalBottomRightX = s.x + textWidth;
+    const originalBottomRightY = s.y + textHeight;
+    scaleX = Math.max(0.5, (originalBottomRightX - p.x) / textWidth);
+    scaleY = Math.max(0.5, (originalBottomRightY - p.y) / textHeight);
+    
+    // Update position to maintain bottom-right anchor
+    s.x = originalBottomRightX - textWidth * scaleX;
+    s.y = originalBottomRightY - textHeight * scaleY;
   } else if (h === "tr") {
-    // Top-right: adjust x to maintain right edge, move y
-    s.x = p.x - textWidth;
-    s.y = p.y;
-  } else if (h === "bl") {
-    // Bottom-left: move x, adjust y to maintain bottom edge
-    s.x = p.x;
-    s.y = p.y - textHeight;
+    // Top-right: calculate scale based on distance from bottom-left
+    const originalBottomLeftY = s.y + textHeight;
+    scaleX = Math.max(0.5, (p.x - s.x) / textWidth);
+    scaleY = Math.max(0.5, (originalBottomLeftY - p.y) / textHeight);
+    
+    // Update y position to maintain bottom anchor
+    s.y = originalBottomLeftY - textHeight * scaleY;
+  }  else if (h === "bl") {
+    // Bottom-left: calculate scale based on distance from top-right
+    const originalTopRightX = s.x + textWidth;
+    scaleX = Math.max(0.5, (originalTopRightX - p.x) / textWidth);
+    scaleY = Math.max(0.5, (p.y - s.y) / textHeight);
+    
+    // Update x position to maintain right anchor
+    s.x = originalTopRightX - textWidth * scaleX;
   } else if (h === "br") {
-    // Bottom-right: adjust both x and y to maintain bottom-right edge
-    s.x = p.x - textWidth;
-    s.y = p.y - textHeight;
-  }}
-          }
-          this.clearCanvas();
-          if (this.isSolo) {
+                scaleX = Math.max(0.5, (p.x - s.x) / textWidth);
+    scaleY = Math.max(0.5, (p.y - s.y) / textHeight);
+              }
+               const avgScale = (scaleX + scaleY) / 2;
+  s.fontSize = Math.max(8, Math.min(100, fontSize * avgScale));
+            }
+            }
+            this.clearCanvas();
+            if (this.isSolo) {
             this.scheduleLocalSave();
           } else {
             this.safeSend(JSON.stringify({
@@ -1837,16 +1869,16 @@ private getPanStorageKey(): string {
           }
           return;
         }
-if (this.selectedTool === "eraser" && this.clicked) {
-  const logicalX = pos.x ;
-  const logicalY = pos.y;
+        if (this.selectedTool === "eraser" && this.clicked) {
+          const logicalX = pos.x ;
+          const logicalY = pos.y;
 
-  for (let i = this.existingShapes.length - 1; i >= 0; i--) {
-    if (this.isPointInsideShape(logicalX, logicalY, this.existingShapes[i])) {
-      const shape = this.existingShapes[i];
+          for (let i = this.existingShapes.length - 1; i >= 0; i--) {
+            if (this.isPointInsideShape(logicalX, logicalY, this.existingShapes[i])) {
+              const shape = this.existingShapes[i];
 
    
-      this.deleteShapeByIndex(i);
+              this.deleteShapeByIndex(i);
 
       
       if (!this.isSolo && shape) {
@@ -1874,19 +1906,28 @@ if (!this.clicked) return;
 
 if (this.selectedTool === "pencil" && this.clicked) {
   const last = this.pencilPoints[this.pencilPoints.length - 1];
-  const newX = pos.x ;
+  const newX = pos.x;
   const newY = pos.y;
   if (!last || last.x !== newX || last.y !== newY) {
     this.pencilPoints.push({ x: newX, y: newY });
   }
+  
+  // Clear and redraw everything first
   this.clearCanvas();
 
-    this.ctx.save();
-    this.ctx.strokeStyle = this.currentStrokeColor;
-    this.ctx.lineWidth = this.currentStrokeWidth;
-    this.ctx.setLineDash(this.getDashArray(this.currentStrokeStyle));
-    this.drawPencilPath(this.pencilPoints);
-    this.ctx.restore();
+  // Now draw the current pencil path with proper transformation
+  this.ctx.save();
+  this.ctx.setTransform(1, 0, 0, 1, 0, 0);
+  this.ctx.translate(this.panOffsetX, this.panOffsetY);
+  this.ctx.scale(this.zoom, this.zoom);
+  
+  this.ctx.strokeStyle = this.currentStrokeColor;
+  this.ctx.lineWidth = this.currentStrokeWidth;
+  this.ctx.setLineDash(this.getDashArray(this.currentStrokeStyle));
+  
+  // Draw the pencil path using logical coordinates (no transformation needed in drawPencilPath)
+  this.drawPencilPath(this.pencilPoints);
+  this.ctx.restore();
 }
 
 else {
