@@ -733,8 +733,8 @@ addTextShape(x: number, y: number, text: string) {
 getMousePos = (e: MouseEvent) => {
   const rect = this.canvas.getBoundingClientRect();
   return {
-    x: (e.clientX - rect.left - this.panOffsetX) / this.zoom,
-    y: (e.clientY - rect.top - this.panOffsetY) / this.zoom,
+    x: (e.clientX - rect.left) / this.zoom - this.panOffsetX / this.zoom,
+    y: (e.clientY - rect.top) / this.zoom - this.panOffsetY / this.zoom,
   };
 };
 
@@ -1882,8 +1882,6 @@ if (this.selectedTool === "pencil" && this.clicked) {
   this.clearCanvas();
 
     this.ctx.save();
-    this.ctx.translate(this.panOffsetX, this.panOffsetY);
-    this.ctx.scale(this.zoom, this.zoom);
     this.ctx.strokeStyle = this.currentStrokeColor;
     this.ctx.lineWidth = this.currentStrokeWidth;
     this.ctx.setLineDash(this.getDashArray(this.currentStrokeStyle));
@@ -1896,9 +1894,6 @@ else {
   const width = pos.x - this.startX;
   const height = pos.y - this.startY;
   this.clearCanvas();
-    this.ctx.save();
-    this.ctx.translate(this.panOffsetX, this.panOffsetY);
-    this.ctx.scale(this.zoom, this.zoom);
   // Read panel-selected properties
   const strokeCol = this.currentStrokeColor;
   const fillCol = this.currentBackgroundColor;
@@ -1909,7 +1904,8 @@ else {
   this.ctx.fillStyle = fillCol;
   this.ctx.lineWidth = lineWidth;
   this.ctx.setLineDash(dashArray);
-
+const drawX = (coord: number) => coord * this.zoom + this.panOffsetX;
+const drawY = (coord: number) => coord * this.zoom + this.panOffsetY;
 if (this.selectedTool === "rect") {
   const r = Math.min(
     this.MAX_CORNER_RADIUS,
@@ -1930,28 +1926,36 @@ if (this.selectedTool === "rect") {
   this.ctx.setLineDash(dashArray);
 
   this.ctx.beginPath();
-  this.ctx.roundRect(this.startX , this.startY , width, height, r);
+  this.ctx.roundRect(
+    drawX(this.startX), 
+    drawY(this.startY), 
+    width * this.zoom, 
+    height * this.zoom, 
+    r * this.zoom
+  );
   this.ctx.fill();
   this.ctx.stroke();
+  this.ctx.restore();
+
 
   this.ctx.restore();
 } else if (this.selectedTool === "diamond") {
   const cx = this.startX + width / 2;
   const cy = this.startY + height / 2;
-  const top = { x: cx, y: cy - height / 2 };
-  const right = { x: cx + width / 2, y: cy };
-  const bottom = { x: cx, y: cy + height / 2 };
-  const left = { x: cx - width / 2, y: cy };
+  const top = { x: drawX(cx), y: drawY(cy - height / 2) };
+  const right = { x: drawX(cx + width / 2), y: drawY(cy) };
+  const bottom = { x: drawX(cx), y: drawY(cy + height / 2) };
+  const left = { x: drawX(cx - width / 2), y: drawY(cy) };
 
   this.drawDiamond(
     top,
     right,
     bottom,
     left,
-    this.currentStrokeColor,              // stroke color from panel
-    this.currentBackgroundColor,          // fill color from panel
-    this.getDashArray(this.currentStrokeStyle), // dash array from panel
-    this.currentStrokeWidth               // line width from panel
+    this.currentStrokeColor,              
+    this.currentBackgroundColor,          
+    this.getDashArray(this.currentStrokeStyle), 
+    this.currentStrokeWidth              
   );
 } else if (this.selectedTool === "circle") {
   const rx = Math.abs(width / 2);
@@ -1964,9 +1968,9 @@ if (this.selectedTool === "rect") {
   this.ctx.lineWidth = this.currentStrokeWidth;
   this.ctx.setLineDash(this.getDashArray(this.currentStrokeStyle));
   this.ctx.beginPath();
-  this.ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
-  this.ctx.fill();    // Apply fill from panel
-  this.ctx.stroke();  // Apply stroke from panel
+  this.ctx.ellipse(drawX(cx), drawY(cy), rx * this.zoom, ry * this.zoom,0, 0, Math.PI * 2);
+  this.ctx.fill();    
+  this.ctx.stroke(); 
   this.ctx.closePath();
   this.ctx.restore();
 }else if (this.selectedTool === "line") {
@@ -1975,24 +1979,25 @@ if (this.selectedTool === "rect") {
   this.ctx.lineWidth = this.currentStrokeWidth;
   this.ctx.setLineDash(this.getDashArray(this.currentStrokeStyle));
   this.ctx.beginPath();
-  this.ctx.moveTo(this.startX, this.startY);
-  this.ctx.lineTo(pos.x, pos.y);
+  this.ctx.moveTo(drawX(this.startX), drawY(this.startY));
+  this.ctx.lineTo(drawX(pos.x), drawY(pos.y));
   this.ctx.stroke();
   this.ctx.closePath();
   this.ctx.restore();
+
   this.endX = pos.x;
   this.endY = pos.y;
 }
  else if (this.selectedTool === "arrow") {
  this.drawArrow(
   this.ctx,
-  this.startX!,
-  this.startY!,
-  pos.x,
-  pos.y,
-  this.currentStrokeColor,                  // stroke color
-  this.currentBackgroundColor,              // fill color (arrowhead fill)
-  this.currentStrokeWidth,                  // line width
+  drawX(this.startX!),
+  drawY(this.startY!),
+  drawX(pos.x),
+  drawY(pos.y),
+  this.currentStrokeColor,              
+  this.currentBackgroundColor,              
+  this.currentStrokeWidth,                  
   this.getDashArray(this.currentStrokeStyle)
 );
     this.endX = pos.x;
@@ -2001,8 +2006,10 @@ if (this.selectedTool === "rect") {
     if (!this.clicked) return;
     this.clearCanvas();
     this.ctx.fillStyle = this.currentStrokeColor;
-    this.ctx.font = "16px Arial";
-    this.ctx.fillText("Sample Text" , pos.x , pos.y);
+    this.ctx.font = `${16 * this.zoom}px Arial`;
+    this.ctx.fillText("Sample Text", drawX(pos.x), drawY(pos.y));
+    this.ctx.restore();
+
   }
   this.ctx.restore();
 }
