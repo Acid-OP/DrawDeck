@@ -19,10 +19,8 @@ interface RTCClient {
 
 const rtcClients: Set<RTCClient> = new Set();
 
-// Verify Clerk session token from cookies
 async function verifyClerkSession(sessionToken: string): Promise<string | null> {
   try {
-    // Method 1: Try verifyToken (for JWT tokens)
     try {
       const payload = await clerkClient.verifyToken(sessionToken, {
         secretKey: process.env.CLERK_SECRET_KEY!,
