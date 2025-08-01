@@ -1,199 +1,182 @@
-import { WebSocketServer } from "ws";
-import WebSocket from "ws";
-import { clerkClient } from "@clerk/clerk-sdk-node";
-import { IncomingMessage } from "http";
-import { parse } from "cookie";
-import dotenv from 'dotenv';
-dotenv.config();
+import { WebSocketServer, WebSocket as WSWebSocket } from "ws";
+// import { clerkClient } from "@clerk/clerk-sdk-node";
+// import { parse } from "cookie";
+// import dotenv from "dotenv";
+// dotenv.config();
 
 const wss = new WebSocketServer({ port: 8080 });
 
-wss.on("listening", () => {
-  console.log("✅ WebSocket server is listening on ws://localhost:8080");
-});
-
-interface ClientInfo {
-  ws: WebSocket;
+type ClientInfo = {
+  ws: WSWebSocket;
   userId: string;
   rooms: Set<string>;
-}
+};
 
-const clients: Set<ClientInfo> = new Set();
+type Room = {
+  participants: Map<string, ClientInfo>;
+};
 
-// Verify Clerk session tokens to authenticate users
-async function verifyClerkSession(sessionToken: string): Promise<string | null> {
-  try {
-    try {
-      const payload = await clerkClient.verifyToken(sessionToken, {
-        secretKey: process.env.CLERK_SECRET_KEY!,
-      });
-      return payload.sub; // userId
-    } catch (tokenError) {
-      console.log("⚠️ verifyToken failed, trying verifySession...");
+const clients = new Set<ClientInfo>();
+const rooms: Map<string, Room> = new Map();
+
+function broadcastToRoom(roomName: string, data: any, exclude?: ClientInfo) {
+  const room = rooms.get(roomName);
+  if (!room) return;
+
+  const message = JSON.stringify(data);
+
+  for (const [userId, client] of room.participants.entries()) {
+    if (client !== exclude && client.ws.readyState === client.ws.OPEN) {
+      client.ws.send(message);
     }
-    const tokenParts = sessionToken.split('.');
-    if (tokenParts.length === 3 && tokenParts[1]) {
-      const payload = JSON.parse(Buffer.from(tokenParts[1], 'base64').toString());
-      const sessionId = payload.sid;
-      
-      if (sessionId) {
-        const session = await clerkClient.sessions.verifySession(sessionId, sessionToken);
-        return session.userId;
-      }
-    }
-    return null;
-  } catch (error) {
-    console.error("❌ All verification methods failed:", error);
-    return null;
   }
 }
 
-// Authenticate user from incoming HTTP request's cookie header
-async function authenticateUser(request: IncomingMessage): Promise<string | null> {
-  const cookieHeader = request.headers.cookie;
-  if (!cookieHeader) return null;
-  const cookies = parse(cookieHeader);
-  const sessionToken = cookies['__session']; // Clerk session cookie
-  if (!sessionToken) return null;
-  return await verifyClerkSession(sessionToken);
-}
-
-// Broadcast payload to all clients in the same room, excluding the sender
-function broadcastToRoom(roomName: string, payload: unknown, senderClient?: ClientInfo) {
-  const msg = JSON.stringify(payload);
-  let broadcastCount = 0;
-
-  clients.forEach(client => {
-    if (senderClient && client.userId === senderClient.userId) {
-      // Skip sending back to the sender
-      return;
-    }
-    if (client.rooms.has(roomName)) {
-      try {
-        if (client.ws.readyState === WebSocket.OPEN) {
-          client.ws.send(msg);
-          broadcastCount++;
-          // Log minimal info, can comment out in prod
-          console.log(`📤 Sent to client ${client.userId} in room "${roomName}"`);
-        }
-      } catch (error) {
-        console.error(`❌ Failed to send to client ${client.userId}:`, error);
-        clients.delete(client); 
-      }
-    }
-  });
-
-  console.log(`📊 Total broadcasts sent: ${broadcastCount} (excluded sender: ${senderClient?.userId})`);
-}
-
-// Main WebSocket connection handling
-wss.on("connection", async (ws, request) => {
-  const userId = await authenticateUser(request);
-
-  if (!userId) {
-    console.log("❌ Authentication failed, closing connection");
-    return ws.close(4001, "invalidtoken");
-  }
-
-  const client: ClientInfo = { ws, userId, rooms: new Set() };
+wss.on("connection", (ws, request) => {
+  const dummyUserId = `user_${Math.floor(Math.random() * 10000)}`;
+  const client: ClientInfo = {
+    ws,
+    userId: dummyUserId,
+    rooms: new Set(),
+  };
   clients.add(client);
-
-  console.log(`👤 Client connected: ${userId} (Total clients: ${clients.size})`);
+  console.log(`✅ Dummy client connected: ${client.userId}`);
 
   ws.on("message", (raw) => {
-    let payload: any;
     try {
-      payload = JSON.parse(raw.toString());
-    } catch {
-      console.error("❌ Failed to parse message:", raw.toString());
-      return;
-    }
+      const data = JSON.parse(raw.toString());
+      const { type, roomId, roomName, shape, shapeId, updatedShape } = data;
 
-    console.log(`📨 Received message from ${client.userId}:`, {
-      type: payload.type,
-      roomName: payload.roomName,
-    });
+      switch (type) {
+        case "create_room": {
+          const newRoom = roomId || roomName || `room_${Date.now()}`;
+          if (!rooms.has(newRoom)) {
+            rooms.set(newRoom, { participants: new Map() });
+            console.log(`🏠 Room created: "${newRoom}"`);
+          }
+          const room = rooms.get(newRoom)!;
+          room.participants.set(client.userId, client);
+          client.rooms.add(newRoom);
 
-    const { type } = payload;
+          ws.send(JSON.stringify({
+            type: "room_created",
+            roomId: newRoom,
+            userId: client.userId,
+          }));
+          break;
+        }
 
-    switch (type) {
-      case "test": {
-        // Simple echo broadcast to all including sender for testing
-        broadcastToRoom(String(payload.roomName), {
-          type: "test",
-          message: "Hello from server",
-          timestamp: new Date().toISOString(),
-        });
-        break;
+        case "join-room": {
+          if (!roomId) return;
+
+          if (!rooms.has(roomId)) {
+            ws.send(JSON.stringify({
+              type: "error",
+              message: `Room "${roomId}" does not exist.`,
+            }));
+            return;
+          }
+
+          const room = rooms.get(roomId)!;
+          room.participants.set(client.userId, client);
+          client.rooms.add(roomId);
+
+          console.log(`👥 ${client.userId} joined room "${roomId}"`);
+
+          ws.send(JSON.stringify({
+            type: "joined_successfully",
+            roomId,
+            userId: client.userId,
+          }));
+
+          broadcastToRoom(roomId, {
+            type: "user_joined",
+            userId: client.userId,
+            roomId,
+            participantCount: room.participants.size,
+            timestamp: new Date().toISOString(),
+          }, client);
+          break;
+        }
+
+        case "shape_add": {
+          if (!roomId || !shape) return;
+          console.log(`➕ Shape added in "${roomId}" by ${client.userId}`);
+
+          broadcastToRoom(roomId, {
+            type: "shape_added",
+            roomId,
+            userId: client.userId,
+            shape,
+            timestamp: new Date().toISOString(),
+          }, client);
+          break;
+        }
+
+        case "shape_delete": {
+          if (!roomId || !shapeId) return;
+          console.log(`❌ Shape deleted in "${roomId}" by ${client.userId}`);
+
+          broadcastToRoom(roomId, {
+            type: "shape_deleted",
+            roomId,
+            userId: client.userId,
+            shapeId,
+            timestamp: new Date().toISOString(),
+          }, client);
+          break;
+        }
+
+        case "shape_update": {
+          if (!roomId || !updatedShape || !updatedShape.id) return;
+          console.log(`✏️ Shape updated in "${roomId}" by ${client.userId}`);
+
+          broadcastToRoom(roomId, {
+            type: "shape_updated",
+            roomId,
+            userId: client.userId,
+            shape: updatedShape,
+            timestamp: new Date().toISOString(),
+          }, client);
+          break;
+        }
+
+        default:
+          console.warn("⚠️ Unknown message type:", type);
       }
-
-      case "join_room": {
-        client.rooms.add(String(payload.roomName));
-        const roomClients = Array.from(clients).filter(c => c.rooms.has(String(payload.roomName)));
-        console.log(`🏠 Client ${client.userId} joined room "${payload.roomName}"`);
-        console.log(`📊 Room "${payload.roomName}" now has ${roomClients.length} clients:`, roomClients.map(c => c.userId));
-        break;
-      }
-
-      case "leave_room": {
-        client.rooms.delete(String(payload.roomName));
-        console.log(`🚪 Client ${client.userId} left room "${payload.roomName}"`);
-        break;
-      }
-
-      case "shape:add": {
-        const { roomName, shape } = payload;
-        console.log(`[SERVER] 🎨 Received shape:add from ${client.userId}`, {
-          roomName,
-          shapeType: shape?.type,
-          shapeId: shape?.id,
-          timestamp: new Date().toLocaleTimeString(),
-        });
-
-        // Broadcasting received shape to other clients in the room
-        const receivers = Array.from(clients).filter(c => c.rooms.has(roomName) && c.userId !== client.userId);
-        console.log(`📤 Broadcasting shape:add to ${receivers.length} clients in room "${roomName}"`);
-
-        broadcastToRoom(roomName, {
-          type: "shape:add",
-          roomName,
-          shape,
-        }, client);
-        break;
-      }
-
-      case "shape:delete": {
-        const { roomName, shapeId } = payload;
-        console.log(`[SERVER] 🗑️ Received shape:delete from ${client.userId}`, {
-          roomName,
-          shapeId,
-          timestamp: new Date().toLocaleTimeString(),
-        });
-
-        const receivers = Array.from(clients).filter(c => c.rooms.has(roomName) && c.userId !== client.userId);
-        console.log(`📤 Broadcasting shape:delete to ${receivers.length} clients in room "${roomName}"`);
-
-        broadcastToRoom(roomName, {
-          type: "shape:delete",
-          roomName,
-          shapeId,
-        }, client);
-        break;
-      }
-
-      default: {
-        console.warn("❓ Unknown message type:", type);
-      }
+    } catch (err) {
+      console.error("❌ Invalid message format:", raw.toString());
     }
   });
 
-  ws.on("close", (code, reason) => {
+  ws.on("close", () => {
+    client.rooms.forEach((roomId) => {
+      const room = rooms.get(roomId);
+      if (room) {
+        room.participants.delete(client.userId);
+
+        broadcastToRoom(roomId, {
+          type: "user_left",
+          roomId,
+          userId: client.userId,
+          participantCount: room.participants.size,
+          timestamp: new Date().toISOString(),
+        });
+
+        const hasOthers = Array.from(room.participants.values()).length > 0;
+        if (!hasOthers) {
+          rooms.delete(roomId);
+          console.log(`🧹 Deleted empty room: "${roomId}"`);
+        }
+      }
+    });
+
     clients.delete(client);
-    console.log(`👋 Client ${client.userId} disconnected (code: ${code}, reason: ${reason})`);
-    console.log(`📊 Total clients remaining: ${clients.size}`);
+    console.log(`❌ Dummy client ${client.userId} disconnected`);
   });
 
   ws.on("error", (error) => {
-    console.error(`❌ WebSocket error for client ${client.userId}:`, error);
+    console.error(`❌ WebSocket error (user ${client.userId}):`, error);
   });
 });
+console.log("✅ WebSocket server running at ws://localhost:8080");
