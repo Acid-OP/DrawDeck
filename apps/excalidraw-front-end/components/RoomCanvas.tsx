@@ -10,7 +10,7 @@ export function RoomCanvas({ slug }: { slug: string }) {
   const [socket, setSocket] = useState<WebSocket | null>(null);
   const [isConnecting, setIsConnecting] = useState(false);
   const [connectionError, setConnectionError] = useState<string | null>(null);
-  const { getToken } = useAuth(); 
+  const { getToken } = useAuth();
 
   useEffect(() => {
     if (!slug) return;
@@ -19,41 +19,80 @@ export function RoomCanvas({ slug }: { slug: string }) {
       try {
         setIsConnecting(true);
         setConnectionError(null);
+
         const ws = new WebSocket(WS_URL);
 
         ws.onopen = () => {
           console.log('✅ WebSocket connected');
-          ws.send(JSON.stringify({ type: 'join_room', roomName: slug }));
+          const isCreator = sessionStorage.getItem(`creator-${slug}`) === 'true';
+
+          const payload = isCreator
+            ? { type: 'create_room', roomId: slug }
+            : { type: 'join-room', roomId: slug };
+
+          console.log(`📤 Sending ${payload.type} request for room "${slug}"`);
+          ws.send(JSON.stringify(payload));
           setSocket(ws);
           setIsConnecting(false);
         };
 
+        ws.onmessage = (event) => {
+          const data = JSON.parse(event.data);
+          const { type, ...rest } = data;
+
+          console.log("📨 WS message received:", data);
+
+          switch (type) {
+            case 'room_created':
+              console.log(`✅ Room created: "${rest.roomId}" by user ${rest.userId}`);
+              break;
+
+            case 'joined_successfully':
+              console.log(`🙌 Joined room "${rest.roomId}" as user ${rest.userId}`);
+              break;
+
+            case 'user_joined':
+              console.log(`👤 User ${rest.userId} joined room "${rest.roomId}"`);
+              console.log(`👥 Total participants: ${rest.participantCount}`);
+              break;
+
+            case 'user_left':
+              console.log(`👋 User ${rest.userId} left room "${rest.roomId}"`);
+              console.log(`👥 Remaining participants: ${rest.participantCount}`);
+              break;
+
+            case 'shape_added':
+              console.log(`➕ Shape added by ${rest.userId} (ID: ${rest.shape?.id})`);
+              break;
+
+            case 'shape_updated':
+              console.log(`✏️ Shape updated by ${rest.userId} (ID: ${rest.shape?.id})`);
+              break;
+
+            case 'shape_deleted':
+              console.log(`❌ Shape deleted by ${rest.userId} (ID: ${rest.shapeId})`);
+              break;
+
+            default:
+              console.warn('⚠️ Unknown message type received:', type, rest);
+              break;
+          }
+        };
+
         ws.onerror = (err) => {
           console.error('❌ WebSocket error:', err);
-          setConnectionError('Failed to connect to room');
+          setConnectionError('WebSocket connection failed');
           setIsConnecting(false);
         };
 
         ws.onclose = (event) => {
-          console.log('🔌 WebSocket disconnected:', event.code, event.reason);
+          console.log('🔌 WebSocket closed:', event.code, event.reason);
           setSocket(null);
           setIsConnecting(false);
-          
-          
-          if (event.code === 4001) {
-            setConnectionError('Authentication failed. Please refresh the page.');
-          } else if (event.code === 4002) {
-            setConnectionError('Invalid session. Please sign in again.');
-          }
+          setConnectionError('Disconnected from room');
         };
-
-        ws.onmessage = (event) => {
-          const data = JSON.parse(event.data);
-          console.log('📨 Received:', data);
-        };
-
       } catch (error) {
-        console.error('❌ Failed to connect:', error);
+        console.error('❌ Connection error:', error);
         setConnectionError(error instanceof Error ? error.message : 'Connection failed');
         setIsConnecting(false);
       }
@@ -63,7 +102,7 @@ export function RoomCanvas({ slug }: { slug: string }) {
 
     return () => {
       if (socket?.readyState === WebSocket.OPEN) {
-        socket.send(JSON.stringify({ type: 'leave_room', roomName: slug }));
+        socket.send(JSON.stringify({ type: 'leave_room', roomId: slug }));
         socket.close();
       }
     };
@@ -74,8 +113,8 @@ export function RoomCanvas({ slug }: { slug: string }) {
       <div className="flex items-center justify-center h-64">
         <div className="p-6 text-center">
           <div className="text-red-600 mb-4">❌ {connectionError}</div>
-          <button 
-            onClick={() => window.location.reload()} 
+          <button
+            onClick={() => window.location.reload()}
             className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors"
           >
             Retry
@@ -85,7 +124,6 @@ export function RoomCanvas({ slug }: { slug: string }) {
     );
   }
 
-  // Show connecting state
   if (isConnecting || !socket) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -99,8 +137,10 @@ export function RoomCanvas({ slug }: { slug: string }) {
 
   return (
     <div className="relative w-full h-full">
-      <Canvas roomName={slug} socket={socket} />
+      <Canvas roomId={slug} socket={socket} />
+      {/* Uncomment when ready: */}
       {/* <VideoCall roomName={slug} /> */}
+      {/* Or <OclaModal /> wherever you're using it */}
     </div>
   );
 }

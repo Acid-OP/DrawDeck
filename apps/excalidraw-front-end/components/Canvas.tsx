@@ -27,13 +27,13 @@ export type Tool =
   | "eraser";
 
 interface CanvasProps {
-  roomName: string;
+  roomId: string;
   socket: WebSocket | null;
   isSolo?: boolean;
   isUserAuthenticated?: boolean; 
 }
 
-export function Canvas({ roomName, socket, isSolo = false, isUserAuthenticated = false }: CanvasProps) {
+export function Canvas({ roomId, socket, isSolo = false, isUserAuthenticated = false }: CanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [game, setGame] = useState<Game>();
   const [hasInteracted, setHasInteracted] = useState(false);
@@ -163,7 +163,7 @@ export function Canvas({ roomName, socket, isSolo = false, isUserAuthenticated =
 
   useEffect(() => {
     if (canvasRef.current && dimensions.width !== 0 && dimensions.height !== 0) {
-      const g = new Game(canvasRef.current, roomName, socket, isSolo, theme);
+      const g = new Game(canvasRef.current, roomId, socket, isSolo, theme);
       g.onToolChange = (tool) => setSelectedTool(tool);
   g.onTextInsert = (logicalX, logicalY) => {
   if ((window as any).justBlurredTextInput) return;
@@ -178,7 +178,7 @@ export function Canvas({ roomName, socket, isSolo = false, isUserAuthenticated =
 
       return () => g.destroy();
     }
-  }, [canvasRef, isSolo, roomName, socket, dimensions, theme]);
+  }, [canvasRef, isSolo, roomId, socket, dimensions, theme]);
 
   const shouldShowPropertiesPanel = ["rect", "diamond", "circle", "arrow", "line", "pencil", "text"].includes(selectedTool);
   

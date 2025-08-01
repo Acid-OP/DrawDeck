@@ -8,11 +8,11 @@ import { useEffect, useState } from 'react';
 
 export default function CanvasPage() {
   const params = useParams();
-  const roomName = params.slug as string;
-  return <AuthWrapper roomName={roomName} />;
+  const roomId = params.slug as string;
+  return <AuthWrapper roomId={roomId} />;
 }
 
-function AuthWrapper({ roomName }: { roomName: string }) {
+function AuthWrapper({ roomId }: { roomId: string }) {
   const { isSignedIn, isLoaded } = useAuth();
   const router = useRouter();
   const [minTimeElapsed, setMinTimeElapsed] = useState(false);
@@ -35,8 +35,8 @@ function AuthWrapper({ roomName }: { roomName: string }) {
 
   return (
     <>
-      <ShareLinkModal roomId={roomName} />
-      <RoomCanvas slug={roomName} />
+      <ShareLinkModal roomId={roomId} />
+      <RoomCanvas slug={roomId} />
     </>
   );
 }

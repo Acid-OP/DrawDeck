@@ -25,10 +25,9 @@ export const LiveCollabModal: React.FC<Props> = ({ onClose }) => {
       Math.random().toString(36).slice(2, 6);
     onClose();
 
-    setTimeout(() => {
-      router.push(`/${randomId}`);
-      // window.location.href = `/${randomId}`;
-    }, 100);
+    sessionStorage.setItem(`creator-${randomId}`, "true");
+    router.push(`/${randomId}`);
+
   };
 
   const handleClose = () => {

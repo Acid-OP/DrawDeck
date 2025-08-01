@@ -24,7 +24,7 @@ export default function HomePage() {
   
   return (
     <Canvas 
-      roomName="__solo"
+      roomId="__solo"
       socket={null}
       isSolo={true}
       isUserAuthenticated={isSignedIn}

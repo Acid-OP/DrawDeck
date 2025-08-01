@@ -62,8 +62,7 @@ export class Game {
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
   public existingShapes: Shape[];
-  private roomId?: string | null;
-  private roomName?: string | null;
+  private roomId: string;
   private clicked: boolean;
   private startX: number | null = null;
   private startY: number | null = null;
@@ -141,8 +140,11 @@ export class Game {
   if (this.isSolo || !this.socket || this.socket.readyState !== WebSocket.OPEN || !this.roomId) return;
   try {
     
-    if (payload?.type === "shape:add") {
-      console.log(`[CLIENT] Sending shape:add (id: ${payload.shape?.id}) to room: ${payload.roomName}`, new Date().toLocaleTimeString());
+    if (payload?.type === "shape_add") {
+      // console.log(payload.roomId);
+      // console.log(payload);
+      // console.log(payload.shape.id);
+      console.log(`[CLIENT] Sending shape_add (id: ${payload.shape.id}) to room: ${payload.roomId}`);
     }
     this.socket.send(JSON.stringify(payload));
   } catch (error) {
@@ -163,8 +165,8 @@ private broadcastShape(shape: Shape) {
   console.log(`[CLIENT] Shape locally added: id=${shape.id}, type=${shape.type}`, new Date().toLocaleTimeString());
 
   this.safeSend?.({
-    type: "shape:add",
-    roomName: this.roomId?.toString(),
+    type: "shape_add",
+    roomId: this.roomId?.toString(),
     shape,
   });
 }
@@ -579,13 +581,13 @@ if (shape.type === "line" || shape.type === "arrow") {
   return this.isSolo ? "solo_shapes" : `shapes_${this.roomId}`;
 }
 
-  constructor(canvas: HTMLCanvasElement, roomName: string | null, socket: WebSocket | null , isSolo:boolean=false , theme: "light" | "dark" ) {
+  constructor(canvas: HTMLCanvasElement, roomId: string | null, socket: WebSocket | null , isSolo:boolean=false , theme: "light" | "dark" ) {
     this.canvas = canvas;
     this.ctx = canvas.getContext("2d")!;
     this.existingShapes = [];
     this.isSolo = isSolo;
-    this.roomName = roomName;
-    this.roomId = roomName;
+    if (!roomId) throw new Error("roomId is required");
+    this.roomId = roomId;
     this.socket = socket;
     this.theme = theme;
     this.clearCanvas();
@@ -938,25 +940,26 @@ public clearAllShapes() {
 
     this.socket.onmessage = (event) => {
     let msg = JSON.parse(event.data);
-    console.log("gaurdwe  rwqxsav",msg);
-    console.log("gaurdwe  rwqxceetrcwsav",this.roomId?.toString());
-    if (msg.roomName !== this.roomId?.toString()) return;
+    console.log("inside init handler")
     switch (msg.type) {
-      case "shape:add": {
+      case "shape_add": {
         const shape = msg.shape;
         const exists = this.existingShapes.some(s => s.id === shape.id);
         if (!exists) {
           this.existingShapes.push(shape);
           this.clearCanvas();
+          console.log("shape that recived added to the canvas ")
         }
         break;
       }
 
-      case "shape:delete": {
+      case "shape_delete": {
         const shapeId = msg.shapeId;
         const index = this.existingShapes.findIndex(s => s.id === shapeId);
         if (index !== -1) {
           this.deleteShapeByIndex(index);
+          console.log("shape that recived removed from the canvas ")
+
         }
         break;
       }
@@ -979,9 +982,12 @@ public deleteShapeByIndex(index: number) {
   this.scheduleLocalSave();
 } else {
   this.scheduleWriteAll();
+          console.log("INSIDE DLEETE");
+      console.log(this.roomId?.toString());
+      console.log(this.roomId);
   this.safeSend({
-    type: "shape:delete",
-    roomName: this.roomId?.toString(),
+    type: "shape_delete",
+    roomId: this.roomId?.toString(),
     shapeId: shape.id,
   });
 }
@@ -1248,13 +1254,11 @@ public deleteShapeByIndex(index: number) {
 
     // Broadcast delete if not in solo mode and shape was found
     if (!this.isSolo && deletedShape) {
-      this.safeSend(
-        JSON.stringify({
-          type: "shape:delete",
-          roomName: this.roomId?.toString(),
+      this.safeSend({
+          type: "shape_delete",
+          roomId: this.roomId?.toString(),
           shapeId: deletedShape.id,
-        })
-      );
+        });
       this.scheduleWriteAll();
     } else if (this.isSolo) {
       // For local only, ensure storage updates if deleteShapeByIndex doesn't do it
@@ -1355,13 +1359,14 @@ mouseUpHandler = async (e: MouseEvent) => {
       if (this.isSolo) {
         this.scheduleLocalSave();
       } else {
-        this.safeSend(
-          JSON.stringify({
-            type: "shape:add",
-            roomName: this.roomId?.toString(),
+                console.log("INSIDE MOUSEUP");
+      console.log(this.roomId?.toString());
+      console.log(this.roomId);
+        this.safeSend({
+            type: "shape_add",
+            roomId: this.roomId?.toString(),
             shape,
-          })
-        );
+          });
       }
     }
     return;
@@ -1872,11 +1877,11 @@ public getScreenCoordinates(logicalX: number, logicalY: number): { x: number; y:
             if (this.isSolo) {
             this.scheduleLocalSave();
           } else {
-            this.safeSend(JSON.stringify({
-              type: "shape:add",
-              roomName: this.roomId?.toString(),
+            this.safeSend({
+              type: "shape_add",
+              roomId: this.roomId?.toString(),
               shape: s
-            }));
+            });
             this.scheduleWrite(s);
           }
           return;
@@ -1894,13 +1899,11 @@ public getScreenCoordinates(logicalX: number, logicalY: number): { x: number; y:
 
       
       if (!this.isSolo && shape) {
-        this.safeSend(
-          JSON.stringify({
-            type: "shape:delete",
-            roomName: this.roomId?.toString(),
+        this.safeSend({
+            type: "shape_delete",
+            roomId: this.roomId?.toString(),
             shapeId: shape.id,
-          })
-        );
+          });
         this.scheduleWriteAll();
       } else if (this.isSolo) {
         this.scheduleLocalSave?.();
