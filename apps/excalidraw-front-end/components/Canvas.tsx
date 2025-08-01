@@ -73,7 +73,6 @@ export function Canvas({ roomName, socket, isSolo = false, isUserAuthenticated =
     '#a5d8ff',
     '#ffec99'
   ];
-
   const strokeWidths = [2, 3.5, 6];
 
   const updateSize = useCallback(() => {
@@ -110,7 +109,6 @@ export function Canvas({ roomName, socket, isSolo = false, isUserAuthenticated =
     if (typeof window === "undefined") return;
 
     updateSize();
-    
     let timeoutId: NodeJS.Timeout;
     const debouncedResize = () => {
       clearTimeout(timeoutId);

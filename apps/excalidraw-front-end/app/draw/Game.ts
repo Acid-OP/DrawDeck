@@ -137,27 +137,37 @@ export class Game {
     localStorage.setItem(key, JSON.stringify(this.existingShapes));
   }
 
-  private safeSend(payload: any) {
-    if (this.isSolo || !this.socket || !this.roomId) return;
-    this.socket.send(JSON.stringify(payload));
-  }
-  private broadcastShape(shape: Shape) {
-    const key = this.getLocalStorageKey();
-
-    if (this.isSolo) {
-      const existing = JSON.parse(localStorage.getItem(key) || "[]");
-      const updated = [...existing, shape];
-      localStorage.setItem(key, JSON.stringify(updated));
+ private safeSend(payload: any) {
+  if (this.isSolo || !this.socket || this.socket.readyState !== WebSocket.OPEN || !this.roomId) return;
+  try {
+    
+    if (payload?.type === "shape:add") {
+      console.log(`[CLIENT] Sending shape:add (id: ${payload.shape?.id}) to room: ${payload.roomName}`, new Date().toLocaleTimeString());
     }
-
-    this.existingShapes.push(shape);
-
-    this.safeSend?.({
-      type: "shape:add",
-      roomName: this.roomId?.toString(),
-      shape,
-    });
+    this.socket.send(JSON.stringify(payload));
+  } catch (error) {
+    console.error("[CLIENT] WS send failed:", error);
   }
+}
+
+private broadcastShape(shape: Shape) {
+  if (this.isSolo) {
+    const key = this.getLocalStorageKey();
+    const existing = JSON.parse(localStorage.getItem(key) || "[]");
+    localStorage.setItem(key, JSON.stringify([...existing, shape]));
+  }
+
+  this.existingShapes.push(shape);
+
+  // LOG: local shape immediately added
+  console.log(`[CLIENT] Shape locally added: id=${shape.id}, type=${shape.type}`, new Date().toLocaleTimeString());
+
+  this.safeSend?.({
+    type: "shape:add",
+    roomName: this.roomId?.toString(),
+    shape,
+  });
+}
 
   hitTestShapeHandle(shape: Shape, mouseX: number, mouseY: number): "tl" | "tr" | "bl" | "br" | null {
     const handleSize = 10;
@@ -927,7 +937,9 @@ public clearAllShapes() {
     if (this.isSolo || !this.socket || !this.roomId) return;
 
     this.socket.onmessage = (event) => {
-    const msg = JSON.parse(event.data);
+    let msg = JSON.parse(event.data);
+    console.log("gaurdwe  rwqxsav",msg);
+    console.log("gaurdwe  rwqxceetrcwsav",this.roomId?.toString());
     if (msg.roomName !== this.roomId?.toString()) return;
     switch (msg.type) {
       case "shape:add": {

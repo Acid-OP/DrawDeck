@@ -19,7 +19,7 @@ importers:
         version: 5.8.2
 
   apps/excalidraw-front-end:
-    dependencies:
+    dependencies:reason
       '@clerk/nextjs':
         specifier: ^6.25.4
         version: 6.25.4(next@15.3.2(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react@19.1.0)

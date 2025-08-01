@@ -27,6 +27,7 @@ export const LiveCollabModal: React.FC<Props> = ({ onClose }) => {
 
     setTimeout(() => {
       router.push(`/${randomId}`);
+      // window.location.href = `/${randomId}`;
     }, 100);
   };
 
