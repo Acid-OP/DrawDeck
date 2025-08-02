@@ -1,12 +1,10 @@
 import { WebSocketServer } from "ws";
 import WebSocket from "ws";
-import { clerkClient } from "@clerk/clerk-sdk-node";
 import { IncomingMessage } from "http";
-import { parse } from "cookie";
-import dotenv from 'dotenv';
-dotenv.config();
+import { randomUUID } from "crypto";
 
-const wss = new WebSocketServer({ port: 8081 }); 
+const wss = new WebSocketServer({ port: 8081 });
+
 wss.on("listening", () => {
   console.log("🎥 WebRTC signaling server running on ws://localhost:8081");
 });
@@ -19,55 +17,6 @@ interface RTCClient {
 
 const rtcClients: Set<RTCClient> = new Set();
 
-// Verify Clerk session token from cookies
-async function verifyClerkSession(sessionToken: string): Promise<string | null> {
-  try {
-    // Method 1: Try verifyToken (for JWT tokens)
-    try {
-      const payload = await clerkClient.verifyToken(sessionToken, {
-        secretKey: process.env.CLERK_SECRET_KEY!,
-      });
-      return payload.sub; 
-    } catch (tokenError) {
-    }
-
-    const tokenParts = sessionToken.split('.');
-    if (tokenParts.length === 3 && tokenParts[1]) {
-      const payload = JSON.parse(Buffer.from(tokenParts[1], 'base64').toString());
-      const sessionId = payload.sid;
-      
-      if (sessionId) {
-        const session = await clerkClient.sessions.verifySession(sessionId, sessionToken);
-        return session.userId;
-      }
-    }
-
-    return null;
-  } catch (error) {
-    console.error("❌ All verification methods failed:", error);
-    return null;
-  }
-}
-
-async function authenticateUser(request: IncomingMessage): Promise<string | null> {
-  const cookieHeader = request.headers.cookie;
-  
-  if (!cookieHeader) {
-    return null;
-  }
-
-  const cookies = parse(cookieHeader);
-  const sessionToken = cookies['__session']; 
-  
-  if (!sessionToken) {
-    console.log('🔍 Available cookies:', Object.keys(cookies));
-    return null;
-  }
-
-  const userId = await verifyClerkSession(sessionToken);
-  return userId;
-}
-
 function broadcastToRoom(roomName: string, sender: RTCClient, payload: any) {
   const msg = JSON.stringify(payload);
   rtcClients.forEach((client) => {
@@ -77,21 +26,18 @@ function broadcastToRoom(roomName: string, sender: RTCClient, payload: any) {
           client.ws.send(msg);
         }
       } catch (error) {
-        
         rtcClients.delete(client);
       }
     }
   });
 }
 
-wss.on("connection", async (ws, request) => {
-  const userId = await authenticateUser(request);
-
-  if (!userId) {
-    return ws.close(4001, "invalidtoken");
-  }
-
-  const client: RTCClient = { ws, userId, rooms: new Set() };
+wss.on("connection", (ws: WebSocket, request: IncomingMessage) => {
+  const client: RTCClient = {
+    ws,
+    userId: randomUUID(), // Anonymous but unique identifier
+    rooms: new Set(),
+  };
   rtcClients.add(client);
 
   ws.on("message", (raw) => {
