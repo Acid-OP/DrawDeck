@@ -139,13 +139,6 @@ export class Game {
  private safeSend(payload: any) {
   if (this.isSolo || !this.socket || this.socket.readyState !== WebSocket.OPEN || !this.roomId) return;
   try {
-    
-    if (payload?.type === "shape_add") {
-      // console.log(payload.roomId);
-      // console.log(payload);
-      // console.log(payload.shape.id);
-      console.log(`[CLIENT] Sending shape_add (id: ${payload.shape.id}) to room: ${payload.roomId}`);
-    }
     this.socket.send(JSON.stringify(payload));
   } catch (error) {
     console.error("[CLIENT] WS send failed:", error);
@@ -158,12 +151,7 @@ private broadcastShape(shape: Shape) {
     const existing = JSON.parse(localStorage.getItem(key) || "[]");
     localStorage.setItem(key, JSON.stringify([...existing, shape]));
   }
-
   this.existingShapes.push(shape);
-
-  // LOG: local shape immediately added
-  console.log(`[CLIENT] Shape locally added: id=${shape.id}, type=${shape.type}`, new Date().toLocaleTimeString());
-
   this.safeSend?.({
     type: "shape_add",
     roomId: this.roomId?.toString(),
@@ -940,7 +928,6 @@ public clearAllShapes() {
 
     this.socket.onmessage = (event) => {
     let msg = JSON.parse(event.data);
-    console.log("inside init handler")
     switch (msg.type) {
       case "shape_add": {
         const shape = msg.shape;
@@ -948,7 +935,6 @@ public clearAllShapes() {
         if (!exists) {
           this.existingShapes.push(shape);
           this.clearCanvas();
-          console.log("shape that recived added to the canvas ")
         }
         break;
       }
@@ -958,8 +944,6 @@ public clearAllShapes() {
         const index = this.existingShapes.findIndex(s => s.id === shapeId);
         if (index !== -1) {
           this.deleteShapeByIndex(index);
-          console.log("shape that recived removed from the canvas ")
-
         }
         break;
       }
@@ -982,9 +966,6 @@ public deleteShapeByIndex(index: number) {
   this.scheduleLocalSave();
 } else {
   this.scheduleWriteAll();
-          console.log("INSIDE DLEETE");
-      console.log(this.roomId?.toString());
-      console.log(this.roomId);
   this.safeSend({
     type: "shape_delete",
     roomId: this.roomId?.toString(),
@@ -1359,9 +1340,6 @@ mouseUpHandler = async (e: MouseEvent) => {
       if (this.isSolo) {
         this.scheduleLocalSave();
       } else {
-                console.log("INSIDE MOUSEUP");
-      console.log(this.roomId?.toString());
-      console.log(this.roomId);
         this.safeSend({
             type: "shape_add",
             roomId: this.roomId?.toString(),

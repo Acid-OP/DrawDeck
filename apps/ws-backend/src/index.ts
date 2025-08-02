@@ -23,17 +23,9 @@ function broadcastToRoom(roomId: string, data: any, exclude?: ClientInfo) {
 
   for (const [userId, client] of room.participants.entries()) {
     if (client !== exclude && client.ws.readyState === client.ws.OPEN) {
-      console.log(`📤 Sending to ${userId} in room "${roomId}": ${data.type}`);
       client.ws.send(message);
     }
   }
-}
-
-function printRoomMembers(roomId: string) {
-  const room = rooms.get(roomId);
-  if (!room) return;
-  const users = Array.from(room.participants.keys()).join(", ");
-  console.log(`👥 Current users in "${roomId}": [${users}]`);
 }
 
 wss.on("connection", (ws, request) => {
@@ -44,7 +36,6 @@ wss.on("connection", (ws, request) => {
     rooms: new Set(),
   };
   clients.add(client);
-  console.log(`✅ Dummy client connected: ${client.userId}`);
 
   ws.on("message", (raw) => {
     try {
@@ -56,7 +47,6 @@ wss.on("connection", (ws, request) => {
           const newRoom = roomId ||`room_${Date.now()}`;
           if (!rooms.has(newRoom)) {
             rooms.set(newRoom, { participants: new Map() });
-            console.log(`🏠 Room created: "${newRoom}" by ${client.userId}`);
           }
           const room = rooms.get(newRoom)!;
           room.participants.set(client.userId, client);
@@ -67,8 +57,6 @@ wss.on("connection", (ws, request) => {
             roomId: newRoom,
             userId: client.userId,
           }));
-
-          printRoomMembers(newRoom);
           break;
         }
 
@@ -86,9 +74,6 @@ wss.on("connection", (ws, request) => {
           const room = rooms.get(roomId)!;
           room.participants.set(client.userId, client);
           client.rooms.add(roomId);
-
-          console.log(`➕ ${client.userId} joined room "${roomId}"`);
-          printRoomMembers(roomId);
 
           ws.send(JSON.stringify({
             type: "joined_successfully",
@@ -108,8 +93,6 @@ wss.on("connection", (ws, request) => {
 
         case "shape_add": {
           if (!roomId || !shape) return;
-          console.log(`🖊️ [${client.userId}] added shape "${shape.id}" in room "${roomId}"`);
-          console.log(`📥 Received shape_add from ${client.userId}:`, data.shape);
 
           broadcastToRoom(roomId, {
             type: "shape_add",
@@ -123,7 +106,6 @@ wss.on("connection", (ws, request) => {
 
         case "shape_delete": {
           if (!roomId || !shapeId) return;
-          console.log(`🗑️ [${client.userId}] deleted shape "${shapeId}" in room "${roomId}"`);
 
           broadcastToRoom(roomId, {
             type: "shape_delete",
@@ -137,7 +119,6 @@ wss.on("connection", (ws, request) => {
 
         case "shape_update": {
           if (!roomId || !updatedShape || !updatedShape.id) return;
-          console.log(`✏️ [${client.userId}] updated shape "${updatedShape.id}" in room "${roomId}"`);
 
           broadcastToRoom(roomId, {
             type: "shape_updated",
@@ -174,15 +155,11 @@ wss.on("connection", (ws, request) => {
         const hasOthers = room.participants.size > 0;
         if (!hasOthers) {
           rooms.delete(roomId);
-          console.log(`🧹 Deleted empty room: "${roomId}"`);
-        } else {
-          printRoomMembers(roomId);
-        }
+        } 
       }
     });
 
     clients.delete(client);
-    console.log(`❌ Client disconnected: ${client.userId}`);
   });
 
   ws.on("error", (error) => {

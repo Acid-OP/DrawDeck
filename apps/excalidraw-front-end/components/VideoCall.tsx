@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Video, VideoOff, Mic, MicOff } from "lucide-react";
 import { motion } from "framer-motion";
-import { useAuth } from '@clerk/nextjs';
 
 interface VideoCallProps {
   roomName: string;
@@ -18,10 +17,10 @@ export function VideoCall({ roomName, token }: VideoCallProps) {
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
   const [isCameraOn, setIsCameraOn] = useState(false); 
   const [isMicOn, setIsMicOn] = useState(false);
-  const { isSignedIn, isLoaded } = useAuth();
+
 
 useEffect(() => {
-  if (!isLoaded || !isSignedIn) return;
+ 
 
   const rtc = new WebSocket('ws://localhost:8081');
   setRtcSocket(rtc);
@@ -53,7 +52,7 @@ useEffect(() => {
   };
 
   return () => rtc.close();
-}, [roomName, isLoaded, isSignedIn]);
+}, [roomName]);
 
 
   useEffect(() => {
