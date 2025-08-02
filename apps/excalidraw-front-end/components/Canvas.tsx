@@ -30,9 +30,10 @@ interface CanvasProps {
   roomId: string;
   socket: WebSocket | null;
   isSolo?: boolean;
+  isUserAuthenticated? : boolean;
 }
 
-export function Canvas({ roomId, socket, isSolo = false }: CanvasProps) {
+export function Canvas({ roomId, socket, isSolo = false , isUserAuthenticated= false }: CanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [game, setGame] = useState<Game>();
   const [hasInteracted, setHasInteracted] = useState(false);

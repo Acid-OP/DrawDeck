@@ -35,7 +35,7 @@ function broadcastToRoom(roomName: string, sender: RTCClient, payload: any) {
 wss.on("connection", (ws: WebSocket, request: IncomingMessage) => {
   const client: RTCClient = {
     ws,
-    userId: randomUUID(), // Anonymous but unique identifier
+    userId: randomUUID(), 
     rooms: new Set(),
   };
   rtcClients.add(client);

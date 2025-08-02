@@ -5,11 +5,11 @@ import { Video, VideoOff, Mic, MicOff } from "lucide-react";
 import { motion } from "framer-motion";
 
 interface VideoCallProps {
-  roomName: string;
+  roomId: string;
   token?: string; // Keep this optional for backward compatibility
 }
 
-export function VideoCall({ roomName, token }: VideoCallProps) {
+export function VideoCall({ roomId, token }: VideoCallProps) {
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
   const [rtcSocket, setRtcSocket] = useState<WebSocket | null>(null);
@@ -26,7 +26,7 @@ useEffect(() => {
   setRtcSocket(rtc);
 
   rtc.onopen = () => {
-    rtc.send(JSON.stringify({ type: "join_room", roomName }));
+    rtc.send(JSON.stringify({ type: "join_room", roomId }));
   };
 
   rtc.onmessage = async (event) => {
@@ -38,7 +38,7 @@ useEffect(() => {
         await peerRef.current.setRemoteDescription(new RTCSessionDescription(msg.data));
         const answer = await peerRef.current.createAnswer();
         await peerRef.current.setLocalDescription(answer);
-        rtc.send(JSON.stringify({ type: "rtc:answer", roomName, data: answer }));
+        rtc.send(JSON.stringify({ type: "rtc:answer", roomId, data: answer }));
         break;
 
       case "rtc:answer":
@@ -52,7 +52,7 @@ useEffect(() => {
   };
 
   return () => rtc.close();
-}, [roomName]);
+}, [roomId]);
 
 
   useEffect(() => {
@@ -68,7 +68,7 @@ useEffect(() => {
       if (event.candidate) {
         rtcSocket.send(JSON.stringify({
           type: "rtc:candidate",
-          roomName,
+          roomId,
           data: event.candidate,
         }));
       }
@@ -93,7 +93,7 @@ useEffect(() => {
 
       pc.createOffer().then((offer) => {
         pc.setLocalDescription(offer);
-        rtcSocket.send(JSON.stringify({ type: "rtc:offer", roomName, data: offer }));
+        rtcSocket.send(JSON.stringify({ type: "rtc:offer", roomId, data: offer }));
       });
     }).catch((err) => {
       console.error("Media error:", err);

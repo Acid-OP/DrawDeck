@@ -96,7 +96,7 @@ export function RoomCanvas({ slug }: { slug: string }) {
   return (
     <div className="relative w-full h-full">
       <Canvas roomId={slug} socket={socket} />
-      <VideoCall roomName={slug} />
+      <VideoCall roomId={slug} />
     </div>
   );
 }
