@@ -1,4 +1,7 @@
 import { Tool } from "@/components/Canvas";
+import { useAuth } from "@clerk/nextjs";
+
+
 type BaseShape = { readonly id: string };
 
 type Shape =
@@ -80,6 +83,7 @@ export class Game {
   private selectedShapeIndex: number | null = null;
   private hoveredForErase: number[] = [];
   socket?: WebSocket | null;
+
   private dragMode: "none" | "move" | "resize" = "none";
   private activeHandle: "tl" | "tr" | "bl" | "br" | "start" | "end" | null = null;
   private offsetX = 0;
@@ -139,6 +143,7 @@ export class Game {
  private safeSend(payload: any) {
   if (this.isSolo || !this.socket || this.socket.readyState !== WebSocket.OPEN || !this.roomId) return;
   try {
+    console.log("inside safe sent shappe")
     this.socket.send(JSON.stringify(payload));
   } catch (error) {
     console.error("[CLIENT] WS send failed:", error);
@@ -569,7 +574,7 @@ if (shape.type === "line" || shape.type === "arrow") {
   return this.isSolo ? "solo_shapes" : `shapes_${this.roomId}`;
 }
 
-  constructor(canvas: HTMLCanvasElement, roomId: string | null, socket: WebSocket | null , isSolo:boolean=false , theme: "light" | "dark" ) {
+  constructor(canvas: HTMLCanvasElement, roomId: string | null, socket: WebSocket | null , isSolo:boolean=false , theme: "light" | "dark") {
     this.canvas = canvas;
     this.ctx = canvas.getContext("2d")!;
     this.existingShapes = [];
@@ -579,7 +584,7 @@ if (shape.type === "line" || shape.type === "arrow") {
     this.socket = socket;
     this.theme = theme;
     this.clearCanvas();
-    this.panOffsetX = 0; 
+    this.panOffsetX = 0;
     this.panOffsetY = 0;
     this.loadPanOffset();
     this.clicked = false;
@@ -928,6 +933,7 @@ public clearAllShapes() {
 
     this.socket.onmessage = (event) => {
     let msg = JSON.parse(event.data);
+    console.log("inside init handler  shape added")
     switch (msg.type) {
       case "shape_add": {
         const shape = msg.shape;
@@ -1239,6 +1245,7 @@ public deleteShapeByIndex(index: number) {
           type: "shape_delete",
           roomId: this.roomId?.toString(),
           shapeId: deletedShape.id,
+  
         });
       this.scheduleWriteAll();
     } else if (this.isSolo) {
@@ -1344,6 +1351,7 @@ mouseUpHandler = async (e: MouseEvent) => {
             type: "shape_add",
             roomId: this.roomId?.toString(),
             shape,
+
           });
       }
     }
@@ -1858,7 +1866,9 @@ public getScreenCoordinates(logicalX: number, logicalY: number): { x: number; y:
             this.safeSend({
               type: "shape_add",
               roomId: this.roomId?.toString(),
-              shape: s
+              shape: s,
+
+
             });
             this.scheduleWrite(s);
           }
@@ -1881,6 +1891,7 @@ public getScreenCoordinates(logicalX: number, logicalY: number): { x: number; y:
             type: "shape_delete",
             roomId: this.roomId?.toString(),
             shapeId: shape.id,
+
           });
         this.scheduleWriteAll();
       } else if (this.isSolo) {

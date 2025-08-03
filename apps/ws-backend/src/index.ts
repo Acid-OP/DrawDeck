@@ -2,60 +2,18 @@ import { WebSocketServer, WebSocket as WSWebSocket } from "ws";
 
 const wss = new WebSocketServer({ port: 8080 });
 
-type UserSession = {
-  authenticated: boolean;
-  role: 'creator' | 'participant';
-  expires: number;
-  clerkUserId: string;
-};
-
 type ClientInfo = {
   ws: WSWebSocket;
   userId: string;
   rooms: Set<string>;
-  session?: UserSession;
 };
 
 type Room = {
   participants: Map<string, ClientInfo>;
-  creatorId?: string;
 };
 
 const clients = new Set<ClientInfo>();
 const rooms: Map<string, Room> = new Map();
-const userSessions = new Map<string, UserSession>(); 
-
-import { verifyToken } from '@clerk/backend';
-
-async function verifyClerkToken(token: string): Promise<{ id: string; sessionId?: string } | null> {
-  try {
-    const verifiedToken = await verifyToken(token, {
-      jwtKey: process.env.CLERK_JWT_KEY,
-      authorizedParties: [
-        'http://localhost:3000', 
-        'https://your-domain.com' 
-      ]
-    });
-    
-    return {
-      id: verifiedToken.sub, 
-      sessionId: verifiedToken.sid
-    };
-  } catch (error) {
-    console.error('❌ Clerk token verification failed:', error);
-    return null;
-  }
-}
-
-function isValidSession(userId: string): boolean {
-  const session = userSessions.get(userId);
-  if (!session) return false;
-  if (session.expires < Date.now()) {
-    userSessions.delete(userId);
-    return false;
-  }
-  return true;
-}
 
 function broadcastToRoom(roomId: string, data: any, exclude?: ClientInfo) {
   const room = rooms.get(roomId);
@@ -65,9 +23,17 @@ function broadcastToRoom(roomId: string, data: any, exclude?: ClientInfo) {
 
   for (const [userId, client] of room.participants.entries()) {
     if (client !== exclude && client.ws.readyState === client.ws.OPEN) {
+      console.log(`📤 Sending to ${userId} in room "${roomId}": ${data.type}`);
       client.ws.send(message);
     }
   }
+}
+
+function printRoomMembers(roomId: string) {
+  const room = rooms.get(roomId);
+  if (!room) return;
+  const users = Array.from(room.participants.keys()).join(", ");
+  console.log(`👥 Current users in "${roomId}": [${users}]`);
 }
 
 wss.on("connection", (ws, request) => {
@@ -78,48 +44,19 @@ wss.on("connection", (ws, request) => {
     rooms: new Set(),
   };
   clients.add(client);
+  console.log(`✅ Dummy client connected: ${client.userId}`);
 
-  ws.on("message", async (raw) => {
+  ws.on("message", (raw) => {
     try {
       const data = JSON.parse(raw.toString());
-      const { type, roomId, shape, shapeId, updatedShape, clerkToken } = data;
+      const { type, roomId, shape, shapeId, updatedShape } = data;
       
       switch (type) {
         case "create_room": {
-          if (!clerkToken) {
-            ws.send(JSON.stringify({
-              type: "error",
-              message: "Authentication required to create room"
-            }));
-            return;
-          }
-
-          const user = await verifyClerkToken(clerkToken);
-          if (!user) {
-            ws.send(JSON.stringify({
-              type: "error",
-              message: "Invalid authentication token"
-            }));
-            ws.close(1008, 'Authentication failed');
-            return;
-          }
-
-          const session: UserSession = {
-            authenticated: true,
-            role: 'creator',
-            expires: Date.now() + (24 * 60 * 60 * 1000), 
-            clerkUserId: user.id
-          };
-          
-          userSessions.set(client.userId, session);
-          client.session = session;
-
-          const newRoom = roomId || `room_${Date.now()}`;
+          const newRoom = roomId ||`room_${Date.now()}`;
           if (!rooms.has(newRoom)) {
-            rooms.set(newRoom, { 
-              participants: new Map(),
-              creatorId: client.userId
-            });
+            rooms.set(newRoom, { participants: new Map() });
+            console.log(`🏠 Room created: "${newRoom}" by ${client.userId}`);
           }
           const room = rooms.get(newRoom)!;
           room.participants.set(client.userId, client);
@@ -129,31 +66,14 @@ wss.on("connection", (ws, request) => {
             type: "room_created",
             roomId: newRoom,
             userId: client.userId,
-            role: 'creator'
           }));
+
+          printRoomMembers(newRoom);
           break;
         }
 
         case "join-room": {
           if (!roomId) return;
-
-          if (!clerkToken) {
-            ws.send(JSON.stringify({
-              type: "error",
-              message: "Authentication required to join room"
-            }));
-            return;
-          }
-
-          const user = await verifyClerkToken(clerkToken);
-          if (!user) {
-            ws.send(JSON.stringify({
-              type: "error",
-              message: "Invalid authentication token"
-            }));
-            ws.close(1008, 'Authentication failed');
-            return;
-          }
 
           if (!rooms.has(roomId)) {
             ws.send(JSON.stringify({
@@ -163,29 +83,21 @@ wss.on("connection", (ws, request) => {
             return;
           }
 
-          const session: UserSession = {
-            authenticated: true,
-            role: 'participant',
-            expires: Date.now() + (24 * 60 * 60 * 1000), 
-            clerkUserId: user.id
-          };
-          
-          userSessions.set(client.userId, session);
-          client.session = session;
-
           const room = rooms.get(roomId)!;
           room.participants.set(client.userId, client);
           client.rooms.add(roomId);
+
+          console.log(`➕ ${client.userId} joined room "${roomId}"`);
+          printRoomMembers(roomId);
 
           ws.send(JSON.stringify({
             type: "joined_successfully",
             roomId,
             userId: client.userId,
-            role: 'participant'
           }));
 
           broadcastToRoom(roomId, {
-            type: "user_joined",
+            type: "join-room",
             userId: client.userId,
             roomId,
             participantCount: room.participants.size,
@@ -195,15 +107,9 @@ wss.on("connection", (ws, request) => {
         }
 
         case "shape_add": {
-          if (!isValidSession(client.userId)) {
-            ws.send(JSON.stringify({
-              type: "error",
-              message: "Session expired or invalid. Please reconnect."
-            }));
-            return;
-          }
-
           if (!roomId || !shape) return;
+          console.log(`🖊️ [${client.userId}] added shape "${shape.id}" in room "${roomId}"`);
+          console.log(`📥 Received shape_add from ${client.userId}:`, data.shape);
 
           broadcastToRoom(roomId, {
             type: "shape_add",
@@ -216,15 +122,8 @@ wss.on("connection", (ws, request) => {
         }
 
         case "shape_delete": {
-          if (!isValidSession(client.userId)) {
-            ws.send(JSON.stringify({
-              type: "error",
-              message: "Session expired or invalid. Please reconnect."
-            }));
-            return;
-          }
-
           if (!roomId || !shapeId) return;
+          console.log(`🗑️ [${client.userId}] deleted shape "${shapeId}" in room "${roomId}"`);
 
           broadcastToRoom(roomId, {
             type: "shape_delete",
@@ -237,15 +136,8 @@ wss.on("connection", (ws, request) => {
         }
 
         case "shape_update": {
-          if (!isValidSession(client.userId)) {
-            ws.send(JSON.stringify({
-              type: "error",
-              message: "Session expired or invalid. Please reconnect."
-            }));
-            return;
-          }
-
           if (!roomId || !updatedShape || !updatedShape.id) return;
+          console.log(`✏️ [${client.userId}] updated shape "${updatedShape.id}" in room "${roomId}"`);
 
           broadcastToRoom(roomId, {
             type: "shape_updated",
@@ -282,12 +174,15 @@ wss.on("connection", (ws, request) => {
         const hasOthers = room.participants.size > 0;
         if (!hasOthers) {
           rooms.delete(roomId);
-        } 
+          console.log(`🧹 Deleted empty room: "${roomId}"`);
+        } else {
+          printRoomMembers(roomId);
+        }
       }
     });
 
-    userSessions.delete(client.userId);
     clients.delete(client);
+    console.log(`❌ Client disconnected: ${client.userId}`);
   });
 
   ws.on("error", (error) => {

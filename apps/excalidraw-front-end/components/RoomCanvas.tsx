@@ -1,11 +1,12 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useAuth } from '@clerk/nextjs';
 import { WS_URL } from '@/config';
 import { Canvas } from './Canvas';
 import { VideoCall } from './VideoCall';
 
-export function RoomCanvas({ slug }: { slug: string }) {
+export function RoomCanvas({ slug, encryptionKey }: { slug: string; encryptionKey: string }) {
   const [socket, setSocket] = useState<WebSocket | null>(null);
   const [isConnecting, setIsConnecting] = useState(false);
   const [connectionError, setConnectionError] = useState<string | null>(null);
@@ -28,6 +29,7 @@ export function RoomCanvas({ slug }: { slug: string }) {
             ? { type: 'create_room', roomId: slug }
             : { type: 'join-room', roomId: slug };
 
+          console.log(`📤 Sending ${payload.type} request for room "${slug}"`);
           ws.send(JSON.stringify(payload));
           setSocket(ws);
           setIsConnecting(false);
@@ -35,6 +37,45 @@ export function RoomCanvas({ slug }: { slug: string }) {
 
         ws.onmessage = (event) => {
           const data = JSON.parse(event.data);
+          const { type, ...rest } = data;
+
+          console.log("📨 WS message received:", data);
+
+          switch (type) {
+            case 'room_created':
+              console.log(`✅ Room created: "${rest.roomId}" by user ${rest.userId}`);
+              break;
+
+            case 'joined_successfully':
+              console.log(`🙌 Joined room "${rest.roomId}" as user ${rest.userId}`);
+              break;
+
+            case 'user_joined':
+              console.log(`👤 User ${rest.userId} joined room "${rest.roomId}"`);
+              console.log(`👥 Total participants: ${rest.participantCount}`);
+              break;
+
+            case 'user_left':
+              console.log(`👋 User ${rest.userId} left room "${rest.roomId}"`);
+              console.log(`👥 Remaining participants: ${rest.participantCount}`);
+              break;
+
+            case 'shape_added':
+              console.log(`➕ Shape added by ${rest.userId} (ID: ${rest.shape?.id})`);
+              break;
+
+            case 'shape_updated':
+              console.log(`✏️ Shape updated by ${rest.userId} (ID: ${rest.shape?.id})`);
+              break;
+
+            case 'shape_deleted':
+              console.log(`❌ Shape deleted by ${rest.userId} (ID: ${rest.shapeId})`);
+              break;
+
+            default:
+              console.warn('⚠️ Unknown message type received:', type, rest);
+              break;
+          }
         };
 
         ws.onerror = (err) => {
@@ -96,7 +137,9 @@ export function RoomCanvas({ slug }: { slug: string }) {
   return (
     <div className="relative w-full h-full">
       <Canvas roomId={slug} socket={socket} />
-      <VideoCall roomId={slug} />
+      {/* Uncomment when ready: */}
+      {/* <VideoCall roomName={slug} /> */}
+      {/* Or <OclaModal /> wherever you're using it */}
     </div>
   );
 }

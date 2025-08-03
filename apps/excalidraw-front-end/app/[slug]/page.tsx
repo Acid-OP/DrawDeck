@@ -1,52 +1,23 @@
 "use client";
-import { useAuth } from '@clerk/nextjs';
-import { RoomCanvas } from "@/components/RoomCanvas";
-import { useParams } from 'next/navigation';
-import { ShareLinkModal } from '@/components/modal/SharelinkModal';
-import LoaderAnimation from '@/components/Loader';
-import { useEffect, useState } from 'react';
-import AuthModal from '@/components/AuthModal';
+import { AuthWrapper } from "@/components/AuthWrapper";
+import LoaderAnimation from "@/components/Loader";
+import { useEffect, useState } from "react";
 
 export default function CanvasPage() {
-  const params = useParams();
-  const roomId = params.slug as string;
-  return <AuthWrapper roomId={roomId} />;
-}
-
-function AuthWrapper({ roomId }: { roomId: string }) {
-  const { isSignedIn, isLoaded } = useAuth();
-  const [minTimeElapsed, setMinTimeElapsed] = useState(false);
-  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [roomId, setRoomId] = useState<string | null>(null);
+  const [encryptionKey, setEncryptionKey] = useState<string | null>(null);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setMinTimeElapsed(true);
-    }, 2300);
-    return () => clearTimeout(timer);
+    const hash = window.location.hash;
+    if (hash.startsWith("#room=")) {
+      const data = hash.replace("#room=", "");
+      const [id, key] = data.split(",");
+      setRoomId(id);
+      setEncryptionKey(key);
+    }
   }, []);
 
-  useEffect(() => {
-    if (isLoaded && minTimeElapsed) {
-      if (!isSignedIn) {
-        setShowAuthModal(true);
-      }
-    }
-  }, [isLoaded, minTimeElapsed, isSignedIn]);
+  if (!roomId || !encryptionKey) return <LoaderAnimation />;
 
-  if (!isLoaded || !minTimeElapsed) {
-    return <LoaderAnimation />;
-  }
-
-  return (
-    <>
-      {isSignedIn && (
-        <>
-          <ShareLinkModal roomId={roomId} />
-          <RoomCanvas slug={roomId} />
-        </>
-      )}
-
-      <AuthModal isOpen={showAuthModal} />
-    </>
-  );
+  return <AuthWrapper roomId={roomId} encryptionKey={encryptionKey} />;
 }

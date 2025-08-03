@@ -13,7 +13,7 @@ import CurvedArrow from "./CurveArrow";
 import LocalSaveNotice from "./menuiconpointer";
 import ToolbarIcon from "./ToolBarIcon";
 import ToolIconPointer from "./toolbariconpointer";
-
+import { useAuth } from "@clerk/nextjs";
 export type Tool =
   | "hand"
   | "select"
@@ -38,6 +38,7 @@ export function Canvas({ roomId, socket, isSolo = false , isUserAuthenticated= f
   const [game, setGame] = useState<Game>();
   const [hasInteracted, setHasInteracted] = useState(false);
   const [selectedTool, setSelectedTool] = useState<Tool>("hand");
+  const { getToken } = useAuth();
   const [inputBox, setInputBox] = useState<{ 
   x: number; 
   y: number; 

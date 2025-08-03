@@ -4,6 +4,8 @@ import React, { useEffect, useRef } from "react";
 import { Play } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@clerk/nextjs";
+import { generateRoomId } from "@/lib/generateRoomId";
+import { generateAESKey } from "@/lib/crypto";
 
 interface Props {
   onClose: () => void;
@@ -14,19 +16,18 @@ export const LiveCollabModal: React.FC<Props> = ({ onClose }) => {
   const router = useRouter();
   const { isSignedIn } = useAuth();
 
-  const handleStartSession = () => {
+  const handleStartSession = async () => {
     if (!isSignedIn) {
       router.push("/signin");
       return;
     }
-
-    const randomId =
-      Math.random().toString(36).slice(2, 10) +
-      Math.random().toString(36).slice(2, 6);
+    const encryptionKey = await generateAESKey();
+    const roomId = generateRoomId();
     onClose();
 
-    sessionStorage.setItem(`creator-${randomId}`, "true");
-    router.push(`/${randomId}`);
+    sessionStorage.setItem(`creator-${roomId}`, "true");
+    const redirectURL = `/#room=${roomId},${encryptionKey}`;
+    router.push(redirectURL);
 
   };
 
