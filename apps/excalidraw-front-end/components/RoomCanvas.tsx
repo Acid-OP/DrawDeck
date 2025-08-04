@@ -100,7 +100,6 @@ export function RoomCanvas({ slug, encryptionKey }: { slug: string; encryptionKe
           setSocket(null);
           setIsConnecting(false);
           
-          // Only show error if it wasn't a clean close
           if (event.code !== 1000) {
             setConnectionError('Disconnected from room');
           }
@@ -121,7 +120,7 @@ export function RoomCanvas({ slug, encryptionKey }: { slug: string; encryptionKe
         socket.close(1000, 'Component unmounting');
       }
     };
-  }, [slug, encryptionKey]); // Added encryptionKey to dependencies
+  }, [slug, encryptionKey]); 
 
   if (connectionError) {
     return (
@@ -153,8 +152,7 @@ export function RoomCanvas({ slug, encryptionKey }: { slug: string; encryptionKe
 
   return (
     <div className="relative w-full h-full">
-      <Canvas roomId={slug} socket={socket} />
-      {/* Uncomment when ready: */}
+      <Canvas roomId={slug} socket={socket} encryptionKey={encryptionKey} />
       {/* <VideoCall roomName={slug} /> */}
     </div>
   );

@@ -8,7 +8,7 @@ export default function CanvasPage() {
   const params = useParams();
   const searchParams = useSearchParams();
   
-  // Get roomId from URL params and encryptionKey from query params
+  
   const roomId = params.slug as string;
   const encryptionKey = searchParams.get('key');
 

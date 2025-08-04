@@ -1,7 +1,6 @@
 "use client";
-
-import React, { useEffect, useRef } from "react";
-import { Play } from "lucide-react";
+import React, { useEffect, useRef, useState } from "react";
+import { Play, Users, Video } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@clerk/nextjs";
 import { generateRoomId } from "@/lib/generateRoomId";
@@ -11,27 +10,31 @@ interface Props {
   onClose: () => void;
 }
 
+type RoomType = "duo" | "group";
+
 export const LiveCollabModal: React.FC<Props> = ({ onClose }) => {
   const modalRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
   const { isSignedIn } = useAuth();
+  const [selectedRoomType, setSelectedRoomType] = useState<RoomType>("duo");
 
-const handleStartSession = async () => {
-  if (!isSignedIn) {
-    router.push("/signin");
-    return;
-  }
-  
-  const encryptionKey = await generateAESKey();
-  const roomId = generateRoomId();
-  onClose();
-  
-  sessionStorage.setItem(`creator-${roomId}`, "true");
-  
-  // Change to root level:
-  const redirectURL = `/${roomId}?key=${encryptionKey}`;
-  router.push(redirectURL);
-};
+  const handleStartSession = async () => {
+    if (!isSignedIn) {
+      router.push("/signin");
+      return;
+    }
+
+    const encryptionKey = await generateAESKey();
+    const roomId = generateRoomId();
+    onClose();
+
+    sessionStorage.setItem(`creator-${roomId}`, "true");
+    sessionStorage.setItem(`roomType-${roomId}`, selectedRoomType);
+
+    // Change to root level:
+    const redirectURL = `/${roomId}?key=${encryptionKey}&type=${selectedRoomType}`;
+    router.push(redirectURL);
+  };
 
   const handleClose = () => {
     onClose();
@@ -59,19 +62,87 @@ const handleStartSession = async () => {
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
       <div
         ref={modalRef}
-        className="relative bg-[#232329] text-white w-[700px] min-h-[350px] p-12 rounded-2xl shadow-2xl text-center border border-[#333]"
+        className="relative bg-[#232329] text-white w-[700px] min-h-[420px] p-12 rounded-2xl shadow-2xl text-center border border-[#333]"
       >
-        <h2 className="text-2xl font-bold" style={{ color: "#9e9aea" }}>
+        <h2 className="text-2xl font-bold mb-2" style={{ color: "#9e9aea" }}>
           Live collaboration
         </h2>
 
-        <p className="text-lg text-white/80 font-light leading-6 mb-6">
-          <br />
+        <p className="text-lg text-white/80 font-light leading-6 mb-8">
           Invite people to collaborate on your drawing. <br />
           <br />
           Don't worry, the session is end-to-end encrypted, and fully private.
           Not even our server can see what you draw.
         </p>
+
+        {/* Room Type Selection */}
+        <div className="mb-8 space-y-4">
+          <h3 className="text-lg font-medium text-white/90 mb-4">Choose your collaboration style:</h3>
+          
+          {/* Duo Room Option */}
+          <label 
+            className={`flex items-center p-4 rounded-lg border cursor-pointer transition-all ${
+              selectedRoomType === "duo" 
+                ? "border-[#9e9aea] bg-[#9e9aea]/10" 
+                : "border-[#444] hover:border-[#666] bg-transparent"
+            }`}
+          >
+            <input
+              type="radio"
+              name="roomType"
+              value="duo"
+              checked={selectedRoomType === "duo"}
+              onChange={(e) => setSelectedRoomType(e.target.value as RoomType)}
+              className="sr-only"
+            />
+            <div className={`w-5 h-5 rounded-full border-2 mr-4 flex items-center justify-center ${
+              selectedRoomType === "duo" ? "border-[#9e9aea]" : "border-[#666]"
+            }`}>
+              {selectedRoomType === "duo" && (
+                <div className="w-2.5 h-2.5 rounded-full bg-[#9e9aea]"></div>
+              )}
+            </div>
+            <div className="flex items-center gap-3 flex-1 text-left">
+              <Video size={20} className="text-[#9e9aea]" />
+              <div>
+                <div className="font-medium text-white">Intimate Session (2 people max)</div>
+                <div className="text-sm text-white/60">Perfect for focused collaboration with video calling</div>
+              </div>
+            </div>
+          </label>
+
+          {/* Group Room Option */}
+          <label 
+            className={`flex items-center p-4 rounded-lg border cursor-pointer transition-all ${
+              selectedRoomType === "group" 
+                ? "border-[#9e9aea] bg-[#9e9aea]/10" 
+                : "border-[#444] hover:border-[#666] bg-transparent"
+            }`}
+          >
+            <input
+              type="radio"
+              name="roomType"
+              value="group"
+              checked={selectedRoomType === "group"}
+              onChange={(e) => setSelectedRoomType(e.target.value as RoomType)}
+              className="sr-only"
+            />
+            <div className={`w-5 h-5 rounded-full border-2 mr-4 flex items-center justify-center ${
+              selectedRoomType === "group" ? "border-[#9e9aea]" : "border-[#666]"
+            }`}>
+              {selectedRoomType === "group" && (
+                <div className="w-2.5 h-2.5 rounded-full bg-[#9e9aea]"></div>
+              )}
+            </div>
+            <div className="flex items-center gap-3 flex-1 text-left">
+              <Users size={20} className="text-[#9e9aea]" />
+              <div>
+                <div className="font-medium text-white">Group Session (Multiple people)</div>
+                <div className="text-sm text-white/60">Great for team brainstorming with canvas-only collaboration</div>
+              </div>
+            </div>
+          </label>
+        </div>
 
         <button
           onClick={handleStartSession}

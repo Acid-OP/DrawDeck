@@ -83,7 +83,7 @@ export class Game {
   private selectedShapeIndex: number | null = null;
   private hoveredForErase: number[] = [];
   socket?: WebSocket | null;
-
+  encryptionKey? : string | null;
   private dragMode: "none" | "move" | "resize" = "none";
   private activeHandle: "tl" | "tr" | "bl" | "br" | "start" | "end" | null = null;
   private offsetX = 0;
@@ -161,6 +161,7 @@ private broadcastShape(shape: Shape) {
     type: "shape_add",
     roomId: this.roomId?.toString(),
     shape,
+    encryptionKey: this.encryptionKey
   });
 }
 
@@ -574,7 +575,7 @@ if (shape.type === "line" || shape.type === "arrow") {
   return this.isSolo ? "solo_shapes" : `shapes_${this.roomId}`;
 }
 
-  constructor(canvas: HTMLCanvasElement, roomId: string | null, socket: WebSocket | null , isSolo:boolean=false , theme: "light" | "dark") {
+  constructor(canvas: HTMLCanvasElement, roomId: string | null, socket: WebSocket | null , isSolo:boolean=false , theme: "light" | "dark" , encryptionKey: string | null = null) {
     this.canvas = canvas;
     this.ctx = canvas.getContext("2d")!;
     this.existingShapes = [];
@@ -584,6 +585,7 @@ if (shape.type === "line" || shape.type === "arrow") {
     this.socket = socket;
     this.theme = theme;
     this.clearCanvas();
+    this.encryptionKey = encryptionKey;
     this.panOffsetX = 0;
     this.panOffsetY = 0;
     this.loadPanOffset();
@@ -976,6 +978,7 @@ public deleteShapeByIndex(index: number) {
     type: "shape_delete",
     roomId: this.roomId?.toString(),
     shapeId: shape.id,
+    encryptionKey: this.encryptionKey
   });
 }
 
@@ -1245,6 +1248,7 @@ public deleteShapeByIndex(index: number) {
           type: "shape_delete",
           roomId: this.roomId?.toString(),
           shapeId: deletedShape.id,
+          encryptionKey: this.encryptionKey
   
         });
       this.scheduleWriteAll();
@@ -1351,6 +1355,7 @@ mouseUpHandler = async (e: MouseEvent) => {
             type: "shape_add",
             roomId: this.roomId?.toString(),
             shape,
+            encryptionKey: this.encryptionKey
 
           });
       }
@@ -1867,6 +1872,7 @@ public getScreenCoordinates(logicalX: number, logicalY: number): { x: number; y:
               type: "shape_add",
               roomId: this.roomId?.toString(),
               shape: s,
+              encryptionKey: this.encryptionKey
 
 
             });
@@ -1891,6 +1897,7 @@ public getScreenCoordinates(logicalX: number, logicalY: number): { x: number; y:
             type: "shape_delete",
             roomId: this.roomId?.toString(),
             shapeId: shape.id,
+            encryptionKey: this.encryptionKey
 
           });
         this.scheduleWriteAll();

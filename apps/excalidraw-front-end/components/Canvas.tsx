@@ -31,9 +31,10 @@ interface CanvasProps {
   socket: WebSocket | null;
   isSolo?: boolean;
   isUserAuthenticated? : boolean;
+  encryptionKey?: string;
 }
 
-export function Canvas({ roomId, socket, isSolo = false , isUserAuthenticated= false }: CanvasProps) {
+export function Canvas({ roomId, socket, isSolo = false , isUserAuthenticated= false , encryptionKey }: CanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [game, setGame] = useState<Game>();
   const [hasInteracted, setHasInteracted] = useState(false);
@@ -161,25 +162,22 @@ export function Canvas({ roomId, socket, isSolo = false , isUserAuthenticated= f
     game.setStrokeStyle(strokeStyleIndex);
     game.setFillStyle(fillIndex);
   }, [game, strokeIndex, backgroundIndex, strokeWidthIndex, strokeStyleIndex, fillIndex]);
-
+  
   useEffect(() => {
     if (canvasRef.current && dimensions.width !== 0 && dimensions.height !== 0) {
-      const g = new Game(canvasRef.current, roomId, socket, isSolo, theme);
+      const keyToPass = isSolo ? null : (encryptionKey || null);
+      const g = new Game(canvasRef.current, roomId, socket, isSolo, theme , keyToPass);
       g.onToolChange = (tool) => setSelectedTool(tool);
-  g.onTextInsert = (logicalX, logicalY) => {
-  if ((window as any).justBlurredTextInput) return;
-  
-  // Convert logical coordinates to screen coordinates
-  const screenX = logicalX * g.zoom + g.panOffsetX;
-  const screenY = logicalY * g.zoom + g.panOffsetY;
-  setInputBox({ x: screenX, y: screenY, logicalX, logicalY });
-};
+      g.onTextInsert = (logicalX, logicalY) => {
+        if ((window as any).justBlurredTextInput) return;
+        const screenX = logicalX * g.zoom + g.panOffsetX;
+        const screenY = logicalY * g.zoom + g.panOffsetY;
+        setInputBox({ x: screenX, y: screenY, logicalX, logicalY });
+      };
       setGame(g);
-      
-
       return () => g.destroy();
     }
-  }, [canvasRef, isSolo, roomId, socket, dimensions, theme]);
+  }, [canvasRef, isSolo, roomId, socket, dimensions, theme , encryptionKey]);
 
   const shouldShowPropertiesPanel = ["rect", "diamond", "circle", "arrow", "line", "pencil", "text"].includes(selectedTool);
   
