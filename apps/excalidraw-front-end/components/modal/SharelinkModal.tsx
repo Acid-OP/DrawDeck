@@ -5,13 +5,17 @@ import { Copy, Check, X } from "lucide-react";
 
 interface Props {
   roomId: string;
+  encryptionKey: string;
+  roomType: 'duo' | 'group';
 }
 
-export const ShareLinkModal: React.FC<Props> = ({ roomId }) => {
+
+export const ShareLinkModal: React.FC<Props> = ({ roomId ,  encryptionKey , roomType }) => {
   const [isVisible, setIsVisible] = useState(true);
   const [copied, setCopied] = useState(false);
   const modalRef = useRef<HTMLDivElement>(null);
-  const shareableLink = `${window.location.origin}/${roomId}`;
+  const shareableLink = `${window.location.origin}/${roomId}?key=${encryptionKey}&type=${roomType}`;
+
 
   const handleCopy = async () => {
     try {
@@ -22,6 +26,15 @@ export const ShareLinkModal: React.FC<Props> = ({ roomId }) => {
       console.error("Failed to copy link:", err);
     }
   };
+useEffect(() => {
+  const hasVisited = sessionStorage.getItem(`visited-${roomId}`);
+  if (!hasVisited) {
+    setIsVisible(true); 
+    sessionStorage.setItem(`visited-${roomId}`, "true");
+  } else {
+    setIsVisible(false); 
+  }
+}, [roomId]);
 
   const handleClose = () => {
     setIsVisible(false);
@@ -53,7 +66,7 @@ export const ShareLinkModal: React.FC<Props> = ({ roomId }) => {
         ref={modalRef}
         className="relative bg-[#232329] text-white w-[720px] max-w-[90%] p-10 rounded-2xl shadow-[0_0_40px_rgba(0,0,0,0.6)] border border-[#444] transition-all"
       >
-        {/* Close Button */}
+   
         <button
           onClick={handleClose}
           className="absolute top-5 right-5 text-white/70 hover:text-white transition-colors cursor-pointer"
@@ -61,7 +74,7 @@ export const ShareLinkModal: React.FC<Props> = ({ roomId }) => {
           <X size={24} />
         </button>
 
-        {/* Heading */}
+       
         <h2 className="text-3xl font-bold mb-4" style={{ color: "#9e9aea" }}>
           Share Collaboration Link
         </h2>
@@ -70,7 +83,7 @@ export const ShareLinkModal: React.FC<Props> = ({ roomId }) => {
           Send this link to anyone you want to collaborate with. They'll be able to draw with you in real-time.
         </p>
 
-        {/* Input & Copy */}
+
         <div className="mb-6">
           <label className="block text-sm font-medium text-white/90 mb-2">Link</label>
           <div className="flex items-center gap-3">
@@ -99,7 +112,6 @@ export const ShareLinkModal: React.FC<Props> = ({ roomId }) => {
           </div>
         </div>
 
-        {/* Footer Info */}
         <div className="text-sm text-white/60 space-y-1">
           <p>💡 Anyone with this link can join your collaborative session.</p>
           <p>🔒 Your session is end-to-end encrypted and private.</p>

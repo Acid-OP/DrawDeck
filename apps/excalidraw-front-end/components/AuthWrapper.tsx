@@ -7,7 +7,13 @@ import { ShareLinkModal } from "./modal/SharelinkModal";
 import { RoomCanvas } from "./RoomCanvas";
 import AuthModal from "./AuthModal";
 
-export function AuthWrapper({ roomId, encryptionKey }: { roomId: string, encryptionKey: string }) {
+interface AuthWrapperProps {
+  roomId: string;
+  encryptionKey: string;
+  roomType: 'duo' | 'group';
+}
+
+export function AuthWrapper({ roomId, encryptionKey, roomType }: AuthWrapperProps) {
   const { isSignedIn, isLoaded } = useAuth();
   const [minTimeElapsed, setMinTimeElapsed] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
@@ -24,17 +30,17 @@ export function AuthWrapper({ roomId, encryptionKey }: { roomId: string, encrypt
   }, [isLoaded, minTimeElapsed, isSignedIn]);
 
   if (!isLoaded || !minTimeElapsed) return <LoaderAnimation />;
-return (
-  <>
-    {isSignedIn ? (
-      <>
-        <ShareLinkModal roomId={roomId} />
-        <RoomCanvas slug={roomId} encryptionKey={encryptionKey} />
-      </>
-    ) : (
-      <AuthModal isOpen={showAuthModal} />
-    )}
-  </>
-);
 
+  return (
+    <>
+      {isSignedIn ? (
+        <>
+          <ShareLinkModal roomId={roomId} encryptionKey={encryptionKey} roomType={roomType} />
+          <RoomCanvas slug={roomId} encryptionKey={encryptionKey} roomType={roomType} />
+        </>
+      ) : (
+        <AuthModal isOpen={showAuthModal} />
+      )}
+    </>
+  );
 }

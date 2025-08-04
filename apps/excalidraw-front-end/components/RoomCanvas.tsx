@@ -5,11 +5,18 @@ import { WS_URL } from '@/config';
 import { Canvas } from './Canvas';
 import { VideoCall } from './VideoCall';
 
-export function RoomCanvas({ slug, encryptionKey }: { slug: string; encryptionKey: string }) {
+export function RoomCanvas({ slug, encryptionKey , roomType:propRoomType  }: { slug: string; encryptionKey: string; roomType?: 'duo' | 'group' }) {
   const [socket, setSocket] = useState<WebSocket | null>(null);
   const [isConnecting, setIsConnecting] = useState(false);
   const [connectionError, setConnectionError] = useState<string | null>(null);
 
+
+  const roomTypeFromStorage = typeof window !== 'undefined' 
+    ? sessionStorage.getItem(`roomType-${slug}`) as 'duo' | 'group' | null
+    : null;
+  
+  const roomType = propRoomType;
+  const shouldShowVideoCall = roomType === 'duo';
   useEffect(() => {
     if (!slug || !encryptionKey) {
       console.error('❌ Missing slug or encryptionKey');
@@ -153,7 +160,9 @@ export function RoomCanvas({ slug, encryptionKey }: { slug: string; encryptionKe
   return (
     <div className="relative w-full h-full">
       <Canvas roomId={slug} socket={socket} encryptionKey={encryptionKey} />
-      {/* <VideoCall roomName={slug} /> */}
+       {shouldShowVideoCall && ( 
+        <VideoCall roomId={slug} />
+       )}
     </div>
   );
 }

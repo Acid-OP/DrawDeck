@@ -29,9 +29,7 @@ export const LiveCollabModal: React.FC<Props> = ({ onClose }) => {
     onClose();
 
     sessionStorage.setItem(`creator-${roomId}`, "true");
-    sessionStorage.setItem(`roomType-${roomId}`, selectedRoomType);
 
-    // Change to root level:
     const redirectURL = `/${roomId}?key=${encryptionKey}&type=${selectedRoomType}`;
     router.push(redirectURL);
   };
@@ -75,11 +73,9 @@ export const LiveCollabModal: React.FC<Props> = ({ onClose }) => {
           Not even our server can see what you draw.
         </p>
 
-        {/* Room Type Selection */}
         <div className="mb-8 space-y-4">
           <h3 className="text-lg font-medium text-white/90 mb-4">Choose your collaboration style:</h3>
           
-          {/* Duo Room Option */}
           <label 
             className={`flex items-center p-4 rounded-lg border cursor-pointer transition-all ${
               selectedRoomType === "duo" 
@@ -111,7 +107,6 @@ export const LiveCollabModal: React.FC<Props> = ({ onClose }) => {
             </div>
           </label>
 
-          {/* Group Room Option */}
           <label 
             className={`flex items-center p-4 rounded-lg border cursor-pointer transition-all ${
               selectedRoomType === "group" 

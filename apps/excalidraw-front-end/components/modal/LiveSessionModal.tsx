@@ -11,7 +11,7 @@ export const LiveSessionModal: React.FC<Props> = ({ onClose }) => {
   const modalRef = useRef<HTMLDivElement>(null);
   const [roomURL, setRoomURL] = useState("");
 
-  // Get current URL as room link
+ 
   useEffect(() => {
     setRoomURL(window.location.href);
   }, []);
@@ -20,7 +20,7 @@ export const LiveSessionModal: React.FC<Props> = ({ onClose }) => {
     if (roomURL) await navigator.clipboard.writeText(roomURL);
   };
 
-  // Close on ESC
+ 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
@@ -29,7 +29,7 @@ export const LiveSessionModal: React.FC<Props> = ({ onClose }) => {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [onClose]);
 
-  // Close on outside click
+
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (modalRef.current && !modalRef.current.contains(e.target as Node)) {
