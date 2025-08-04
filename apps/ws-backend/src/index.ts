@@ -10,9 +10,10 @@ type ClientInfo = {
 
 type Room = {
   participants: Map<string, ClientInfo>;
+  roomType?: 'duo' | 'group'; 
 };
 const roomSecrets: Map<string, string> = new Map(); 
-
+const roomTypes: Map<string, 'duo' | 'group'> = new Map();
 const clients = new Set<ClientInfo>();
 const rooms: Map<string, Room> = new Map();
 
@@ -53,41 +54,36 @@ wss.on("connection", (ws, request) => {
       const { type, roomId, shape, shapeId, updatedShape } = data;
       
       switch (type) {
-case "create_room": {
-  const newRoom = roomId || `room_${Date.now()}`;
-  const encryptionKey = data.encryptionKey;
-  console.log(encryptionKey);
+        case "create_room": {
+          const newRoom = roomId || `room_${Date.now()}`;
+          const encryptionKey = data.encryptionKey;
+          const roomType = data.roomType || 'group';
+            if (!encryptionKey) {
+              ws.send(JSON.stringify({
+                type: "error",
+                message: "Missing encryption key.",
+              }));
+              return;
+            }
+            if (!rooms.has(newRoom)) {
+              rooms.set(newRoom, { participants: new Map() });
+              roomSecrets.set(newRoom, encryptionKey);
+              roomTypes.set(newRoom, roomType);
+            }
+            const room = rooms.get(newRoom)!;
+            room.participants.set(client.userId, client);
+            client.rooms.add(newRoom);
 
-  if (!encryptionKey) {
-    ws.send(JSON.stringify({
-      type: "error",
-      message: "Missing encryption key.",
-    }));
-    return;
-  }
+            ws.send(JSON.stringify({
+              type: "room_created",
+              roomId: newRoom,
+              userId: client.userId,
+            }));
 
-  if (!rooms.has(newRoom)) {
-    rooms.set(newRoom, { participants: new Map() });
-    roomSecrets.set(newRoom, encryptionKey); 
-    console.log(`🏠 Room created: "${newRoom}" by ${client.userId}`);
-  }
-
-  const room = rooms.get(newRoom)!;
-  room.participants.set(client.userId, client);
-  client.rooms.add(newRoom);
-
-  ws.send(JSON.stringify({
-    type: "room_created",
-    roomId: newRoom,
-    userId: client.userId,
-  }));
-
-  printRoomMembers(newRoom);
-  break;
-}
-
-
-case "join-room": {
+            printRoomMembers(newRoom);
+            break;
+        }
+        case "join-room": {
   if (!roomId) return;
   const encryptionKey = data.encryptionKey;
   console.log(encryptionKey);
@@ -110,6 +106,18 @@ case "join-room": {
   }
 
   const room = rooms.get(roomId)!;
+  const roomType = roomTypes.get(roomId) || 'group';
+          if (roomType === 'duo' && room.participants.size >= 2) {
+            ws.send(JSON.stringify({
+              type: "room_full",
+              message: "This duo room is full. Only 2 participants are allowed.",
+              roomId: roomId,
+              maxCapacity: 2,
+              currentCount: room.participants.size,
+            }));
+            console.log(`🚫 ${client.userId} tried to join full duo room "${roomId}" (${room.participants.size}/2)`);
+            return;
+          }
   room.participants.set(client.userId, client);
   client.rooms.add(roomId);
 
@@ -222,7 +230,7 @@ if (!expectedKey || encryptionKey !== expectedKey) {
         const hasOthers = room.participants.size > 0;
         if (!hasOthers) {
           rooms.delete(roomId);
-          console.log(`🧹 Deleted empty room: "${roomId}"`);
+          roomSecrets.delete(roomId);
         } else {
           printRoomMembers(roomId);
         }
