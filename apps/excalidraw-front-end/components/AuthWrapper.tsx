@@ -24,16 +24,17 @@ export function AuthWrapper({ roomId, encryptionKey }: { roomId: string, encrypt
   }, [isLoaded, minTimeElapsed, isSignedIn]);
 
   if (!isLoaded || !minTimeElapsed) return <LoaderAnimation />;
-
-  return (
-    <>
-      {isSignedIn && (
-        <>
-          <ShareLinkModal roomId={roomId} />
-          <RoomCanvas slug={roomId} encryptionKey={encryptionKey} />
-        </>
-      )}
+return (
+  <>
+    {isSignedIn ? (
+      <>
+        <ShareLinkModal roomId={roomId} />
+        <RoomCanvas slug={roomId} encryptionKey={encryptionKey} />
+      </>
+    ) : (
       <AuthModal isOpen={showAuthModal} />
-    </>
-  );
+    )}
+  </>
+);
+
 }

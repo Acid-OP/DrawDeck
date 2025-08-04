@@ -1,5 +1,5 @@
 "use client";
-import { useErrorBoundary } from "@/app/hooks/hooks";
+import { useErrorBoundary } from "@/hooks/hooks";
 import ErrorFallback from "@/components/Errorfallback";
 import FloatingDoodles from "@/components/FloatingDoodles";
 import GraphicSection from "@/components/GraphicSession";

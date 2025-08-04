@@ -11,6 +11,7 @@ type ClientInfo = {
 type Room = {
   participants: Map<string, ClientInfo>;
 };
+const roomSecrets: Map<string, string> = new Map(); 
 
 const clients = new Set<ClientInfo>();
 const rooms: Map<string, Room> = new Map();
@@ -52,62 +53,99 @@ wss.on("connection", (ws, request) => {
       const { type, roomId, shape, shapeId, updatedShape } = data;
       
       switch (type) {
-        case "create_room": {
-          const newRoom = roomId ||`room_${Date.now()}`;
-          if (!rooms.has(newRoom)) {
-            rooms.set(newRoom, { participants: new Map() });
-            console.log(`🏠 Room created: "${newRoom}" by ${client.userId}`);
-          }
-          const room = rooms.get(newRoom)!;
-          room.participants.set(client.userId, client);
-          client.rooms.add(newRoom);
+case "create_room": {
+  const newRoom = roomId || `room_${Date.now()}`;
+  const encryptionKey = data.encryptionKey;
+  console.log(encryptionKey);
 
-          ws.send(JSON.stringify({
-            type: "room_created",
-            roomId: newRoom,
-            userId: client.userId,
-          }));
+  if (!encryptionKey) {
+    ws.send(JSON.stringify({
+      type: "error",
+      message: "Missing encryption key.",
+    }));
+    return;
+  }
 
-          printRoomMembers(newRoom);
-          break;
-        }
+  if (!rooms.has(newRoom)) {
+    rooms.set(newRoom, { participants: new Map() });
+    roomSecrets.set(newRoom, encryptionKey); 
+    console.log(`🏠 Room created: "${newRoom}" by ${client.userId}`);
+  }
 
-        case "join-room": {
-          if (!roomId) return;
+  const room = rooms.get(newRoom)!;
+  room.participants.set(client.userId, client);
+  client.rooms.add(newRoom);
 
-          if (!rooms.has(roomId)) {
-            ws.send(JSON.stringify({
-              type: "error",
-              message: `Room "${roomId}" does not exist.`,
-            }));
-            return;
-          }
+  ws.send(JSON.stringify({
+    type: "room_created",
+    roomId: newRoom,
+    userId: client.userId,
+  }));
 
-          const room = rooms.get(roomId)!;
-          room.participants.set(client.userId, client);
-          client.rooms.add(roomId);
+  printRoomMembers(newRoom);
+  break;
+}
 
-          console.log(`➕ ${client.userId} joined room "${roomId}"`);
-          printRoomMembers(roomId);
 
-          ws.send(JSON.stringify({
-            type: "joined_successfully",
-            roomId,
-            userId: client.userId,
-          }));
+case "join-room": {
+  if (!roomId) return;
+  const encryptionKey = data.encryptionKey;
+  console.log(encryptionKey);
 
-          broadcastToRoom(roomId, {
-            type: "join-room",
-            userId: client.userId,
-            roomId,
-            participantCount: room.participants.size,
-            timestamp: new Date().toISOString(),
-          }, client);
-          break;
-        }
+  if (!rooms.has(roomId)) {
+    ws.send(JSON.stringify({
+      type: "error",
+      message: `Room "${roomId}" does not exist.`,
+    }));
+    return;
+  }
+
+  const expectedKey = roomSecrets.get(roomId);
+  if (!expectedKey || encryptionKey !== expectedKey) {
+    ws.send(JSON.stringify({
+      type: "error",
+      message: "Invalid or missing encryption key.",
+    }));
+    return;
+  }
+
+  const room = rooms.get(roomId)!;
+  room.participants.set(client.userId, client);
+  client.rooms.add(roomId);
+
+  console.log(`➕ ${client.userId} joined room "${roomId}"`);
+  printRoomMembers(roomId);
+
+  ws.send(JSON.stringify({
+    type: "joined_successfully",
+    roomId,
+    userId: client.userId,
+  }));
+
+  broadcastToRoom(roomId, {
+    type: "join-room",
+    userId: client.userId,
+    roomId,
+    participantCount: room.participants.size,
+    timestamp: new Date().toISOString(),
+  }, client);
+  break;
+}
+
 
         case "shape_add": {
           if (!roomId || !shape) return;
+          const encryptionKey = data.encryptionKey;
+  console.log("shape added",encryptionKey);
+          const expectedKey = roomSecrets.get(roomId);
+if (!expectedKey || encryptionKey !== expectedKey) {
+  ws.send(JSON.stringify({
+    type: "error",
+    message: "Invalid or missing encryption key.",
+  }));
+  return;
+}
+
           console.log(`🖊️ [${client.userId}] added shape "${shape.id}" in room "${roomId}"`);
           console.log(`📥 Received shape_add from ${client.userId}:`, data.shape);
 
@@ -123,7 +161,17 @@ wss.on("connection", (ws, request) => {
 
         case "shape_delete": {
           if (!roomId || !shapeId) return;
-          console.log(`🗑️ [${client.userId}] deleted shape "${shapeId}" in room "${roomId}"`);
+                    const encryptionKey = data.encryptionKey;
+  console.log("deleetd",encryptionKey);
+          const expectedKey = roomSecrets.get(roomId);
+if (!expectedKey || encryptionKey !== expectedKey) {
+  ws.send(JSON.stringify({
+    type: "error",
+    message: "Invalid or missing encryption key.",
+  }));
+  return;
+}
+
 
           broadcastToRoom(roomId, {
             type: "shape_delete",

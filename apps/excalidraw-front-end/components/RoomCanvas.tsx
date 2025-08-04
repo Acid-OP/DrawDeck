@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useAuth } from '@clerk/nextjs';
 import { WS_URL } from '@/config';
 import { Canvas } from './Canvas';
 import { VideoCall } from './VideoCall';
@@ -12,10 +11,15 @@ export function RoomCanvas({ slug, encryptionKey }: { slug: string; encryptionKe
   const [connectionError, setConnectionError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!slug) return;
+    if (!slug || !encryptionKey) {
+      console.error('❌ Missing slug or encryptionKey');
+      setConnectionError('Missing room parameters');
+      return;
+    }
 
     const connectWebSocket = async () => {
       try {
+        console.log(`🔌 Connecting to room "${slug}" with key...`);
         setIsConnecting(true);
         setConnectionError(null);
 
@@ -24,12 +28,14 @@ export function RoomCanvas({ slug, encryptionKey }: { slug: string; encryptionKe
         ws.onopen = () => {
           console.log('✅ WebSocket connected');
           const isCreator = sessionStorage.getItem(`creator-${slug}`) === 'true';
+          
+          console.log(`👤 User role: ${isCreator ? 'Creator' : 'Participant'}`);
 
           const payload = isCreator
-            ? { type: 'create_room', roomId: slug }
-            : { type: 'join-room', roomId: slug };
+            ? { type: 'create_room', roomId: slug, encryptionKey }
+            : { type: 'join-room', roomId: slug, encryptionKey }; 
 
-          console.log(`📤 Sending ${payload.type} request for room "${slug}"`);
+          console.log(payload.encryptionKey);
           ws.send(JSON.stringify(payload));
           setSocket(ws);
           setIsConnecting(false);
@@ -72,6 +78,11 @@ export function RoomCanvas({ slug, encryptionKey }: { slug: string; encryptionKe
               console.log(`❌ Shape deleted by ${rest.userId} (ID: ${rest.shapeId})`);
               break;
 
+            case 'error':
+              console.error(`🚨 Server error: ${rest.message}`);
+              setConnectionError(rest.message || 'Server error occurred');
+              break;
+
             default:
               console.warn('⚠️ Unknown message type received:', type, rest);
               break;
@@ -88,7 +99,11 @@ export function RoomCanvas({ slug, encryptionKey }: { slug: string; encryptionKe
           console.log('🔌 WebSocket closed:', event.code, event.reason);
           setSocket(null);
           setIsConnecting(false);
-          setConnectionError('Disconnected from room');
+          
+          // Only show error if it wasn't a clean close
+          if (event.code !== 1000) {
+            setConnectionError('Disconnected from room');
+          }
         };
       } catch (error) {
         console.error('❌ Connection error:', error);
@@ -101,11 +116,12 @@ export function RoomCanvas({ slug, encryptionKey }: { slug: string; encryptionKe
 
     return () => {
       if (socket?.readyState === WebSocket.OPEN) {
+        console.log('🚪 Leaving room...');
         socket.send(JSON.stringify({ type: 'leave_room', roomId: slug }));
-        socket.close();
+        socket.close(1000, 'Component unmounting');
       }
     };
-  }, [slug]);
+  }, [slug, encryptionKey]); // Added encryptionKey to dependencies
 
   if (connectionError) {
     return (
@@ -116,7 +132,7 @@ export function RoomCanvas({ slug, encryptionKey }: { slug: string; encryptionKe
             onClick={() => window.location.reload()}
             className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors"
           >
-            Retry
+            Retry Connection
           </button>
         </div>
       </div>
@@ -129,6 +145,7 @@ export function RoomCanvas({ slug, encryptionKey }: { slug: string; encryptionKe
         <div className="p-6 text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600 mx-auto mb-4"></div>
           <p>Connecting to room "{slug}"...</p>
+          <p className="text-sm text-gray-500 mt-2">Establishing secure connection...</p>
         </div>
       </div>
     );
@@ -139,7 +156,6 @@ export function RoomCanvas({ slug, encryptionKey }: { slug: string; encryptionKe
       <Canvas roomId={slug} socket={socket} />
       {/* Uncomment when ready: */}
       {/* <VideoCall roomName={slug} /> */}
-      {/* Or <OclaModal /> wherever you're using it */}
     </div>
   );
 }

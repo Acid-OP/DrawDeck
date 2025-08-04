@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { AlertCircle, ArrowRight, UserPlus } from "lucide-react";
 import { useSignUp } from "@clerk/nextjs";
-import { useErrorHandler } from "@/app/hooks/hooks";
+import { useErrorHandler } from "@/hooks/hooks";
 
 interface SignupFormProps {
   isDark: boolean;

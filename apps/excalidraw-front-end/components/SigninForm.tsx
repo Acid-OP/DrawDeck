@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { AlertCircle, ArrowRight, User } from "lucide-react";
 import { useSignIn } from "@clerk/nextjs";
-import { useErrorHandler } from "@/app/hooks/hooks";
+import { useErrorHandler } from "@/hooks/hooks";
 
 
 interface SignInFormProps {
