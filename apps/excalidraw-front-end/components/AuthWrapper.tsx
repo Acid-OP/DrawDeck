@@ -34,12 +34,11 @@ export function AuthWrapper({ roomId, encryptionKey, roomType }: AuthWrapperProp
     <>
       {isSignedIn ? (
         <>
-          {/* Auto-triggered modal on first visit */}
           <ShareLinkModal 
             roomId={roomId} 
             encryptionKey={encryptionKey} 
             roomType={roomType} 
-            isManualTrigger={false} // This is auto-triggered
+            isManualTrigger={false} 
           />
           <RoomCanvas slug={roomId} encryptionKey={encryptionKey} roomType={roomType} />
         </>
