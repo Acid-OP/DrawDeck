@@ -15,8 +15,6 @@
     "typescript": "^5"
   },
   "dependencies": {
-    "@clerk/backend": "^2.6.0",
-    "@clerk/clerk-sdk-node": "^5.1.6",
     "@repo/backend-common": "workspace:*",
     "@types/jsonwebtoken": "^9.0.9",
     "@types/ws": "^8.18.1",

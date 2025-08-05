@@ -130,12 +130,6 @@ importers:
 
   apps/ws-backend:
     dependencies:
-      '@clerk/backend':
-        specifier: ^2.6.0
-        version: 2.6.0(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
-      '@clerk/clerk-sdk-node':
-        specifier: ^5.1.6
-        version: 5.1.6(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
       '@repo/backend-common':
         specifier: workspace:*
         version: link:../../packages/backend-common
