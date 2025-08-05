@@ -7,6 +7,7 @@ import { TopBar } from "./TopBar";
 import { Menu } from "./Menu";
 import { ExcalidrawPropertiesPanel } from "./PropertiesPanel";
 import { LiveCollabModal } from "./modal/LiveCollabModal";
+import { ShareLinkModal } from "./modal/SharelinkModal";
 import { ZoomBar } from "./ZoomBar";
 import { Header } from "./Header";
 import CurvedArrow from "./CurveArrow";
@@ -14,6 +15,7 @@ import LocalSaveNotice from "./menuiconpointer";
 import ToolbarIcon from "./ToolBarIcon";
 import ToolIconPointer from "./toolbariconpointer";
 import { useAuth } from "@clerk/nextjs";
+
 export type Tool =
   | "hand"
   | "select"
@@ -30,27 +32,30 @@ interface CanvasProps {
   roomId: string;
   socket: WebSocket | null;
   isSolo?: boolean;
-  isUserAuthenticated? : boolean;
+  isUserAuthenticated?: boolean;
   encryptionKey?: string;
+  roomType?: 'duo' | 'group';
 }
 
-export function Canvas({ roomId, socket, isSolo = false , isUserAuthenticated= false , encryptionKey }: CanvasProps) {
+export function Canvas({ roomId, socket, isSolo = false, isUserAuthenticated = false, encryptionKey, roomType }: CanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [game, setGame] = useState<Game>();
   const [hasInteracted, setHasInteracted] = useState(false);
   const [selectedTool, setSelectedTool] = useState<Tool>("hand");
   const { getToken } = useAuth();
   const [inputBox, setInputBox] = useState<{ 
-  x: number; 
-  y: number; 
-  logicalX: number; 
-  logicalY: number; 
-} | null>(null);
+    x: number; 
+    y: number; 
+    logicalX: number; 
+    logicalY: number; 
+  } | null>(null);
   const [dimensions, setDimensions] = useState<{ width: number; height: number }>({
     width: 0,
     height: 0,
   });
+  
   const [showLiveModal, setShowLiveModal] = useState(false);
+  const [showShareLinkModal, setShowShareLinkModal] = useState(false);
   const [strokeIndex, setStrokeIndex] = useState(0);
   const [backgroundIndex, setBackgroundIndex] = useState(0);
   const [strokeWidthIndex, setStrokeWidthIndex] = useState(1);
@@ -59,6 +64,8 @@ export function Canvas({ roomId, socket, isSolo = false , isUserAuthenticated= f
   const [theme, setTheme] = useState<"light" | "dark">("dark");
   const [zoom, setZoom] = useState(1);
   const [isMobile, setIsMobile] = useState(false);
+
+  const isCollabMode = !isSolo && roomType && encryptionKey;
 
   const getStrokeColors = (theme: "light" | "dark") => [
     theme === "dark" ? '#ffffff' : '#1e1e1e',
@@ -98,14 +105,22 @@ export function Canvas({ roomId, socket, isSolo = false , isUserAuthenticated= f
     }
   }, [game]);
 
-  const handleCloseModal = useCallback(() => {
+  const handleCloseLiveModal = useCallback(() => {
     sessionStorage.setItem('collabModalShown', 'true');
     setShowLiveModal(false);
   }, []);
 
-  const handleShareButtonClick = useCallback(() => {
-    setShowLiveModal(true);
+  const handleCloseShareLinkModal = useCallback(() => {
+    setShowShareLinkModal(false);
   }, []);
+
+  const handleShareButtonClick = useCallback(() => {
+    if (isCollabMode) {
+      setShowShareLinkModal(true);
+    } else {
+      setShowLiveModal(true);
+    }
+  }, [isCollabMode]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -166,7 +181,7 @@ export function Canvas({ roomId, socket, isSolo = false , isUserAuthenticated= f
   useEffect(() => {
     if (canvasRef.current && dimensions.width !== 0 && dimensions.height !== 0) {
       const keyToPass = isSolo ? null : (encryptionKey || null);
-      const g = new Game(canvasRef.current, roomId, socket, isSolo, theme , keyToPass);
+      const g = new Game(canvasRef.current, roomId, socket, isSolo, theme, keyToPass);
       g.onToolChange = (tool) => setSelectedTool(tool);
       g.onTextInsert = (logicalX, logicalY) => {
         if ((window as any).justBlurredTextInput) return;
@@ -177,7 +192,7 @@ export function Canvas({ roomId, socket, isSolo = false , isUserAuthenticated= f
       setGame(g);
       return () => g.destroy();
     }
-  }, [canvasRef, isSolo, roomId, socket, dimensions, theme , encryptionKey]);
+  }, [canvasRef, isSolo, roomId, socket, dimensions, theme, encryptionKey]);
 
   const shouldShowPropertiesPanel = ["rect", "diamond", "circle", "arrow", "line", "pencil", "text"].includes(selectedTool);
   
@@ -206,6 +221,12 @@ export function Canvas({ roomId, socket, isSolo = false , isUserAuthenticated= f
           theme={theme} 
           onThemeToggle={toggleTheme} 
           onClearCanvas={clearCanvasAndShapes}
+          {...(isCollabMode && {
+            isCollabMode: true,
+            roomId: roomId,
+            encryptionKey: encryptionKey,
+            roomType: roomType
+          })}
         />
 
         <TopBar 
@@ -214,7 +235,10 @@ export function Canvas({ roomId, socket, isSolo = false , isUserAuthenticated= f
           theme={theme} 
         />
 
-        <ShareButton onClick={handleShareButtonClick} />
+        <ShareButton 
+          onClick={handleShareButtonClick} 
+          isCollabMode={!!isCollabMode}
+        />
       </div>
       
       {shouldShowWelcome && (
@@ -287,7 +311,17 @@ export function Canvas({ roomId, socket, isSolo = false , isUserAuthenticated= f
       </div>
 
       {showLiveModal && (
-        <LiveCollabModal onClose={handleCloseModal} />
+        <LiveCollabModal onClose={handleCloseLiveModal} />
+      )}
+
+      {showShareLinkModal && isCollabMode && (
+        <ShareLinkModal 
+          roomId={roomId}
+          encryptionKey={encryptionKey!}
+          roomType={roomType!}
+          onClose={handleCloseShareLinkModal}
+          isManualTrigger={true}
+        />
       )}
     </div>
   );

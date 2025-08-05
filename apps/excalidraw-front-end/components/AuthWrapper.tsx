@@ -1,5 +1,4 @@
 "use client"
-
 import { useAuth } from "@clerk/nextjs";
 import { useEffect, useState } from "react";
 import LoaderAnimation from "./Loader";
@@ -35,7 +34,13 @@ export function AuthWrapper({ roomId, encryptionKey, roomType }: AuthWrapperProp
     <>
       {isSignedIn ? (
         <>
-          <ShareLinkModal roomId={roomId} encryptionKey={encryptionKey} roomType={roomType} />
+          {/* Auto-triggered modal on first visit */}
+          <ShareLinkModal 
+            roomId={roomId} 
+            encryptionKey={encryptionKey} 
+            roomType={roomType} 
+            isManualTrigger={false} // This is auto-triggered
+          />
           <RoomCanvas slug={roomId} encryptionKey={encryptionKey} roomType={roomType} />
         </>
       ) : (

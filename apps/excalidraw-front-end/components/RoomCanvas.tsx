@@ -292,7 +292,7 @@ export function RoomCanvas({ slug, encryptionKey, roomType: propRoomType }: { sl
 
   return (
     <div className="relative w-full h-full">
-      <Canvas roomId={slug} socket={socket} encryptionKey={encryptionKey} />
+      <Canvas roomId={slug} socket={socket} encryptionKey={encryptionKey} roomType= {roomType} />
       {shouldShowVideoCall && ( 
         <VideoCall roomId={slug} />
       )}

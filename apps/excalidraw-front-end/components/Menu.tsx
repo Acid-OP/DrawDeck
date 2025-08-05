@@ -1,5 +1,4 @@
 "use client";
-
 import { useState, useRef, useEffect } from "react";
 import { SidebarModal } from "./SidebarModal";
 import { MenuIcon } from "lucide-react";
@@ -8,10 +7,22 @@ import CurvedArrow from "./CurveArrow";
 interface MenuProps {
   theme: 'light' | 'dark';
   onThemeToggle: () => void;
-  onClearCanvas: () => void; 
+  onClearCanvas: () => void;
+  isCollabMode?: boolean;
+  roomId?: string;
+  encryptionKey?: string;
+  roomType?: 'duo' | 'group';
 }
 
-export function Menu({ theme, onThemeToggle , onClearCanvas }: MenuProps) {
+export function Menu({ 
+  theme, 
+  onThemeToggle, 
+  onClearCanvas,
+  isCollabMode = false,
+  roomId,
+  encryptionKey,
+  roomType
+}: MenuProps) {
   const [activated, setActivated] = useState(false);
   const [clicked, setClicked] = useState(false);
 
@@ -39,31 +50,34 @@ export function Menu({ theme, onThemeToggle , onClearCanvas }: MenuProps) {
     return () => document.removeEventListener("mousedown", handleOutsideClick);
   }, [activated]);
 
- return (
-  <div className="relative inline-block" ref={menuRef}>
-    <div
-      onClick={handleClick}
-      className={`
-        p-3 rounded-lg inline-block cursor-pointer transition
-        ${clicked ? "border-2 border-blue-500" : "border-2 border-transparent"}
-        ${theme === "dark" ? "bg-[#232329] hover:bg-[#363541]" : "bg-[#ececf4] hover:bg-[#d6d6e2]"}
-      `}
-    >
-      <MenuIcon size={20} className={theme === "dark" ? "text-white" : "text-black"} />
-    </div>
-
-    {activated && (
-      <div className="absolute left-0 mt-2 z-50">
-        <SidebarModal
-          isOpen={true}
-          onClose={() => setActivated(false)}
-          theme={theme}
-          onThemeToggle={onThemeToggle}
-          onClearCanvas={onClearCanvas}
-        />
+  return (
+    <div className="relative inline-block" ref={menuRef}>
+      <div
+        onClick={handleClick}
+        className={`
+          p-3 rounded-lg inline-block cursor-pointer transition
+          ${clicked ? "border-2 border-blue-500" : "border-2 border-transparent"}
+          ${theme === "dark" ? "bg-[#232329] hover:bg-[#363541]" : "bg-[#ececf4] hover:bg-[#d6d6e2]"}
+        `}
+      >
+        <MenuIcon size={20} className={theme === "dark" ? "text-white" : "text-black"} />
       </div>
-    )}
-  </div>
-);
 
+      {activated && (
+        <div className="absolute left-0 mt-2 z-50">
+          <SidebarModal
+            isOpen={true}
+            onClose={() => setActivated(false)}
+            theme={theme}
+            onThemeToggle={onThemeToggle}
+            onClearCanvas={onClearCanvas}
+            isCollabMode={isCollabMode}
+            roomId={roomId}
+            encryptionKey={encryptionKey}
+            roomType={roomType}
+          />
+        </div>
+      )}
+    </div>
+  );
 }

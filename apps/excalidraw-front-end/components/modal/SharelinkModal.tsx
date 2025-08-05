@@ -1,5 +1,4 @@
 "use client";
-
 import React, { useState, useRef, useEffect } from "react";
 import { Copy, Check, X } from "lucide-react";
 
@@ -7,15 +6,21 @@ interface Props {
   roomId: string;
   encryptionKey: string;
   roomType: 'duo' | 'group';
+  onClose?: () => void;
+  isManualTrigger?: boolean; // New prop to distinguish between auto-show and manual trigger
 }
 
-
-export const ShareLinkModal: React.FC<Props> = ({ roomId ,  encryptionKey , roomType }) => {
-  const [isVisible, setIsVisible] = useState(true);
+export const ShareLinkModal: React.FC<Props> = ({ 
+  roomId, 
+  encryptionKey, 
+  roomType,
+  onClose,
+  isManualTrigger = false // Default to false for backward compatibility
+}) => {
+  const [isVisible, setIsVisible] = useState(false);
   const [copied, setCopied] = useState(false);
   const modalRef = useRef<HTMLDivElement>(null);
   const shareableLink = `${window.location.origin}/${roomId}?key=${encryptionKey}&type=${roomType}`;
-
 
   const handleCopy = async () => {
     try {
@@ -26,18 +31,28 @@ export const ShareLinkModal: React.FC<Props> = ({ roomId ,  encryptionKey , room
       console.error("Failed to copy link:", err);
     }
   };
-useEffect(() => {
-  const hasVisited = sessionStorage.getItem(`visited-${roomId}`);
-  if (!hasVisited) {
-    setIsVisible(true); 
-    sessionStorage.setItem(`visited-${roomId}`, "true");
-  } else {
-    setIsVisible(false); 
-  }
-}, [roomId]);
+
+  useEffect(() => {
+    if (isManualTrigger) {
+      // If manually triggered (button click), always show
+      setIsVisible(true);
+    } else {
+      // If auto-triggered (first visit), check sessionStorage
+      const hasVisited = sessionStorage.getItem(`visited-${roomId}`);
+      if (!hasVisited) {
+        setIsVisible(true);
+        sessionStorage.setItem(`visited-${roomId}`, "true");
+      } else {
+        setIsVisible(false);
+      }
+    }
+  }, [roomId, isManualTrigger]);
 
   const handleClose = () => {
     setIsVisible(false);
+    if (onClose) {
+      onClose();
+    }
   };
 
   useEffect(() => {
@@ -66,7 +81,6 @@ useEffect(() => {
         ref={modalRef}
         className="relative bg-[#232329] text-white w-[720px] max-w-[90%] p-10 rounded-2xl shadow-[0_0_40px_rgba(0,0,0,0.6)] border border-[#444] transition-all"
       >
-   
         <button
           onClick={handleClose}
           className="absolute top-5 right-5 text-white/70 hover:text-white transition-colors cursor-pointer"
@@ -74,7 +88,6 @@ useEffect(() => {
           <X size={24} />
         </button>
 
-       
         <h2 className="text-3xl font-bold mb-4" style={{ color: "#9e9aea" }}>
           Share Collaboration Link
         </h2>
@@ -82,7 +95,6 @@ useEffect(() => {
         <p className="text-white/80 mb-8 leading-relaxed">
           Send this link to anyone you want to collaborate with. They'll be able to draw with you in real-time.
         </p>
-
 
         <div className="mb-6">
           <label className="block text-sm font-medium text-white/90 mb-2">Link</label>
