@@ -1,0 +1,21 @@
+FROM node:20-alpine AS base
+
+#Install pnpm
+RUN npm install -g pnpm
+
+WORKDIR /usr/src/app
+
+COPY ./packages ./packages
+COPY ./package.json ./package.json
+COPY ./pnpm-lock.yaml ./pnpm-lock.yaml
+COPY ./pnpm-workspace.yaml ./pnpm-workspace.yaml
+COPY ./turbo.json ./turbo.json
+
+COPY ./apps/rtc ./apps/rtc
+
+RUN pnpm install
+RUN pnpm run build
+
+EXPOSE 8081
+
+CMD ["pnpm","run","start:rtc"]
