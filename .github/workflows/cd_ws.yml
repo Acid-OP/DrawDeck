@@ -19,6 +19,6 @@ jobs:
         uses: docker/build-push-action@v4
         with:
           context: .
-          file: ./docker/Dockerfile.ws
+          file: ./docker/Dockerfile.websocket
           push: true
-          tags: acidop/chess-app-ws:${{ github.sha }}
+          tags: acidop/excalidraw-ws:${{ github.sha }}
