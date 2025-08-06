@@ -1,29 +1,37 @@
 FROM node:20-alpine AS base
 
+#Install pnpm
+RUN npm install -g pnpm turbo
+WORKDIR /usr/src/app
+
 # Build arguments
 ARG NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
 ARG CLERK_SECRET_KEY
-ARG NODE_ENV=production
-
-# Set as environment variables
-ENV NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=$NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
-ENV CLERK_SECRET_KEY=$CLERK_SECRET_KEY
 
 
-#Install pnpm
-RUN npm install -g pnpm turbo
-
-WORKDIR /usr/src/app
-
+# Copy necessary files for dependency installation
 COPY ./packages ./packages
 COPY ./package.json ./package.json
 COPY ./pnpm-lock.yaml ./pnpm-lock.yaml
 COPY ./pnpm-workspace.yaml ./pnpm-workspace.yaml
 COPY ./turbo.json ./turbo.json
-
 COPY ./apps/excalidraw-front-end ./apps/excalidraw-front-end
 
-RUN pnpm install
+# Install dependencies
+RUN pnpm install --frozen-lockfile
+
+# Set environment variables
+ENV NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}
+ENV CLERK_SECRET_KEY=${CLERK_SECRET_KEY}
+
+# Create .env.local for Next.js
+WORKDIR /usr/src/app/apps/excalidraw-front-end
+RUN echo "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=$NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY" > .env.local
+RUN echo "CLERK_SECRET_KEY=$CLERK_SECRET_KEY" >> .env.local
+
+# Change back to the root directory
+WORKDIR /usr/src/app
+
 RUN pnpm run build
 
 EXPOSE 3000
