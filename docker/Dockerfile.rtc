@@ -1,21 +1,30 @@
+# Use Node.js 20 on Alpine Linux as the base image
 FROM node:20-alpine AS base
 
-#Install pnpm
+# Install pnpm globally
 RUN npm install -g pnpm
 
+# Set working directory inside the container
 WORKDIR /usr/src/app
 
+# Copy all necessary files for monorepo setup and dependency installation
 COPY ./packages ./packages
 COPY ./package.json ./package.json
 COPY ./pnpm-lock.yaml ./pnpm-lock.yaml
 COPY ./pnpm-workspace.yaml ./pnpm-workspace.yaml
 COPY ./turbo.json ./turbo.json
 
+# Copy the RTC application code
 COPY ./apps/rtc ./apps/rtc
 
+# Install dependencies defined in the monorepo
 RUN pnpm install
+
+# Build the RTC application
 RUN pnpm run build
 
+# Expose port 8081 for the RTC service
 EXPOSE 8081
 
+# Start the RTC service using the appropriate script
 CMD ["pnpm","run","start:rtc"]

@@ -1,21 +1,30 @@
+# Use Node.js 20 on Alpine Linux as the base image for a lightweight container
 FROM node:20-alpine AS base
 
-#Install pnpm
+# Install pnpm globally
 RUN npm install -g pnpm
 
+# Set the working directory inside the container
 WORKDIR /usr/src/app
 
+# Copy monorepo shared packages and config files
 COPY ./packages ./packages
 COPY ./package.json ./package.json
 COPY ./pnpm-lock.yaml ./pnpm-lock.yaml
 COPY ./pnpm-workspace.yaml ./pnpm-workspace.yaml
 COPY ./turbo.json ./turbo.json
 
+# Copy the WebSocket backend application code
 COPY ./apps/ws-backend ./apps/ws-backend
 
+# Install all dependencies across the monorepo
 RUN pnpm install
+
+# Build the WebSocket backend app
 RUN pnpm run build
 
+# Expose port 8080 to allow traffic to the WebSocket service
 EXPOSE 8080
 
+# Start the WebSocket backend service
 CMD ["pnpm","run","start:ws"]
