@@ -22,3 +22,23 @@ jobs:
           file: ./docker/Dockerfile.rtc
           push: true
           tags: acidop/excalidraw-rtc:${{ github.sha }}
+          
+      # - name: Check SSH key presence (for debug)
+      #   run: |
+      #     echo "${{ secrets.SSH_PRIVATE_KEY }}" | head -n 15
+          
+      # - name: Deploy to VM
+      #   uses: appleboy/ssh-action@v1.1.0
+      #   with:
+      #     host: ${{ secrets.VM_HOST }}
+      #     username: ${{ secrets.VM_USERNAME }}
+      #     key: ${{ secrets.SSH_PRIVATE_KEY }}
+      #     script: |
+      #       docker pull acidop/excalidraw-rtc:${{ github.sha }}
+      #       docker stop rtc-server || true
+      #       docker rm rtc-server || true
+      #       docker run -d \
+      #         --name rtc-server \
+      #         --restart always \
+      #         -p 8081:8081 \
+      #         coderomm/excalidraw-rtc:${{ github.sha }}
