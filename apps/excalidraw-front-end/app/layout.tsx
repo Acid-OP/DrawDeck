@@ -6,13 +6,13 @@ import { ClerkProvider } from "@clerk/nextjs";
 
 // Load local fonts
 const excalifont = localFont({
-  src: "../public/fonts/excalifont-Regular.woff2",
+  src: "./fonts/excalifont-Regular.woff2",
   display: "swap",
   variable: "--font-excalifont",
 });
 
 const virgil = localFont({
-  src: "../public/fonts/virgil.woff2",
+  src: "./fonts/virgil.woff2",
   display: "swap",
   variable: "--font-virgil",
 });
