@@ -1,63 +1,51 @@
 export async function generateAESKey(): Promise<string> {
-  // Check if we're in a browser environment
-  if (typeof window === 'undefined') {
-    throw new Error('generateAESKey can only be called on the client side');
-  }
+  // Check if we're in a browser environment and crypto.subtle is available
+  if (typeof window !== 'undefined' && window.crypto && window.crypto.subtle) {
+    try {
+      const key = await window.crypto.subtle.generateKey(
+        {
+          name: "AES-GCM",
+          length: 256,
+        },
+        true,
+        ["encrypt", "decrypt"]
+      );
 
-  // Check if Web Crypto API is available
-  if (!window.crypto || !window.crypto.subtle) {
-    throw new Error('Web Crypto API not available. This requires HTTPS or localhost.');
+      const rawKey = await window.crypto.subtle.exportKey("raw", key);
+      const base64Key = btoa(String.fromCharCode(...new Uint8Array(rawKey)));
+      return base64Key;
+    } catch (error) {
+      console.warn('crypto.subtle.generateKey failed, falling back to manual generation:', error);
+    }
   }
-
-  try {
-    const key = await window.crypto.subtle.generateKey(
-      {
-        name: "AES-GCM",
-        length: 256,
-      },
-      true,
-      ["encrypt", "decrypt"]
-    );
-
-    const rawKey = await window.crypto.subtle.exportKey("raw", key);
-    const base64Key = btoa(String.fromCharCode(...new Uint8Array(rawKey)));
-    return base64Key;
-  } catch (error) {
-    console.error('Error generating AES key:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    throw new Error(`Failed to generate AES key: ${errorMessage}`);
-  }
+  
+  // Fallback: Generate a pseudo-random 32-byte key
+  console.warn('Web Crypto API not available, using fallback key generation');
+  return generateFallbackKey();
 }
 
 // Fallback function for when Web Crypto API is not available
 export function generateFallbackKey(): string {
-  console.warn('Using fallback key generation - less secure than Web Crypto API');
-  
-  // Generate a random 32-byte key
-  const keyArray = new Uint8Array(32);
-  
-  // Use crypto.getRandomValues if available, otherwise use Math.random (less secure)
+  // Use crypto.getRandomValues if available (works even without HTTPS)
   if (typeof window !== 'undefined' && window.crypto && window.crypto.getRandomValues) {
-    window.crypto.getRandomValues(keyArray);
-  } else {
-    // Fallback to Math.random (not cryptographically secure)
-    for (let i = 0; i < keyArray.length; i++) {
-      keyArray[i] = Math.floor(Math.random() * 256);
+    try {
+      const keyArray = new Uint8Array(32);
+      window.crypto.getRandomValues(keyArray);
+      return btoa(String.fromCharCode(...keyArray));
+    } catch (error) {
+      console.warn('crypto.getRandomValues failed, using Math.random fallback');
     }
   }
   
-  // Convert to base64
-  const base64Key = btoa(String.fromCharCode(...keyArray));
-  return base64Key;
+  // Ultimate fallback using Math.random (less secure but functional)
+  const keyArray = new Uint8Array(32);
+  for (let i = 0; i < keyArray.length; i++) {
+    keyArray[i] = Math.floor(Math.random() * 256);
+  }
+  return btoa(String.fromCharCode(...keyArray));
 }
 
-// Main function that tries secure method first, then falls back
+// Simple function that always works
 export async function generateSecureKey(): Promise<string> {
-  try {
-    return await generateAESKey();
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown crypto error';
-    console.warn('Secure key generation failed, using fallback:', errorMessage);
-    return generateFallbackKey();
-  }
+  return generateAESKey(); // This now has built-in fallbacks
 }

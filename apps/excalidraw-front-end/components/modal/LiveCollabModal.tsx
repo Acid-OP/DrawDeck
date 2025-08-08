@@ -4,8 +4,7 @@ import { Play, Users, Video } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@clerk/nextjs";
 import { generateRoomId } from "@/lib/generateRoomId";
-import { generateAESKey, generateFallbackKey } from "@/lib/crypto";
-
+import { generateSecureKey } from "@/lib/crypto";
 
 interface Props {
   onClose: () => void;
@@ -28,21 +27,9 @@ export const LiveCollabModal: React.FC<Props> = ({ onClose }) => {
     }
 
     setIsLoading(true);
-    setError(null);
-
+    
     try {
-      let encryptionKey: string;
-      
-      try {
-        encryptionKey = await generateAESKey();
-      } catch (cryptoError) {
-        console.warn('Web Crypto API not available, using fallback:', cryptoError);
-        encryptionKey = generateFallbackKey();
-        if (process.env.NODE_ENV === 'production') {
-          setError('Note: Using fallback encryption. For maximum security, please ensure your site uses HTTPS.');
-        }
-      }
-
+      const encryptionKey = await generateSecureKey();
       const roomId = generateRoomId();
       
       if (typeof window !== 'undefined') {
