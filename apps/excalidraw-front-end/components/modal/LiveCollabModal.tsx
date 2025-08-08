@@ -4,7 +4,8 @@ import { Play, Users, Video } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@clerk/nextjs";
 import { generateRoomId } from "@/lib/generateRoomId";
-import { generateAESKey } from "@/lib/crypto";
+import { generateAESKey, generateFallbackKey } from "@/lib/crypto";
+
 
 interface Props {
   onClose: () => void;
@@ -17,6 +18,8 @@ export const LiveCollabModal: React.FC<Props> = ({ onClose }) => {
   const router = useRouter();
   const { isSignedIn } = useAuth();
   const [selectedRoomType, setSelectedRoomType] = useState<RoomType>("duo");
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleStartSession = async () => {
     if (!isSignedIn) {
@@ -24,14 +27,39 @@ export const LiveCollabModal: React.FC<Props> = ({ onClose }) => {
       return;
     }
 
-    const encryptionKey = await generateAESKey();
-    const roomId = generateRoomId();
-    onClose();
+    setIsLoading(true);
+    setError(null);
 
-    sessionStorage.setItem(`creator-${roomId}`, "true");
+    try {
+      let encryptionKey: string;
+      
+      try {
+        encryptionKey = await generateAESKey();
+      } catch (cryptoError) {
+        console.warn('Web Crypto API not available, using fallback:', cryptoError);
+        encryptionKey = generateFallbackKey();
+        if (process.env.NODE_ENV === 'production') {
+          setError('Note: Using fallback encryption. For maximum security, please ensure your site uses HTTPS.');
+        }
+      }
 
-    const redirectURL = `/${roomId}?key=${encryptionKey}&type=${selectedRoomType}`;
-    router.push(redirectURL);
+      const roomId = generateRoomId();
+      
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem(`creator-${roomId}`, "true");
+      }
+
+      const redirectURL = `/${roomId}?key=${encryptionKey}&type=${selectedRoomType}`;
+      
+      onClose();
+      router.push(redirectURL);
+      
+    } catch (error) {
+      console.error('Error starting session:', error);
+      setError('Failed to start session. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleClose = () => {
@@ -73,6 +101,12 @@ export const LiveCollabModal: React.FC<Props> = ({ onClose }) => {
           Not even our server can see what you draw.
         </p>
 
+        {error && (
+          <div className="mb-6 p-3 bg-yellow-900/30 border border-yellow-700 rounded-lg text-yellow-200 text-sm">
+            {error}
+          </div>
+        )}
+
         <div className="mb-8 space-y-4">
           <h3 className="text-lg font-medium text-white/90 mb-4">Choose your collaboration style:</h3>
           
@@ -90,6 +124,7 @@ export const LiveCollabModal: React.FC<Props> = ({ onClose }) => {
               checked={selectedRoomType === "duo"}
               onChange={(e) => setSelectedRoomType(e.target.value as RoomType)}
               className="sr-only"
+              disabled={isLoading}
             />
             <div className={`w-5 h-5 rounded-full border-2 mr-4 flex items-center justify-center ${
               selectedRoomType === "duo" ? "border-[#9e9aea]" : "border-[#666]"
@@ -121,6 +156,7 @@ export const LiveCollabModal: React.FC<Props> = ({ onClose }) => {
               checked={selectedRoomType === "group"}
               onChange={(e) => setSelectedRoomType(e.target.value as RoomType)}
               className="sr-only"
+              disabled={isLoading}
             />
             <div className={`w-5 h-5 rounded-full border-2 mr-4 flex items-center justify-center ${
               selectedRoomType === "group" ? "border-[#9e9aea]" : "border-[#666]"
@@ -141,10 +177,13 @@ export const LiveCollabModal: React.FC<Props> = ({ onClose }) => {
 
         <button
           onClick={handleStartSession}
-          className="bg-[#a8a5ff] text-black font-medium py-4 px-10 rounded-md flex items-center justify-center gap-2 mx-auto transition-all cursor-pointer hover:bg-[#bbb8ff]"
+          disabled={isLoading}
+          className="bg-[#a8a5ff] text-black font-medium py-4 px-10 rounded-md flex items-center justify-center gap-2 mx-auto transition-all cursor-pointer hover:bg-[#bbb8ff] disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <Play size={25} className="text-black" />
-          <span className="text-lg font-medium">Start session</span>
+          <span className="text-lg font-medium">
+            {isLoading ? "Starting..." : "Start session"}
+          </span>
         </button>
       </div>
     </div>
