@@ -22,23 +22,19 @@ jobs:
           file: ./docker/Dockerfile.websocket
           push: true
           tags: acidop/excalidraw-ws:${{ github.sha }}
-    
-      # - name: Check SSH key presence (for debug)
-      #   run: |
-      #     echo "${{ secrets.SSH_PRIVATE_KEY }}" | head -n 15
           
-      # - name: Deploy to VM
-      #   uses: appleboy/ssh-action@v1.1.0
-      #   with:
-      #     host: ${{ secrets.VM_HOST }}
-      #     username: ${{ secrets.VM_USERNAME }}
-      #     key: ${{ secrets.SSH_PRIVATE_KEY }}
-      #     script: |
-      #       docker pull acidop/excalidraw-ws:${{ github.sha }}
-      #       docker stop ws-server || true
-      #       docker rm ws-server || true
-      #       docker run -d \
-      #         --name ws-server \
-      #         --restart always \
-      #         -p 8080:8080 \
-      #         acidop/excalidraw-ws:${{ github.sha }}
+      - name: Deploy to VM
+        uses: appleboy/ssh-action@v1.1.0
+        with:
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            docker pull acidop/excalidraw-ws:${{ github.sha }}
+            docker stop ws-server || true
+            docker rm ws-server || true
+            docker run -d \
+              --name ws-server \
+              --restart always \
+              -p 8080:8080 \
+              acidop/excalidraw-ws:${{ github.sha }}

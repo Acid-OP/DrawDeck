@@ -30,7 +30,7 @@ export function VideoCall({ roomId }: VideoCallProps) {
   const remoteAnalyserRef = useRef<AnalyserNode | null>(null);
 
   useEffect(() => {
-    const rtc = new WebSocket(RTC_URL);
+    const rtc = new WebSocket( process.env.NEXT_PUBLIC_RTC_URL ?? RTC_URL);
     setRtcSocket(rtc);
 
     rtc.onopen = () => {

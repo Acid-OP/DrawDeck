@@ -15,7 +15,7 @@ export function RoomCanvas({ slug, encryptionKey, roomType: propRoomType }: { sl
     maxCapacity: number;
     currentCount: number;
   } | null>(null);
-  const [isRoomAccessible, setIsRoomAccessible] = useState(false); // New state to track room accessibility
+  const [isRoomAccessible, setIsRoomAccessible] = useState(false); 
 
   const roomTypeFromStorage = typeof window !== 'undefined' 
     ? sessionStorage.getItem(`roomType-${slug}`) as 'duo' | 'group' | null
@@ -39,7 +39,7 @@ export function RoomCanvas({ slug, encryptionKey, roomType: propRoomType }: { sl
         setRoomFullError(null);
         setIsRoomAccessible(false); 
 
-        const ws = new WebSocket(WS_URL);
+        const ws = new WebSocket(process.env.NEXT_PUBLIC_WS_URL  ?? WS_URL);
 
         ws.onopen = () => {
           console.log('✅ WebSocket connected');
