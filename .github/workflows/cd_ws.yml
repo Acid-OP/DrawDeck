@@ -30,10 +30,10 @@ jobs:
           username: ${{ secrets.VM_USERNAME }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
-            docker pull acidop/excalidraw-ws:${{ github.sha }}
-            docker stop ws-server || true
-            docker rm ws-server || true
-            docker run -d \
+            sudo docker pull acidop/excalidraw-ws:${{ github.sha }}
+            sudo docker stop ws-server || true
+            sudo docker rm ws-server || true
+            sudo docker run -d \
               --name ws-server \
               --restart always \
               -p 8080:8080 \

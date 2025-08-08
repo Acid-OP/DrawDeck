@@ -30,10 +30,10 @@ jobs:
           username: ${{ secrets.VM_USERNAME }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
-            docker pull acidop/excalidraw-rtc:${{ github.sha }}
-            docker stop rtc-server || true
-            docker rm rtc-server || true
-            docker run -d \
+            sudo docker pull acidop/excalidraw-rtc:${{ github.sha }}
+            sudo docker stop rtc-server || true
+            sudo docker rm rtc-server || true
+            sudo docker run -d \
               --name rtc-server \
               --restart always \
               -p 8081:8081 \
