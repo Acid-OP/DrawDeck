@@ -12,17 +12,18 @@ import {
 } from "lucide-react";
 import { IconButton } from "./IconButton";
 import { Tool } from "./Canvas";
+
 interface TopBarProps {
   selectedTool: Tool;
   setSelectedTool: (s: Tool) => void;
-  theme: "light" | "dark"; // 👈 Add this
+  theme: "light" | "dark";
 }
 
 export function TopBar({ selectedTool, setSelectedTool, theme }: TopBarProps) {
   return (
     <div
       className={`
-        flex gap-1 rounded-lg cursor-pointer mt-1 transition-all
+        flex gap-1.5 rounded-md cursor-pointer transition-all py-1 px-2
         ${theme === "dark" ? "bg-[#232329]" : "bg-white border border-gray-200"}
       `}
     >

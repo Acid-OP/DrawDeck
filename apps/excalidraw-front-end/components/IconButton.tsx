@@ -17,11 +17,9 @@ export function IconButton({
   shortcutKey,
   theme,
 }: IconButtonProps) {
-  // If Lucide icon, add `fill` when activated in light mode
-  // Fall back to "none" fill for others
   const isActiveLight = activated && theme === "light";
   const styledIcon: Partial<LucideProps> = {
-    size: icon.props.size ?? 18,
+    size: icon.props.size ?? 16, 
     color: activated
       ? theme === "light"
         ? "#000000"
@@ -30,15 +28,14 @@ export function IconButton({
         ? "#666666"
         : "#e3e3e8",
     fill: isActiveLight ? "#030064" : "none",
-    // Most Lucide icons will respect `fill` prop on `svg`
   };
 
   const bgColor =
     activated && theme === "light"
       ? "#e0dfff"
       : activated && theme === "dark"
-      ? "#403e6a"
-      : "transparent";
+        ? "#403e6a"
+        : "transparent";
   const hoverBg = theme === "light"
     ? "hover:bg-gray-100"
     : "hover:bg-white/5";
@@ -49,13 +46,13 @@ export function IconButton({
 
   return (
     <div
-      className={`m-2 p-3 rounded-lg flex items-center justify-center relative cursor-pointer transition-all ${hoverBg}`}
+      className={`m-1 p-2 rounded-md flex items-center justify-center relative cursor-pointer transition-all ${hoverBg}`}
       style={{ backgroundColor: bgColor }}
       onClick={onClick}
     >
       {React.cloneElement(icon, styledIcon)}
       <div
-        className="absolute bottom-[1px] right-[6px] text-[10px] font-semibold pointer-events-none opacity-60"
+        className="absolute bottom-[-2px] right-[4px] text-[9px] font-semibold pointer-events-none opacity-60"
         style={{ color: shortcutColor }}
       >
         {shortcutKey}

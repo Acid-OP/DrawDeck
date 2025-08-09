@@ -8,7 +8,7 @@ interface ToolbarIconProps {
 }
 
 const ToolbarIcon: React.FC<ToolbarIconProps> = ({
-  size = 100,
+  size = 80,
   strokeWidth = 2,
   className = '',
   color = '#7a7a7a',

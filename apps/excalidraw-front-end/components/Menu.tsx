@@ -2,7 +2,6 @@
 import { useState, useRef, useEffect } from "react";
 import { SidebarModal } from "./SidebarModal";
 import { MenuIcon } from "lucide-react";
-import CurvedArrow from "./CurveArrow";
 
 interface MenuProps {
   theme: 'light' | 'dark';
@@ -14,9 +13,9 @@ interface MenuProps {
   roomType?: 'duo' | 'group';
 }
 
-export function Menu({ 
-  theme, 
-  onThemeToggle, 
+export function Menu({
+  theme,
+  onThemeToggle,
   onClearCanvas,
   isCollabMode = false,
   roomId,
@@ -55,12 +54,12 @@ export function Menu({
       <div
         onClick={handleClick}
         className={`
-          p-3 rounded-lg inline-block cursor-pointer transition
+          p-2 rounded-md inline-block cursor-pointer transition
           ${clicked ? "border-2 border-blue-500" : "border-2 border-transparent"}
           ${theme === "dark" ? "bg-[#232329] hover:bg-[#363541]" : "bg-[#ececf4] hover:bg-[#d6d6e2]"}
         `}
       >
-        <MenuIcon size={20} className={theme === "dark" ? "text-white" : "text-black"} />
+        <MenuIcon size={16} className={theme === "dark" ? "text-white" : "text-black"} />
       </div>
 
       {activated && (

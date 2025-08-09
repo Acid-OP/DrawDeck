@@ -3,7 +3,7 @@ import React from 'react';
 interface SidebarSeparatorProps {
   theme: 'light' | 'dark';
   orientation?: 'horizontal' | 'vertical';
-  length?: string; // e.g., 'h-px' for horizontal, 'h-6' for vertical height
+  length?: string; 
   className?: string;
 }
 

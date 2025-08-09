@@ -216,49 +216,62 @@ export function Canvas({ roomId, socket, isSolo = false, isUserAuthenticated = f
         </div>
       )}
 
-      <div className="absolute top-4 left-0 w-full flex justify-between items-center px-6">
-        <Menu 
-          theme={theme} 
-          onThemeToggle={toggleTheme} 
-          onClearCanvas={clearCanvasAndShapes}
-          {...(isCollabMode && {
-            isCollabMode: true,
-            roomId: roomId,
-            encryptionKey: encryptionKey,
-            roomType: roomType
-          })}
-        />
+<div className="absolute top-3 left-0 w-full flex justify-between items-start px-4">
+  <div className="flex-shrink-0">
+    <Menu 
+      theme={theme} 
+      onThemeToggle={toggleTheme} 
+      onClearCanvas={clearCanvasAndShapes}
+      {...(isCollabMode && {
+        isCollabMode: true,
+        roomId: roomId,
+        encryptionKey: encryptionKey,
+        roomType: roomType
+      })}
+    />
+  </div>
 
-        <TopBar 
-          selectedTool={selectedTool} 
-          setSelectedTool={setSelectedTool} 
-          theme={theme} 
-        />
+  <div className="flex-1 flex justify-center">
+    <TopBar 
+      selectedTool={selectedTool} 
+      setSelectedTool={setSelectedTool} 
+      theme={theme} 
+    />
+  </div>
 
-        <ShareButton 
-          onClick={handleShareButtonClick} 
-          isCollabMode={!!isCollabMode}
-        />
-      </div>
+  <div className="flex-shrink-0">
+    <ShareButton 
+      onClick={handleShareButtonClick} 
+      isCollabMode={!!isCollabMode}
+    />
+  </div>
+</div>
+
       
-      {shouldShowWelcome && (
-        <>
-          <div className="absolute top-16 left-15 transform -translate-x-1/2 pointer-events-none z-40">
-            <CurvedArrow />
-          </div>
-          <div className="absolute top-40 left-66 transform -translate-x-1/2 pointer-events-none z-40">
-            <LocalSaveNotice />
-          </div>
+{shouldShowWelcome && (
+  <>
+    
 
-          <div className="absolute top-22 left-1/2 transform -translate-x-1/2 pl-8 pointer-events-none z-40">
-            <ToolbarIcon />
-          </div>
+<div className="absolute top-20 left-1/2 transform -translate-x-1/2 ml-8 pointer-events-none z-40">
+ <ToolbarIcon />
+</div>
 
-          <div className="absolute top-40 left-1/2 transform -translate-x-1/2 sm:-translate-x-32 md:-translate-x-40 lg:-translate-x-44 pointer-events-none z-40">
-            <ToolIconPointer />
-          </div>
-        </>
-      )}
+
+{/* CurvedArrow pointing to Menu Icon */}
+<div className="absolute top-12 -left-1 pointer-events-none z-40">
+  <CurvedArrow />
+</div>
+
+{/* LocalSaveNotice - separate positioning */}
+<div className="absolute top-32 left-18 pointer-events-none z-40">
+  <LocalSaveNotice />
+</div>
+
+  <div className="absolute top-35 left-1/2 transform -translate-x-1/2 pointer-events-none z-40" style={{ marginLeft: '-3rem' }}>
+ <ToolIconPointer />
+</div>
+  </>
+)}
 
       {shouldShowPropertiesPanel && (
         <div className="absolute top-[72px] left-6 z-50">

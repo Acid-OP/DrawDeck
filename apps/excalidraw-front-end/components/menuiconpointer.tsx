@@ -1,6 +1,6 @@
 const LocalSaveNotice = () => {
   return (
-    <span className="virgil text-xl text-[#7a7a7a] p-4">
+    <span className="virgil text-md text-[#7a7a7a]">
       Export, preferences, languages, ...
     </span>
   );

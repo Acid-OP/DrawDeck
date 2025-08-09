@@ -8,7 +8,7 @@ interface CurvedArrowProps {
 }
 
 const CurvedArrow: React.FC<CurvedArrowProps> = ({
-  size = 120,
+  size = 100,
   strokeWidth = 2,
   className = '',
   color = '#7a7a7a',

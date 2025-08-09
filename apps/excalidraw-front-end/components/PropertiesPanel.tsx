@@ -8,7 +8,6 @@ import { PropertySection } from './panel/PropertySection';
 import { StrokePattern, StrokeWidthPattern } from './panel/StrokePatterns';
 import { FillPattern } from './panel/FillPatterns';
 import { SidebarSeparator } from './sidebar/SidebarSeparator';
-import { ThemeToggle } from './sidebar/ThemeToggle';
 
 export interface ExcalidrawPropertiesPanelProps {
   strokeSelectedIndex?: number;

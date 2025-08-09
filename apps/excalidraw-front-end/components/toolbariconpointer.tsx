@@ -1,9 +1,9 @@
 const ToolIconPointer = () => {
   return (
-    <span className="virgil text-xl text-[#7a7a7a] p-4">
+    <div className="virgil text-md text-[#7a7a7a]">
       Pick a tool & <br/>
       Start drawing!
-    </span>
+    </div>
   );
 };
 
