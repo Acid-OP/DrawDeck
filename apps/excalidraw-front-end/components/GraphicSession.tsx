@@ -9,7 +9,7 @@ const GraphicSection: React.FC<GraphicSectionProps> = ({ isDark }) => {
     <div className="relative flex items-center justify-center">
       <div className="relative">
         <div
-          className="w-96 h-96 rounded-full border-4 border-dashed animate-pulse"
+          className="w-80 h-80 rounded-full border-4 border-dashed animate-pulse"
           style={{
             borderColor: isDark ? "#a8a5ff" : "#6965db",
             animationDuration: "3s",
@@ -18,28 +18,28 @@ const GraphicSection: React.FC<GraphicSectionProps> = ({ isDark }) => {
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="relative">
               <Palette
-                size={120}
+                size={100} // was 120
                 color={isDark ? "#a8a5ff" : "#6965db"}
                 className="animate-bounce"
                 style={{ animationDuration: "2s" }}
               />
               <div
-                className="absolute -top-8 -right-8 animate-spin"
+                className="absolute -top-7 -right-7 animate-spin"
                 style={{ animationDuration: "8s" }}
               >
-                <Sparkles size={32} color="#ff6b6b" />
+                <Sparkles size={28} color="#ff6b6b" /> {/* was 32 */}
               </div>
               <div
-                className="absolute -bottom-8 -left-8 animate-spin"
+                className="absolute -bottom-7 -left-7 animate-spin"
                 style={{ animationDuration: "6s" }}
               >
-                <Star size={28} color="#4ecdc4" />
+                <Star size={24} color="#4ecdc4" /> {/* was 28 */}
               </div>
               <div
-                className="absolute top-0 -left-12 animate-bounce"
+                className="absolute top-0 -left-10 animate-bounce"
                 style={{ animationDelay: "1s" }}
               >
-                <Zap size={24} color="#feca57" />
+                <Zap size={20} color="#feca57" /> {/* was 24 */}
               </div>
             </div>
           </div>

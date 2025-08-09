@@ -5,7 +5,6 @@ import { useAuth, useClerk } from '@clerk/nextjs';
 import { FeatureButton } from './sidebar/FeatureButton';
 import { SocialButton } from './sidebar/SocialButton';
 import { ThemeToggle } from './sidebar/ThemeToggle';
-import { CanvasBackgroundPicker } from './sidebar/CanvasBackgroundPicker';
 import { SidebarSeparator } from './sidebar/SidebarSeparator';
 import { ShareLinkModal } from './modal/SharelinkModal';
 import { useRouter } from 'next/navigation';
@@ -15,7 +14,6 @@ interface SidebarItemsProps {
   theme: 'light' | 'dark';
   onThemeToggle: () => void;
   onClearCanvas: () => void;
-  // Add these props for collaboration state
   isCollabMode?: boolean;
   roomId?: string;
   encryptionKey?: string;
@@ -56,34 +54,33 @@ export const SidebarItems: React.FC<SidebarItemsProps> = ({
 
   return (
     <>
-      <div className="space-y-4">
-        <div className="space-y-1">
+      <div className="space-y-3 text-[13px]"> {/* Smaller font and spacing */}
+        <div className="space-y-[3px]">
           <FeatureButton 
-            icon={<Command size={18} />} 
+            icon={<Command size={14} />} 
             label="Command Palette" 
             theme={theme} 
           />
           <FeatureButton 
-            icon={<Trash2 size={18} />} 
+            icon={<Trash2 size={14} />} 
             label="Clear Canvas" 
             onClick={openClearConfirm} 
             theme={theme} 
           />
           <FeatureButton 
-            icon={<Download size={18} />} 
+            icon={<Download size={14} />} 
             label="Export Drawing" 
             theme={theme} 
           />
           <FeatureButton 
-            icon={<Upload size={18} />} 
+            icon={<Upload size={14} />} 
             label="Import Drawing" 
             theme={theme} 
           />
           
-          {/* Conditionally render Share Collaboration button only when in collab mode */}
           {isCollabMode && roomId && encryptionKey && roomType && (
             <FeatureButton 
-              icon={<Share size={18} />} 
+              icon={<Share size={14} />} 
               label="Share Collaboration" 
               onClick={handleShareClick} 
               theme={theme} 
@@ -91,7 +88,7 @@ export const SidebarItems: React.FC<SidebarItemsProps> = ({
           )}
           
           <FeatureButton 
-            icon={isSignedIn ? <LogOut size={18} /> : <UserPlus size={18} />} 
+            icon={isSignedIn ? <LogOut size={14} /> : <UserPlus size={14} />} 
             label={isSignedIn ? "Logout" : "Sign Up"} 
             variant={isSignedIn ? "primary" : "primary"} 
             theme={theme} 
@@ -101,28 +98,28 @@ export const SidebarItems: React.FC<SidebarItemsProps> = ({
         
         <SidebarSeparator theme={theme} />
         
-        <div className="space-y-1">
+        <div className="space-y-[3px]">
           <SocialButton 
-            icon={<Github size={18} />} 
+            icon={<Github size={14} />} 
             label="GitHub" 
             highlight={true} 
             theme={theme} 
           />
           <SocialButton 
-            icon={<Twitter size={18} />} 
+            icon={<Twitter size={14} />} 
             label="Twitter/X" 
             theme={theme} 
           />
           <SocialButton 
-            icon={<Linkedin size={18} />} 
+            icon={<Linkedin size={14} />} 
             label="LinkedIn" 
             theme={theme} 
           />
         </div>
         
-        <SidebarSeparator theme={theme} className="my-2" />
+        <SidebarSeparator theme={theme} className="my-[6px]" />
         
-        <div>
+        <div className="scale-90 origin-left"> 
           <ThemeToggle theme={theme} onThemeChange={onThemeToggle} />
         </div>
       </div>
@@ -136,14 +133,13 @@ export const SidebarItems: React.FC<SidebarItemsProps> = ({
         />
       )}
 
-      {/* Modal for manual trigger (button click) */}
       {showShareModal && isCollabMode && roomId && encryptionKey && roomType && (
         <ShareLinkModal 
           roomId={roomId}
           encryptionKey={encryptionKey}
           roomType={roomType}
           onClose={() => setShowShareModal(false)}
-          isManualTrigger={true} // This tells the modal it was manually triggered
+          isManualTrigger={true}
         />
       )}
     </>

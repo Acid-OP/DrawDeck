@@ -21,11 +21,11 @@ export const Header: React.FC<HeaderProps> = ({ theme }) => {
     <div>
       <div className="flex flex-col items-center justify-center p-4 pointer-events-auto">
         <BrandTitle theme={theme} />
-        <span className='virgil text-2xl text-[#7a7a7a] p-4'>
+        <span className='virgil text-lg text-[#7a7a7a] p-4'>
           All your data is saved locally in your browser
         </span>
 
-        <div className='flex items-center justify-start w-full p-6 cursor-pointer pl-12'>
+        <div className='flex items-center justify-start w-full cursor-pointer'>
           <div className="w-full p-4">
             <LiveCollaborationButton theme={theme} onClick={() => setIsModalOpen(true)} />
             {isLoaded && !isSignedIn && <SignupButton theme={theme} onClick={() => router.push('/signup')}/>}

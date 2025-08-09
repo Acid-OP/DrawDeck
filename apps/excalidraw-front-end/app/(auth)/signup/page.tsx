@@ -8,8 +8,6 @@ import SignupHeader from "@/components/SignupHeader";
 import ThemeToggle from "@/components/Themetoggle";
 import { useState } from "react";
 
-
-
 const ExcalidrawSignup: React.FC = () => {
   const [isDark, setIsDark] = useState<boolean>(false);
   const { hasError, boundaryError, resetError } = useErrorBoundary();
@@ -21,15 +19,21 @@ const ExcalidrawSignup: React.FC = () => {
   return (
     <div
       className={`min-h-screen overflow-hidden transition-all duration-500 ${
-        isDark ? "bg-[#232329]" : "bg-[#fff0c9]"
+        isDark ? "bg-[#232329]" : "bg-[#fffbf0]"
       }`}
     >
-      <ThemeToggle isDark={isDark} toggleDarkMode={() => setIsDark(!isDark)} />
+      {/* <ThemeToggle isDark={isDark} toggleDarkMode={() => setIsDark(!isDark)} /> */}
+
       <FloatingDoodles />
       <SignupHeader isDark={isDark} />
-      <div className="flex flex-col lg:flex-row items-center justify-between mt-12 max-w-screen-xl mx-auto">
-        <GraphicSection isDark={isDark} />
-        <SignupForm isDark={isDark} />
+
+      <div className="flex flex-col lg:flex-row items-center justify-around mt-28 max-w-screen-xl mx-auto px-4">
+        <div className="flex-shrink-0 w-[340px] lg:w-[380px]">
+          <GraphicSection isDark={isDark} />
+        </div>
+        <div className="flex-shrink-0 w-[340px] lg:w-[380px] mt-4 lg:mt-0">
+          <SignupForm isDark={isDark} />
+        </div>
       </div>
     </div>
   );

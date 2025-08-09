@@ -63,7 +63,7 @@ export function Menu({
       </div>
 
       {activated && (
-        <div className="absolute left-0 mt-2 z-50">
+        <div className="absolute left-0 mt-1 z-50"> 
           <SidebarModal
             isOpen={true}
             onClose={() => setActivated(false)}

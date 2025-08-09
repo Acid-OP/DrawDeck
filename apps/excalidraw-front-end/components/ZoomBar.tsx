@@ -21,11 +21,8 @@ export const ZoomBar: React.FC<ZoomBarProps> = ({
 }) => {
   const [hovered, setHovered] = useState<"minus" | "plus" | "reset" | null>(null);
 
-  // Section highlights for – and +
   const leftFrac = 36;
   const rightFrac = 64;
-
-  // Tooltip text per hovered section
   const tooltipText =
     hovered === "minus"
       ? "Zoom out"
@@ -39,8 +36,8 @@ export const ZoomBar: React.FC<ZoomBarProps> = ({
     <div
       className="fixed"
       style={{
-        left: 24,
-        bottom: 24,
+        left: 20,
+        bottom: 20,
         zIndex: 200,
         pointerEvents: "auto",
       }}
@@ -48,21 +45,21 @@ export const ZoomBar: React.FC<ZoomBarProps> = ({
       <div
         className="relative flex items-center"
         style={{
-          borderRadius: 10,
-          minWidth: 142,
-          height: 40,
-          padding: "0 12px",
+          borderRadius: 8,
+          minWidth: 120,
+          height: 34,
+          padding: "0 10px",
           fontFamily: "'Inter',sans-serif",
           boxShadow:
-            "rgba(0,0,0,0.09) 0px 2px 16px 0px,rgba(0,0,0,0.09) 0px 1.5px 7px 0px",
+            "rgba(0,0,0,0.09) 0px 1.7px 14px 0px,rgba(0,0,0,0.09) 0px 1.2px 6px 0px",
           userSelect: "none",
           touchAction: "manipulation",
           fontWeight: 500,
-          fontSize: 16,
+          fontSize: 14,
           letterSpacing: "0.01em",
           background: theme === "dark" ? "#202026" : "#ececf4",
           position: "relative",
-          minHeight: 40,
+          minHeight: 34,
           display: "flex",
           alignItems: "center",
         }}
@@ -81,8 +78,8 @@ export const ZoomBar: React.FC<ZoomBarProps> = ({
                   ? "#2e2d39"
                   : "#eeedfc"
                 : "transparent",
-            borderTopLeftRadius: 10,
-            borderBottomLeftRadius: 10,
+            borderTopLeftRadius: 8,
+            borderBottomLeftRadius: 8,
             transition: "background 0.13s",
             zIndex: 1,
             pointerEvents: "none",
@@ -102,8 +99,8 @@ export const ZoomBar: React.FC<ZoomBarProps> = ({
                   ? "#2e2d39"
                   : "#eeedfc"
                 : "transparent",
-            borderTopRightRadius: 10,
-            borderBottomRightRadius: 10,
+            borderTopRightRadius: 8,
+            borderBottomRightRadius: 8,
             transition: "background 0.13s",
             zIndex: 1,
             pointerEvents: "none",
@@ -119,17 +116,17 @@ export const ZoomBar: React.FC<ZoomBarProps> = ({
           onFocus={() => setHovered("minus")}
           onBlur={() => setHovered(null)}
           style={{
-            width: 36,
-            height: 36,
-            borderRadius: 6,
+            width: 30,
+            height: 30,
+            borderRadius: 5,
             background: "none",
             border: "none",
             fontWeight: 500,
-            fontSize: 20,
+            fontSize: 18,
             cursor: "pointer",
             zIndex: 2,
             color: theme === "dark" ? "#fff" : "#000",
-            marginRight: 3,
+            marginRight: 2,
             marginLeft: 1,
             outline: "none",
             position: "relative",
@@ -157,14 +154,14 @@ export const ZoomBar: React.FC<ZoomBarProps> = ({
             border: "none",
             fontWeight: 500,
             outline: "none",
-            minWidth: 60,
-            height: 36,
-            fontSize: 16,
+            minWidth: 50,
+            height: 30,
+            fontSize: 14,
             fontFamily: "'Inter',sans-serif",
             cursor: "pointer",
             zIndex: 2,
             color: theme === "dark" ? "#fff" : "#000",
-            borderRadius: 6,
+            borderRadius: 5,
           }}
           onClick={() => setZoom(1)}
           tabIndex={0}
@@ -181,17 +178,17 @@ export const ZoomBar: React.FC<ZoomBarProps> = ({
           onFocus={() => setHovered("plus")}
           onBlur={() => setHovered(null)}
           style={{
-            width: 36,
-            height: 36,
-            borderRadius: 6,
+            width: 30,
+            height: 30,
+            borderRadius: 5,
             background: "none",
             border: "none",
             fontWeight: 500,
-            fontSize: 20,
+            fontSize: 18,
             cursor: "pointer",
             zIndex: 2,
             color: theme === "dark" ? "#fff" : "#000",
-            marginLeft: 3,
+            marginLeft: 2,
             marginRight: 1,
             outline: "none",
             position: "relative",
@@ -206,24 +203,24 @@ export const ZoomBar: React.FC<ZoomBarProps> = ({
           +
         </button>
 
-        {/* TOOLTIP - above the whole bar */}
+        {/* TOOLTIP */}
         {hovered && (
           <div
             style={{
               position: "absolute",
               left: "50%",
               transform: "translateX(-50%)",
-              bottom: 48,
+              bottom: 40,
               background: "#fff",
               color: "#23232b",
-              borderRadius: 7,
+              borderRadius: 6,
               border: "1px solid #ededed",
               boxShadow:
-                "0 4px 24px rgba(0,0,0,0.13), 0 1.5px 7px 0 rgba(0,0,0,0.07)",
+                "0 3px 20px rgba(0,0,0,0.13), 0 1px 6px 0 rgba(0,0,0,0.07)",
               fontFamily: "'Inter',sans-serif",
               fontWeight: 500,
-              fontSize: 13,
-              padding: "3px 15px",
+              fontSize: 12,
+              padding: "2px 12px",
               whiteSpace: "nowrap",
               opacity: 0.99,
               zIndex: 9999,

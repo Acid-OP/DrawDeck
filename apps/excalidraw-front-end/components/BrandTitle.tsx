@@ -16,10 +16,10 @@ const BrandTitle: React.FC<BrandTitleProps> = ({
   ? 'text-[#e2dfff]'
   : 'text-[#190064]';
  return (
-   <div className={`flex justify-center items-center gap-4 ${className}`}>
-     <BrandIcon size={50} strokeWidth={2} theme={theme} />
-     <h1 className={`virgil text-5xl font-bold ${textColor} p-4`}>
-       COLLABYDRAW
+   <div className={`flex justify-center items-center gap-4 m-4 ${className}`}>
+     <BrandIcon size={40} strokeWidth={2} theme={theme} />
+     <h1 className={`excalifont text-4xl font-black ${textColor}`}>
+       DRAWDECK
      </h1>
    </div>
  );

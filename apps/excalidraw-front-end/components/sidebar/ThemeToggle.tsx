@@ -9,7 +9,6 @@ interface ThemeToggleProps {
 
 export const ThemeToggle: React.FC<ThemeToggleProps> = ({ theme, onThemeChange }) => {
   const isLight = theme === 'light';
-  const isDark = theme === 'dark';
 
   const getIconColor = (target: 'light' | 'dark' | 'system') => {
     if (theme === 'light') return 'black';
@@ -23,16 +22,15 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({ theme, onThemeChange }
 
   return (
     <div
-      className="flex items-center justify-between px-2 py-1 rounded-lg transition-colors duration-300"
+      className="flex w-full items-center justify-end py-1 gap-5 rounded-lg transition-colors duration-300"
       style={{ backgroundColor: bgColor }}
     >
-      <span
-        className="font-medium text-lg transition-colors duration-300"
+      <div
+        className="font-medium text-md transition-colors duration-300"
         style={{ color: isLight ? '#000000' : '#e0e0e0' }}
       >
         Theme
-      </span>
-
+      </div>
       <ToggleGroup
         type="single"
         value={theme}
@@ -41,7 +39,7 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({ theme, onThemeChange }
             onThemeChange(value);
           }
         }}
-        className="flex gap-[6px] rounded-md px-1 py-[2px] transition-all duration-300"
+        className="flex gap-2 rounded-md px-[4px] py-[3px] transition-all duration-300"
         style={{
           backgroundColor: toggleBg,
           border: `1px solid ${borderColor}`,
@@ -52,7 +50,7 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({ theme, onThemeChange }
           className="h-10 w-10 flex items-center justify-center rounded-md transition-all cursor-pointer duration-300 hover:bg-background/40 data-[state=on]:bg-[#a8a5ff]"
           aria-label="Light theme"
         >
-          <Sun size={24} color={getIconColor('light')} />
+          <Sun size={15} color={getIconColor('light')} />
         </ToggleGroupItem>
 
         <ToggleGroupItem
@@ -60,7 +58,7 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({ theme, onThemeChange }
           className="h-10 w-10 flex items-center justify-center rounded-md transition-all cursor-pointer duration-300 hover:bg-background/40 data-[state=on]:bg-[#a8a5ff]"
           aria-label="Dark theme"
         >
-          <Moon size={24} color={getIconColor('dark')} />
+          <Moon size={15} color={getIconColor('dark')} />
         </ToggleGroupItem>
 
         <ToggleGroupItem
@@ -68,7 +66,7 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({ theme, onThemeChange }
           className="h-10 w-10 flex items-center justify-center rounded-md transition-all cursor-pointer duration-300 hover:bg-background/40 data-[state=on]:bg-[#a8a5ff]"
           aria-label="System theme"
         >
-          <Monitor size={24} color={getIconColor('system')} />
+          <Monitor size={15} color={getIconColor('system')} />
         </ToggleGroupItem>
       </ToggleGroup>
     </div>

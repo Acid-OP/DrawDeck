@@ -207,16 +207,15 @@ export function Canvas({ roomId, socket, isSolo = false, isUserAuthenticated = f
         className="touch-none"
         style={{ backgroundColor: theme === "dark" ? "#121212" : "#ffffff" }}
       />
-      
-      {shouldShowWelcome && (
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 pointer-events-none z-50">
-          <div className="pointer-events-auto">
-            <Header theme={theme}/>
-          </div>
-        </div>
-      )}
+{shouldShowWelcome && (
+  <div className="absolute top-[55%] left-1/2 transform -translate-x-1/2 -translate-y-1/2 pointer-events-none z-50">
+    <div className="pointer-events-auto">
+      <Header theme={theme} />
+    </div>
+  </div>
+)}
 
-<div className="absolute top-3 left-0 w-full flex justify-between items-start px-4">
+      <div className="absolute top-3 left-0 w-full flex justify-between items-start px-4">
   <div className="flex-shrink-0">
     <Menu 
       theme={theme} 
