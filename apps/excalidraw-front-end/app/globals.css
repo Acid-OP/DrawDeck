@@ -21,3 +21,33 @@
 .excalifont {
   font-family: var(--font-excalifont);
 }
+
+@keyframes backdropBlurFadeIn {
+  0% {
+    background-color: rgba(0, 0, 0, 0);
+    backdrop-filter: blur(0px);
+  }
+  100% {
+    background-color: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(6px);
+  }
+}
+
+@keyframes modalFadeIn {
+  0% {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.modal-backdrop {
+  animation: backdropBlurFadeIn 0.35s ease forwards;
+}
+
+.modal-content {
+  animation: modalFadeIn 0.3s ease forwards;
+}
