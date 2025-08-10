@@ -39,7 +39,7 @@ export function RoomCanvas({ slug, encryptionKey, roomType: propRoomType }: { sl
         setRoomFullError(null);
         setIsRoomAccessible(false); 
 
-        const ws = new WebSocket(process.env.NEXT_PUBLIC_WS_URL  ?? WS_URL);
+        const ws = new WebSocket(WS_URL);
 
         ws.onopen = () => {
           console.log('✅ WebSocket connected');

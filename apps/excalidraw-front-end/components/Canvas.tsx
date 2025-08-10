@@ -100,7 +100,9 @@ export function Canvas({ roomId, socket, isSolo = false, isUserAuthenticated = f
   }, []);
 
   const clearCanvasAndShapes = useCallback(() => {
+    console.log('clearCanvasAndShapes called, game:', game);
     if (game) {
+       console.log('Calling clearAllShapes');
       game.clearAllShapes();
     }
   }, [game]);
@@ -323,7 +325,7 @@ export function Canvas({ roomId, socket, isSolo = false, isUserAuthenticated = f
       </div>
 
       {showLiveModal && (
-        <LiveCollabModal onClose={handleCloseLiveModal} />
+        <LiveCollabModal onClose={handleCloseLiveModal} source="share" />
       )}
 
       {showShareLinkModal && isCollabMode && (

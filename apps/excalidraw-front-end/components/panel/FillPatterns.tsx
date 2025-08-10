@@ -1,10 +1,9 @@
-import React from 'react';
-
-export const FillPattern = ({ type, color, size = 14 }: { type: 'hachure' | 'cross-hatch' | 'dots' | 'solid', color: string, size?: number }) => {
+// FillPattern Component (resized)
+export const FillPattern = ({ type, color, size = 8 }: { type: 'hachure' | 'cross-hatch' | 'dots' | 'solid', color: string, size?: number }) => {
   const patterns = {
-    hachure: '////',
-    'cross-hatch': 'xxxx',
-    dots: '•••',
+    hachure: '///',
+    'cross-hatch': 'xxx',
+    dots: '••',
     solid: '■'
   };
   return (

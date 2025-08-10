@@ -1,10 +1,3 @@
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription
-} from "@repo/ui/components/base/dialog";
 import React from "react";
 
 interface ConfirmModalProps {
@@ -33,34 +26,55 @@ export const ConfirmModal = ({
       : "bg-white text-black border border-gray-300 cursor-pointer";
   const modalBg = theme === "dark" ? "bg-[#232329]" : "bg-[#ffffff]";
 
+  if (!open) return null;
+
   return (
-    <Dialog
-      open={open}
-      onOpenChange={setOpen}
+    <div
+      className="fixed inset-0 flex items-center justify-center z-50"
+      aria-modal="true"
+      role="dialog"
     >
-      <DialogContent
-        className={`sm:max-w-[470px] min-w-[370px] py-10 px-8 rounded-2xl ${modalBg} flex flex-col items-center border-none`}
+      {/* Backdrop */}
+      <div
+        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+        onClick={handleCancel}
+      ></div>
+
+      {/* Modal content */}
+      <div
+        className={`relative z-10 sm:max-w-[320px] min-w-[300px] py-6 px-5 rounded-xl ${modalBg} flex flex-col items-center border-none shadow-lg`}
       >
-        <DialogHeader className="space-y-4 w-full text-center">
-          <DialogTitle className={`text-2xl font-bold ${theme === "dark" ? "text-white" : "text-black"}`}>
+        {/* Header */}
+        <div className="space-y-3 w-full text-center">
+          <h2
+            className={`text-lg font-bold ${
+              theme === "dark" ? "text-white" : "text-black"
+            }`}
+          >
             Clear Canvas
-          </DialogTitle>
-          <DialogDescription className={`text-base ${theme === "dark" ? "text-[#ededed]" : "text-gray-800"}`}>
+          </h2>
+          <p
+            className={`text-sm ${
+              theme === "dark" ? "text-[#ededed]" : "text-gray-800"
+            }`}
+          >
             Do you really want to clear the canvas? This cannot be undone.
-          </DialogDescription>
-        </DialogHeader>
-        <div className="flex flex-row gap-7 justify-center w-full mt-9">
+          </p>
+        </div>
+
+        {/* Actions */}
+        <div className="flex flex-row gap-4 justify-center w-full mt-6">
           <button
-            className={`flex-1 py-4 rounded-xl text-lg font-semibold transition-colors duration-150 ${cancelBtnStyles}`}
-            style={{ minWidth: 140, minHeight: 58 }}
+            className={`flex-1 py-3 rounded-lg text-base font-semibold transition-colors duration-150 ${cancelBtnStyles}`}
+            style={{ minWidth: 95, minHeight: 42 }}
             onClick={handleCancel}
             type="button"
           >
             No
           </button>
           <button
-            className={`flex-1 py-4 rounded-xl text-lg font-semibold flex items-center gap-2 justify-center transition-colors duration-150 ${confirmBtnStyles}`}
-            style={{ minWidth: 140, minHeight: 58 }}
+            className={`flex-1 py-3 rounded-lg text-base font-semibold flex items-center gap-2 justify-center transition-colors duration-150 ${confirmBtnStyles}`}
+            style={{ minWidth: 95, minHeight: 42 }}
             onClick={() => {
               onConfirm();
               setOpen(false);
@@ -70,7 +84,7 @@ export const ConfirmModal = ({
             Yes
           </button>
         </div>
-      </DialogContent>
-    </Dialog>
+      </div>
+    </div>
   );
 };

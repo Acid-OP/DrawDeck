@@ -80,17 +80,17 @@ export const ExcalidrawPropertiesPanel: React.FC<ExcalidrawPropertiesPanelProps>
   return (
     <div
       className={cn(
-        'rounded-lg p-4 shadow-lg backdrop-blur-sm transition-colors duration-300',
+        'rounded-lg p-3 shadow-lg backdrop-blur-sm transition-colors duration-300 min-h-[320px]',
         theme === 'light'
           ? 'bg-white text-black border border-gray-300'
           : 'bg-[#232329] text-white border border-[#333]',
-        compact ? 'w-56' : 'w-68',
+        compact ? 'w-44' : 'w-50',
         className
       )}
     >
       {/* Stroke Color */}
       <PropertySection label="Stroke" compact={compact} theme={theme}>
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-2 flex-wrap">
           {strokeColors.map((colorData, index) => (
             <React.Fragment key={index}>
               <ColorSwatch
@@ -101,25 +101,25 @@ export const ExcalidrawPropertiesPanel: React.FC<ExcalidrawPropertiesPanelProps>
                 size="md"
                 theme = {theme}
               />
-              {index === 4 && (
+              {/* {index === 4 && (
                 <SidebarSeparator
                   theme={theme}
                   orientation="vertical"
-                  length="h-6"
+                  length="h-5"
                   className="mx-1"
                 />
-              )}
+              )} */}
             </React.Fragment>
           ))}
-          <StyleButton className="ml-1 cursor-pointer" title="More colors..." size="md" theme={theme}>
-            <div className="w-3 h-3 rounded-full bg-gradient-to-br from-red-400 via-yellow-400 to-blue-400" />
-          </StyleButton>
+          {/* <StyleButton className="ml-1 cursor-pointer" title="More colors..." size="md" theme={theme}>
+            <div className="w-2.5 h-2.5 rounded-full bg-gradient-to-br from-red-400 via-yellow-400 to-blue-400" />
+          </StyleButton> */}
         </div>
       </PropertySection>
 
       {/* Background */}
       <PropertySection label="Background" compact={compact} theme={theme}>
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-2 flex-wrap">
           {backgroundColors.map((colorData, index) => (
             <React.Fragment key={index}>
               <ColorSwatch
@@ -131,25 +131,25 @@ export const ExcalidrawPropertiesPanel: React.FC<ExcalidrawPropertiesPanelProps>
                 isTransparent={colorData.isTransparent}
                 theme={theme}
               />
-              {index === 4 && (
+              {/* {index === 4 && (
                 <SidebarSeparator
                   theme={theme}
                   orientation="vertical"
-                  length="h-6"
+                  length="h-5"
                   className="mx-1"
                 />
-              )}
+              )} */}
             </React.Fragment>
           ))}
-          <StyleButton className="ml-1 cursor-pointer" title="More colors..." size="md" theme={theme}>
-            <div className="w-3 h-3 rounded-full bg-gradient-to-br from-purple-400 via-pink-400 to-green-400" />
-          </StyleButton>
+          {/* <StyleButton className="ml-1 cursor-pointer" title="More colors..." size="md" theme={theme}>
+            <div className="w-2.5 h-2.5 rounded-full bg-gradient-to-br from-purple-400 via-pink-400 to-green-400" />
+          </StyleButton> */}
         </div>
       </PropertySection>
 
       {/* Stroke Width */}
       <PropertySection label="Stroke Width" compact={compact} theme={theme}>
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-2">
           {strokeWidths.map((widthData, index) => (
             <StyleButton
               key={index}
@@ -167,7 +167,7 @@ export const ExcalidrawPropertiesPanel: React.FC<ExcalidrawPropertiesPanelProps>
 
       {/* Stroke Style */}
       <PropertySection label="Stroke Style" compact={compact} theme={theme}>
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-2">
           {strokeStyles.map((styleData, index) => (
             <StyleButton
               key={index}
@@ -185,7 +185,7 @@ export const ExcalidrawPropertiesPanel: React.FC<ExcalidrawPropertiesPanelProps>
 
       {/* Fill Style */}
       <PropertySection label="Fill Style" compact={compact} theme={theme}>
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-2">
           {fillStyles.map((fillData, index) => (
             <StyleButton
               key={index}
@@ -195,7 +195,7 @@ export const ExcalidrawPropertiesPanel: React.FC<ExcalidrawPropertiesPanelProps>
               size="lg"
               theme={theme}
             >
-              <FillPattern type={fillData.type} color="currentColor" size={14} />
+              <FillPattern type={fillData.type} color="currentColor" size={10} />
             </StyleButton>
           ))}
         </div>

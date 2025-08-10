@@ -1,5 +1,4 @@
 'use client';
-
 import React from 'react';
 import { cn } from '@repo/ui/lib/utils';
 
@@ -10,7 +9,7 @@ export interface StyleButtonProps {
   children: React.ReactNode;
   size?: 'sm' | 'md' | 'lg';
   className?: string;
-  theme: 'light' | 'dark'; // added
+  theme: 'light' | 'dark';
 }
 
 export const StyleButton: React.FC<StyleButtonProps> = ({
@@ -23,9 +22,9 @@ export const StyleButton: React.FC<StyleButtonProps> = ({
   theme,
 }) => {
   const sizeClasses = {
-    sm: 'w-7 h-7',
-    md: 'w-8 h-8',
-    lg: 'w-10 h-10',
+    sm: 'w-5 h-5',
+    md: 'w-6 h-6',
+    lg: 'w-8 h-8',
   };
 
   return (

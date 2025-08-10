@@ -1,3 +1,4 @@
+// ColorSwatch Component (resized)
 import React from 'react';
 import { cn } from '@repo/ui/lib/utils';
 
@@ -8,7 +9,7 @@ interface ColorSwatchProps {
   title?: string;
   size?: 'sm' | 'md';
   isTransparent?: boolean;
-  theme: 'light' | 'dark'; // added
+  theme: 'light' | 'dark';
 }
 
 export const ColorSwatch: React.FC<ColorSwatchProps> = ({
@@ -21,8 +22,8 @@ export const ColorSwatch: React.FC<ColorSwatchProps> = ({
   theme,
 }) => {
   const sizeClasses = {
-    sm: 'w-7 h-7',
-    md: 'w-8 h-8'
+    sm: 'w-5 h-5',
+    md: 'w-6 h-6'
   };
 
   return (
@@ -31,7 +32,7 @@ export const ColorSwatch: React.FC<ColorSwatchProps> = ({
       title={title}
       className={cn(
         'rounded-sm transition-all hover:scale-105 focus:outline-none cursor-pointer',
-        selected && (theme === 'dark' ? 'border-2 border-[#a8a5ff]' : 'border-2 border-[#5050ff]'),
+        selected && (theme === 'dark' ? 'border border-[#a8a5ff]' : 'border border-[#5050ff]'),
         sizeClasses[size],
         'flex items-center justify-center',
       )}
@@ -48,3 +49,5 @@ export const ColorSwatch: React.FC<ColorSwatchProps> = ({
     </button>
   );
 };
+
+

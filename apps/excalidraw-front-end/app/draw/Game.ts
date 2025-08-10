@@ -933,11 +933,11 @@ setTool(tool: Tool) {
   this.clearCanvas();
 }
 public clearAllShapes() {
+  console.log('clearAllShapes called, current shapes:', this.existingShapes.length);
   if (this.isSolo) {
     this.existingShapes = [];
     const key = this.getLocalStorageKey(); 
-    localStorage.removeItem(key);
- 
+    localStorage.removeItem(key); 
     this.clearCanvas();
   }
 }

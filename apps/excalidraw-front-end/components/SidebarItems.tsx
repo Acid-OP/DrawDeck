@@ -145,6 +145,7 @@ export const SidebarItems: React.FC<SidebarItemsProps> = ({
       {showLiveModal && (
         <LiveCollabModal 
           onClose={() => setShowLiveModal(false)}
+          source="sidebar"
         />
       )}
       {showShareModal && isCollabMode && roomId && encryptionKey && roomType && (

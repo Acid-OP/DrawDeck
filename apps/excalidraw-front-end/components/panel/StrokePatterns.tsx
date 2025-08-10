@@ -1,23 +1,23 @@
-import React from 'react';
-
+// StrokePatterns Components (resized)
 export const StrokeWidthPattern = ({ width, color }: { width: 'thin' | 'medium' | 'thick', color: string }) => {
   const strokeMap = {
     thin: 1,
-    medium: 3,
-    thick: 5
+    medium: 2,
+    thick: 3
   };
   return (
-    <svg width="20" height="10">
-      <line x1="0" y1="5" x2="20" y2="5" stroke={color} strokeWidth={strokeMap[width]} />
+    <svg width="16" height="8">
+      <line x1="0" y1="4" x2="16" y2="4" stroke={color} strokeWidth={strokeMap[width]} />
     </svg>
   );
 };
 
 export const StrokePattern = ({ type, color }: { type: 'solid' | 'dashed' | 'dotted', color: string }) => {
-  const dashArray = type === 'solid' ? '' : type === 'dashed' ? '5,5' : '1,5';
+  const dashArray = type === 'solid' ? '' : type === 'dashed' ? '4,4' : '1,4';
   return (
-    <svg width="20" height="10">
-      <line x1="0" y1="5" x2="20" y2="5" stroke={color} strokeWidth={2} strokeDasharray={dashArray} />
+    <svg width="16" height="8">
+      <line x1="0" y1="4" x2="16" y2="4" stroke={color} strokeWidth={2} strokeDasharray={dashArray} />
     </svg>
   );
 };
+

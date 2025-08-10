@@ -32,6 +32,25 @@ export const ZoomBar: React.FC<ZoomBarProps> = ({
       ? "Reset"
       : "";
 
+  const buttonBaseStyle: React.CSSProperties = {
+    height: 36,
+    borderRadius: 4,
+    background: "none",
+    border: "none",
+    fontWeight: 400,
+    cursor: "pointer",
+    zIndex: 2,
+    color: "#e9ecef",
+    outline: "none",
+    position: "relative",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    lineHeight: 1, // ensures vertical alignment
+    transition: "color 0.15s ease",
+    fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+  };
+
   return (
     <div
       className="fixed"
@@ -47,24 +66,24 @@ export const ZoomBar: React.FC<ZoomBarProps> = ({
         style={{
           borderRadius: 8,
           minWidth: 120,
-          height: 34,
-          padding: "0 10px",
-          fontFamily: "'Inter',sans-serif",
+          height: 36,
+          padding: "0 8px",
+          fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
           boxShadow:
-            "rgba(0,0,0,0.09) 0px 1.7px 14px 0px,rgba(0,0,0,0.09) 0px 1.2px 6px 0px",
+            "rgba(0,0,0,0.12) 0px 2px 10px 0px, rgba(0,0,0,0.08) 0px 1px 4px 0px",
           userSelect: "none",
           touchAction: "manipulation",
-          fontWeight: 500,
-          fontSize: 14,
-          letterSpacing: "0.01em",
-          background: theme === "dark" ? "#202026" : "#ececf4",
+          fontWeight: 400,
+          fontSize: 13,
+          letterSpacing: "-0.01em",
+          background: "#232329",
           position: "relative",
-          minHeight: 34,
+          minHeight: 36,
           display: "flex",
           alignItems: "center",
         }}
       >
-        {/* Section hover background: left (minus) */}
+        {/* Hover BG Left */}
         <div
           style={{
             position: "absolute",
@@ -74,18 +93,16 @@ export const ZoomBar: React.FC<ZoomBarProps> = ({
             right: `${100 - leftFrac}%`,
             background:
               hovered === "minus"
-                ? theme === "dark"
-                  ? "#2e2d39"
-                  : "#eeedfc"
+                ? "rgba(255,255,255,0.05)"
                 : "transparent",
             borderTopLeftRadius: 8,
             borderBottomLeftRadius: 8,
-            transition: "background 0.13s",
+            transition: "background 0.15s ease",
             zIndex: 1,
             pointerEvents: "none",
           }}
         />
-        {/* Section hover background: right (plus) */}
+        {/* Hover BG Right */}
         <div
           style={{
             position: "absolute",
@@ -95,107 +112,57 @@ export const ZoomBar: React.FC<ZoomBarProps> = ({
             right: 0,
             background:
               hovered === "plus"
-                ? theme === "dark"
-                  ? "#2e2d39"
-                  : "#eeedfc"
+                ? "rgba(255,255,255,0.05)"
                 : "transparent",
             borderTopRightRadius: 8,
             borderBottomRightRadius: 8,
-            transition: "background 0.13s",
+            transition: "background 0.15s ease",
             zIndex: 1,
             pointerEvents: "none",
           }}
         />
 
-        {/* MINUS */}
+        {/* Minus */}
         <button
           aria-label="Zoom out"
           type="button"
           onMouseEnter={() => setHovered("minus")}
           onMouseLeave={() => setHovered(null)}
-          onFocus={() => setHovered("minus")}
-          onBlur={() => setHovered(null)}
-          style={{
-            width: 30,
-            height: 30,
-            borderRadius: 5,
-            background: "none",
-            border: "none",
-            fontWeight: 500,
-            fontSize: 18,
-            cursor: "pointer",
-            zIndex: 2,
-            color: theme === "dark" ? "#fff" : "#000",
-            marginRight: 2,
-            marginLeft: 1,
-            outline: "none",
-            position: "relative",
-          }}
-          tabIndex={0}
+          style={{ ...buttonBaseStyle, width: 40, fontSize: 18 }}
           onClick={() =>
-            setZoom((z: number) =>
+            setZoom(z =>
               Math.max(Number((z - zoomStep).toFixed(2)), minZoom)
             )
           }
         >
-          –
+          −
         </button>
 
-        {/* 100% (reset/percent) */}
+        {/* Percent / Reset */}
         <button
           type="button"
           aria-label="Reset zoom to 100%"
           onMouseEnter={() => setHovered("reset")}
           onMouseLeave={() => setHovered(null)}
-          onFocus={() => setHovered("reset")}
-          onBlur={() => setHovered(null)}
           style={{
-            background: "none",
-            border: "none",
-            fontWeight: 500,
-            outline: "none",
-            minWidth: 50,
-            height: 30,
+            ...buttonBaseStyle,
+            width: 50,
             fontSize: 14,
-            fontFamily: "'Inter',sans-serif",
-            cursor: "pointer",
-            zIndex: 2,
-            color: theme === "dark" ? "#fff" : "#000",
-            borderRadius: 5,
           }}
           onClick={() => setZoom(1)}
-          tabIndex={0}
         >
           {Math.round(zoom * 100)}%
         </button>
 
-        {/* PLUS */}
+        {/* Plus */}
         <button
           aria-label="Zoom in"
           type="button"
           onMouseEnter={() => setHovered("plus")}
           onMouseLeave={() => setHovered(null)}
-          onFocus={() => setHovered("plus")}
-          onBlur={() => setHovered(null)}
-          style={{
-            width: 30,
-            height: 30,
-            borderRadius: 5,
-            background: "none",
-            border: "none",
-            fontWeight: 500,
-            fontSize: 18,
-            cursor: "pointer",
-            zIndex: 2,
-            color: theme === "dark" ? "#fff" : "#000",
-            marginLeft: 2,
-            marginRight: 1,
-            outline: "none",
-            position: "relative",
-          }}
-          tabIndex={0}
+          style={{ ...buttonBaseStyle, width: 40, fontSize: 18 }}
           onClick={() =>
-            setZoom((z: number) =>
+            setZoom(z =>
               Math.min(Number((z + zoomStep).toFixed(2)), maxZoom)
             )
           }
@@ -203,29 +170,30 @@ export const ZoomBar: React.FC<ZoomBarProps> = ({
           +
         </button>
 
-        {/* TOOLTIP */}
+        {/* Tooltip */}
         {hovered && (
           <div
             style={{
               position: "absolute",
               left: "50%",
               transform: "translateX(-50%)",
-              bottom: 40,
-              background: "#fff",
-              color: "#23232b",
+              bottom: 42,
+              background: "#ffffff",
+              color: "#1e1e1e",
               borderRadius: 6,
-              border: "1px solid #ededed",
+              border: "1px solid #e0e0e0",
               boxShadow:
-                "0 3px 20px rgba(0,0,0,0.13), 0 1px 6px 0 rgba(0,0,0,0.07)",
-              fontFamily: "'Inter',sans-serif",
-              fontWeight: 500,
+                "0 4px 20px rgba(0,0,0,0.15), 0 2px 8px rgba(0,0,0,0.10)",
+              fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+              fontWeight: 300,
               fontSize: 12,
-              padding: "2px 12px",
+              padding: "6px 10px",
               whiteSpace: "nowrap",
-              opacity: 0.99,
+              opacity: 1,
               zIndex: 9999,
-              transition: "opacity 0.13s",
+              transition: "opacity 0.15s ease",
               pointerEvents: "none",
+              letterSpacing: "-0.01em",
             }}
           >
             {tooltipText}
