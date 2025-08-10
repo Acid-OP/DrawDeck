@@ -254,22 +254,22 @@ export function VideoCall({ roomId }: VideoCallProps) {
       >
         <div className="flex flex-col items-center">
           <div className={`relative rounded-lg overflow-hidden transition-all duration-200 ${
-            isLocalSpeaking && isMicOn ? 'ring-4 ring-green-400 shadow-lg shadow-green-400/50' : 'ring-2 ring-white'
+            isLocalSpeaking && isMicOn ? 'ring-4 ring-green-400 shadow-lg shadow-green-400/50' : ''
           }`}>
             <video
               ref={localVideoRef}
               autoPlay
               muted
               playsInline
-              className="w-32 h-24 bg-black"
+              className="w-25 h-18 bg-black"
             />
             {!isCameraOn && (
-              <div className="absolute inset-0 flex items-center justify-center bg-gray-800">
-                <VideoOff className="w-6 h-6 text-gray-400" />
+              <div className="absolute inset-0 flex items-center justify-center bg-[#a8a5ff]">
+                <VideoOff className="w-6 h-6 text-black" />
               </div>
             )}
           </div>
-          <span className="text-xs text-white mt-1 flex items-center gap-1">
+          <span className="text-md text-white mt-1 flex items-center gap-1">
             You
             {isLocalSpeaking && isMicOn && (
               <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
@@ -286,25 +286,24 @@ export function VideoCall({ roomId }: VideoCallProps) {
       >
         <div className="flex flex-col items-center">
           <div className={`relative rounded-lg overflow-hidden transition-all duration-200 ${
-            isRemoteSpeaking && isRemoteUserConnected ? 'ring-4 ring-green-400 shadow-lg shadow-green-400/50' : 'ring-2 ring-white'
+            isRemoteSpeaking && isRemoteUserConnected ? 'ring-4 ring-green-400 shadow-lg shadow-green-400/50' : ''
           }`}>
             <video
               ref={remoteVideoRef}
               autoPlay
               playsInline
-              className="w-32 h-24 bg-black"
+              className="w-25 h-18 bg-black"
             />
             {!isRemoteUserConnected && (
-              <div className="absolute inset-0 flex items-center justify-center bg-gray-900">
+              <div className="absolute inset-0 flex items-center justify-center bg-[#a8a5ff]">
                 <div className="text-center">
-                  <div className="w-6 h-6 border-2 border-gray-400 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
-                  <span className="text-xs text-gray-400">Waiting...</span>
+                  <VideoOff className="w-6 h-6 text-black" />
                 </div>
               </div>
             )}
           </div>
-          <span className="text-xs text-white mt-1 flex items-center gap-1">
-            {isRemoteUserConnected ? 'Other user' : 'Connecting...'}
+          <span className="text-md text-white mt-1 flex items-center gap-1">
+            {isRemoteUserConnected ? 'Other user' : 'Connecting'}
             {isRemoteSpeaking && isRemoteUserConnected && (
               <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
             )}
@@ -315,25 +314,25 @@ export function VideoCall({ roomId }: VideoCallProps) {
       <div className="fixed bottom-4 right-4 z-50 flex gap-2">
         <button
           onClick={toggleMic}
-          className={`p-2 rounded transition-colors ${
+          className={`p-1.5 rounded transition-colors cursor-pointer ${
             isMicOn 
-              ? 'bg-gray-800 hover:bg-gray-700 text-white' 
-              : 'bg-red-600 hover:bg-red-700 text-white'
+              ? 'bg-[#a8a5ff]  hover:bg-[#7d78ff] text-black' 
+              : ' bg-[#a8a5ff] hover:bg-[#7d78ff] text-black'
           }`}
           title="Toggle Mic"
         >
-          {isMicOn ? <Mic className="w-5 h-5" /> : <MicOff className="w-5 h-5" />}
+          {isMicOn ? <Mic className="w-4 h-4" /> : <MicOff className="w-4 h-4" />}
         </button>
         <button
           onClick={toggleCamera}
-          className={`p-2 rounded transition-colors ${
+          className={`p-1.5 rounded transition-colors cursor-pointer ${
             isCameraOn 
-              ? 'bg-gray-800 hover:bg-gray-700 text-white' 
-              : 'bg-red-600 hover:bg-red-700 text-white'
+              ? 'bg-[#a8a5ff] hover:bg-[#7d78ff] text-black' 
+              : 'bg-[#a8a5ff] hover:bg-[#7d78ff] text-black'
           }`}
           title="Toggle Camera"
         >
-          {isCameraOn ? <Video className="w-5 h-5" /> : <VideoOff className="w-5 h-5" />}
+          {isCameraOn ? <Video className="w-4 h-4" /> : <VideoOff className="w-4 h-4" />}
         </button>
       </div>
     </>

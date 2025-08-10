@@ -12,6 +12,7 @@ type Room = {
   participants: Map<string, ClientInfo>;
   roomType?: 'duo' | 'group'; 
 };
+const roomCreators: Map<string, string> = new Map();
 const roomSecrets: Map<string, string> = new Map(); 
 const roomTypes: Map<string, 'duo' | 'group'> = new Map();
 const clients = new Set<ClientInfo>();
@@ -69,6 +70,7 @@ wss.on("connection", (ws, request) => {
               rooms.set(newRoom, { participants: new Map() });
               roomSecrets.set(newRoom, encryptionKey);
               roomTypes.set(newRoom, roomType);
+              roomCreators.set(newRoom, client.userId);
             }
             const room = rooms.get(newRoom)!;
             room.participants.set(client.userId, client);
@@ -217,8 +219,17 @@ if (!expectedKey || encryptionKey !== expectedKey) {
     client.rooms.forEach((roomId) => {
       const room = rooms.get(roomId);
       if (room) {
+        const isCreator = roomCreators.get(roomId) === client.userId;
         room.participants.delete(client.userId);
-
+        if (isCreator && room.participants.size > 0) {
+          broadcastToRoom(roomId, {
+          type: "creator_left",
+          roomId,
+          message: "Room creator has left. This room is no longer accessible.",
+          userId: client.userId,
+          timestamp: new Date().toISOString(),
+        });
+      } else{
         broadcastToRoom(roomId, {
           type: "user_left",
           roomId,
@@ -226,11 +237,14 @@ if (!expectedKey || encryptionKey !== expectedKey) {
           participantCount: room.participants.size,
           timestamp: new Date().toISOString(),
         });
+      }
 
         const hasOthers = room.participants.size > 0;
-        if (!hasOthers) {
+        if (!hasOthers || isCreator) {
           rooms.delete(roomId);
           roomSecrets.delete(roomId);
+          roomTypes.delete(roomId);
+          roomCreators.delete(roomId)
         } else {
           printRoomMembers(roomId);
         }
