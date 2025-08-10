@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import SignupButton from './SignupWelcomeButton';
 import BrandTitle from './BrandTitle';
 import { useAuth } from '@clerk/nextjs';
@@ -16,6 +16,9 @@ export const Header: React.FC<HeaderProps> = ({ theme }) => {
   const { isSignedIn, isLoaded } = useAuth();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const router = useRouter();
+   useEffect(() => {
+    router.prefetch("/signup");
+  }, [router]);
 
   return (
     <div>

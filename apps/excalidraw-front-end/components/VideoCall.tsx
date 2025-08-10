@@ -244,18 +244,25 @@ export function VideoCall({ roomId }: VideoCallProps) {
     setIsMicOn(newState);
   };
 
-  return (
-    <>
+return (
+  <>
+    {/* Bottom Center Video Container */}
+    <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 flex flex-row gap-4 flex-wrap justify-center">
+      {/* Local Video */}
       <motion.div
         drag
         dragMomentum={false}
         dragElastic={0.1}
-        className="fixed top-4 left-4 z-50 cursor-move"
+        className="cursor-move"
       >
         <div className="flex flex-col items-center">
-          <div className={`relative rounded-lg overflow-hidden transition-all duration-200 ${
-            isLocalSpeaking && isMicOn ? 'ring-4 ring-green-400 shadow-lg shadow-green-400/50' : ''
-          }`}>
+          <div
+            className={`relative rounded-lg overflow-hidden transition-all duration-200 ${
+              isLocalSpeaking && isMicOn
+                ? "ring-4 ring-green-400 shadow-lg shadow-green-400/50"
+                : ""
+            }`}
+          >
             <video
               ref={localVideoRef}
               autoPlay
@@ -278,16 +285,21 @@ export function VideoCall({ roomId }: VideoCallProps) {
         </div>
       </motion.div>
 
+      {/* Remote Video */}
       <motion.div
         drag
         dragMomentum={false}
         dragElastic={0.1}
-        className="fixed top-4 right-4 z-50 cursor-move"
+        className="cursor-move"
       >
         <div className="flex flex-col items-center">
-          <div className={`relative rounded-lg overflow-hidden transition-all duration-200 ${
-            isRemoteSpeaking && isRemoteUserConnected ? 'ring-4 ring-green-400 shadow-lg shadow-green-400/50' : ''
-          }`}>
+          <div
+            className={`relative rounded-lg overflow-hidden transition-all duration-200 ${
+              isRemoteSpeaking && isRemoteUserConnected
+                ? "ring-4 ring-green-400 shadow-lg shadow-green-400/50"
+                : ""
+            }`}
+          >
             <video
               ref={remoteVideoRef}
               autoPlay
@@ -296,45 +308,38 @@ export function VideoCall({ roomId }: VideoCallProps) {
             />
             {!isRemoteUserConnected && (
               <div className="absolute inset-0 flex items-center justify-center bg-[#a8a5ff]">
-                <div className="text-center">
-                  <VideoOff className="w-6 h-6 text-black" />
-                </div>
+                <VideoOff className="w-6 h-6 text-black" />
               </div>
             )}
           </div>
           <span className="text-md text-white mt-1 flex items-center gap-1">
-            {isRemoteUserConnected ? 'Other user' : 'Connecting'}
+            {isRemoteUserConnected ? "Other user" : "Connecting"}
             {isRemoteSpeaking && isRemoteUserConnected && (
               <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
             )}
           </span>
         </div>
       </motion.div>
+    </div>
 
-      <div className="fixed bottom-4 right-4 z-50 flex gap-2">
-        <button
-          onClick={toggleMic}
-          className={`p-1.5 rounded transition-colors cursor-pointer ${
-            isMicOn 
-              ? 'bg-[#a8a5ff]  hover:bg-[#7d78ff] text-black' 
-              : ' bg-[#a8a5ff] hover:bg-[#7d78ff] text-black'
-          }`}
-          title="Toggle Mic"
-        >
-          {isMicOn ? <Mic className="w-4 h-4" /> : <MicOff className="w-4 h-4" />}
-        </button>
-        <button
-          onClick={toggleCamera}
-          className={`p-1.5 rounded transition-colors cursor-pointer ${
-            isCameraOn 
-              ? 'bg-[#a8a5ff] hover:bg-[#7d78ff] text-black' 
-              : 'bg-[#a8a5ff] hover:bg-[#7d78ff] text-black'
-          }`}
-          title="Toggle Camera"
-        >
-          {isCameraOn ? <Video className="w-4 h-4" /> : <VideoOff className="w-4 h-4" />}
-        </button>
-      </div>
-    </>
-  );
+    {/* Mic/Camera Controls */}
+    <div className="fixed bottom-4 right-4 z-50 flex gap-2">
+      <button
+        onClick={toggleMic}
+        className={`p-1.5 rounded transition-colors cursor-pointer bg-[#a8a5ff] hover:bg-[#7d78ff] text-black`}
+        title="Toggle Mic"
+      >
+        {isMicOn ? <Mic className="w-4 h-4" /> : <MicOff className="w-4 h-4" />}
+      </button>
+      <button
+        onClick={toggleCamera}
+        className={`p-1.5 rounded transition-colors cursor-pointer bg-[#a8a5ff] hover:bg-[#7d78ff] text-black`}
+        title="Toggle Camera"
+      >
+        {isCameraOn ? <Video className="w-4 h-4" /> : <VideoOff className="w-4 h-4" />}
+      </button>
+    </div>
+  </>
+);
+
 }
