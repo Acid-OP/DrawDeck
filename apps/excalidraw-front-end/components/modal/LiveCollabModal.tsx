@@ -8,7 +8,7 @@ import { generateSecureKey } from "@/lib/crypto";
 
 interface Props {
   onClose: () => void;
-  source?: 'header' | 'sidebar' | 'share'; // Add source prop to control size
+  source?: 'header' | 'sidebar' | 'share';
 }
 
 type RoomType = "duo" | "group";
@@ -21,7 +21,6 @@ export const LiveCollabModal: React.FC<Props> = ({ onClose, source = 'header' })
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Determine size based on source
   const isCompact = source === 'sidebar' || source === 'share';
 
   const handleStartSession = async () => {
@@ -74,13 +73,9 @@ export const LiveCollabModal: React.FC<Props> = ({ onClose, source = 'header' })
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
-
-  // Add blur effect to body when modal is mounted
+  
   useEffect(() => {
-    // Add blur class to body
     document.body.classList.add('modal-open-blur');
-    
-    // Remove blur class when component unmounts
     return () => {
       document.body.classList.remove('modal-open-blur');
     };

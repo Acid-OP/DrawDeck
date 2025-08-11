@@ -239,6 +239,7 @@ export function Canvas({ roomId, socket, isSolo = false, isUserAuthenticated = f
               theme={theme} 
               onThemeToggle={toggleTheme} 
               onClearCanvas={clearCanvasAndShapes}
+              isMobile={false}
               {...(isCollabMode && {
                 isCollabMode: true,
                 roomId: roomId,
@@ -271,10 +272,7 @@ export function Canvas({ roomId, socket, isSolo = false, isUserAuthenticated = f
   <>
     {/* Top Toolbar Box - fixed positioning */}
     <div className="fixed top-3 left-3 right-3 z-50 flex justify-center">
-      <div className={`
-        rounded-md py-1 px-2
-        ${theme === "dark" ? "bg-[#232329]" : "bg-white border border-gray-200"}
-      `}>
+      <div>
         <TopBar 
           selectedTool={selectedTool} 
           setSelectedTool={setSelectedTool} 
@@ -282,22 +280,20 @@ export function Canvas({ roomId, socket, isSolo = false, isUserAuthenticated = f
         />
       </div>
     </div>
-
     {/* Bottom Menu Box - fixed positioning */}
     <div className="fixed bottom-3 left-3 right-3 z-50">
       <div className={`
         rounded-md py-1 px-2 flex items-center justify-between gap-2
         ${theme === "dark" ? "bg-[#232329]" : "bg-white border border-gray-200"}
       `}>
-        {/* Menu on the left with border */}
         <div className={`
-          border rounded px-2 py-1 flex-shrink-0
-          ${theme === "dark" ? "border-gray-600" : "border-black"}
+        flex-shrink-0
         `}>
           <Menu 
             theme={theme} 
             onThemeToggle={toggleTheme} 
             onClearCanvas={clearCanvasAndShapes}
+            isMobile={true}
             {...(isCollabMode && {
               isCollabMode: true,
               roomId: roomId,
@@ -306,11 +302,7 @@ export function Canvas({ roomId, socket, isSolo = false, isUserAuthenticated = f
             })}
           />
         </div>
-        
-        {/* ZoomBar on the right with border */}
-        <div className={`
-          border rounded px-2 py-1 flex-shrink-0 ml-auto
-          ${theme === "dark" ? "border-gray-600" : "border-black"}
+        <div className={`rounded flex-shrink-0 ml-auto
         `}>
           <ZoomBar zoom={zoom} setZoom={setZoom} theme={theme} />
         </div>
@@ -318,8 +310,6 @@ export function Canvas({ roomId, socket, isSolo = false, isUserAuthenticated = f
     </div>
   </>
 )}
-
-{/* Desktop ZoomBar - keep fixed positioning */}
 {!isMobile && (
   <div className="absolute bottom-4 right-4">
     <ZoomBar zoom={zoom} setZoom={setZoom} theme={theme} />

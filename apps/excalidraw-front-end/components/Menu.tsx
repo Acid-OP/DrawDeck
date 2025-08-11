@@ -11,6 +11,7 @@ interface MenuProps {
   roomId?: string;
   encryptionKey?: string;
   roomType?: 'duo' | 'group';
+  isMobile?: boolean; 
 }
 
 export function Menu({
@@ -20,7 +21,8 @@ export function Menu({
   isCollabMode = false,
   roomId,
   encryptionKey,
-  roomType
+  roomType,
+  isMobile = false
 }: MenuProps) {
   const [activated, setActivated] = useState(false);
   const [clicked, setClicked] = useState(false);
@@ -55,7 +57,10 @@ export function Menu({
         onClick={handleClick}
         className={`
           p-2 rounded-md inline-block cursor-pointer transition
-          ${clicked ? "border-2 border-blue-500" : "border-2 border-transparent"}
+          ${isMobile 
+            ? "border border-black" 
+            : (clicked ? "border-1 border-[#9b98e7]" : "")
+          }
           ${theme === "dark" ? "bg-[#232329] hover:bg-[#363541]" : "bg-[#ececf4] hover:bg-[#d6d6e2]"}
         `}
       >
@@ -63,7 +68,10 @@ export function Menu({
       </div>
 
       {activated && (
-        <div className="absolute left-0 mt-1 z-50"> 
+        <div className={`
+          absolute left-0 z-50
+          ${isMobile ? "bottom-full mb-1" : "top-full mt-1"}
+        `}> 
           <SidebarModal
             isOpen={true}
             onClose={() => setActivated(false)}
@@ -74,6 +82,7 @@ export function Menu({
             roomId={roomId}
             encryptionKey={encryptionKey}
             roomType={roomType}
+            isMobile={isMobile}
           />
         </div>
       )}

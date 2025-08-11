@@ -6,12 +6,10 @@ export function useRoomHash() {
   useEffect(() => {
     const parseHash = () => {
       const hash = window.location.hash;
-      console.log("Current hash:", hash); // Debug log
       
       if (hash.startsWith("#room=")) {
         const data = hash.replace("#room=", "");
         const [id, key] = data.split(",");
-        console.log("Parsed roomId:", id, "key:", key); // Debug log
         setRoomId(id);
         setEncryptionKey(key);
       }

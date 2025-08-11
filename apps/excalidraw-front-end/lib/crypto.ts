@@ -1,5 +1,4 @@
 export async function generateAESKey(): Promise<string> {
-  // Check if we're in a browser environment and crypto.subtle is available
   if (typeof window !== 'undefined' && window.crypto && window.crypto.subtle) {
     try {
       const key = await window.crypto.subtle.generateKey(
@@ -19,14 +18,11 @@ export async function generateAESKey(): Promise<string> {
     }
   }
   
-  // Fallback: Generate a pseudo-random 32-byte key
   console.warn('Web Crypto API not available, using fallback key generation');
   return generateFallbackKey();
 }
 
-// Fallback function for when Web Crypto API is not available
 export function generateFallbackKey(): string {
-  // Use crypto.getRandomValues if available (works even without HTTPS)
   if (typeof window !== 'undefined' && window.crypto && window.crypto.getRandomValues) {
     try {
       const keyArray = new Uint8Array(32);
@@ -37,7 +33,6 @@ export function generateFallbackKey(): string {
     }
   }
   
-  // Ultimate fallback using Math.random (less secure but functional)
   const keyArray = new Uint8Array(32);
   for (let i = 0; i < keyArray.length; i++) {
     keyArray[i] = Math.floor(Math.random() * 256);
@@ -45,7 +40,6 @@ export function generateFallbackKey(): string {
   return btoa(String.fromCharCode(...keyArray));
 }
 
-// Simple function that always works
 export async function generateSecureKey(): Promise<string> {
-  return generateAESKey(); // This now has built-in fallbacks
+  return generateAESKey();
 }

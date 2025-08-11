@@ -5,9 +5,10 @@ import { ToggleGroup, ToggleGroupItem } from '@repo/ui/components/base/toggle-gr
 interface ThemeToggleProps {
   theme: 'light' | 'dark' | 'system';
   onThemeChange: (theme: 'light' | 'dark' | 'system') => void;
+  isMobile?: boolean;
 }
 
-export const ThemeToggle: React.FC<ThemeToggleProps> = ({ theme, onThemeChange }) => {
+export const ThemeToggle: React.FC<ThemeToggleProps> = ({ theme, onThemeChange, isMobile = false }) => {
   const isLight = theme === 'light';
 
   const getIconColor = (target: 'light' | 'dark' | 'system') => {
@@ -22,7 +23,9 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({ theme, onThemeChange }
 
   return (
     <div
-      className="flex w-full items-center justify-end py-1 gap-5 rounded-lg transition-colors duration-300"
+      className={`flex w-full items-center py-1 gap-5 rounded-lg transition-colors duration-300 ${
+        isMobile ? 'justify-start pl-2' : 'justify-end pl-2'
+      }`}
       style={{ backgroundColor: bgColor }}
     >
       <div

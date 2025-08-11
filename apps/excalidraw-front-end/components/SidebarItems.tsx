@@ -19,6 +19,7 @@ interface SidebarItemsProps {
   roomId?: string;
   encryptionKey?: string;
   roomType?: 'duo' | 'group';
+  isMobile?: boolean;
 }
 
 export const SidebarItems: React.FC<SidebarItemsProps> = ({ 
@@ -28,7 +29,8 @@ export const SidebarItems: React.FC<SidebarItemsProps> = ({
   isCollabMode = false,
   roomId,
   encryptionKey,
-  roomType
+  roomType,
+  isMobile = false
 }) => {
   const [showShareModal, setShowShareModal] = useState(false);
   const [showLiveModal, setShowLiveModal] = useState(false);
@@ -129,8 +131,8 @@ export const SidebarItems: React.FC<SidebarItemsProps> = ({
         
         <SidebarSeparator theme={theme} className="my-[6px]" />
         
-        <div className="scale-90 origin-left"> 
-          <ThemeToggle theme={theme} onThemeChange={onThemeToggle} />
+        <div className={isMobile ? "" : "scale-90 origin-left"}> 
+          <ThemeToggle theme={theme} onThemeChange={onThemeToggle} isMobile={isMobile} />
         </div>
       </div>
 

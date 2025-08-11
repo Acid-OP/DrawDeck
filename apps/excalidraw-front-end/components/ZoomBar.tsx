@@ -22,7 +22,6 @@ export const ZoomBar: React.FC<ZoomBarProps> = ({
   const [hovered, setHovered] = useState<"minus" | "plus" | "reset" | null>(null);
   const [isMobile, setIsMobile] = useState(false);
 
-  // Detect mobile
   useEffect(() => {
     const checkMobile = () => {
       setIsMobile(window.innerWidth < 768);
@@ -53,7 +52,7 @@ export const ZoomBar: React.FC<ZoomBarProps> = ({
     fontWeight: 400,
     cursor: "pointer",
     zIndex: 2,
-    color: "#e9ecef",
+    color: theme === "dark" ? "#e9ecef" : "#000000",
     outline: "none",
     position: "relative",
     display: "flex",
@@ -63,15 +62,11 @@ export const ZoomBar: React.FC<ZoomBarProps> = ({
     transition: "color 0.15s ease",
     fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
   };
-
-  // Different container styles for mobile vs desktop
   const containerStyle = isMobile ? {
-    // Mobile: relative positioning for inline layout
     position: 'relative' as const,
     zIndex: 2,
     pointerEvents: "auto" as const,
   } : {
-    // Desktop: fixed positioning
     position: 'fixed' as const,
     left: 20,
     bottom: 20,
@@ -85,7 +80,9 @@ export const ZoomBar: React.FC<ZoomBarProps> = ({
       style={containerStyle}
     >
       <div
-        className="relative flex items-center"
+        className={`relative flex items-center ${
+          isMobile && theme === "dark" ? "border border-black" : ""
+        }`}
         style={{
           borderRadius: 8,
           minWidth: 120,
@@ -99,7 +96,7 @@ export const ZoomBar: React.FC<ZoomBarProps> = ({
           fontWeight: 400,
           fontSize: 13,
           letterSpacing: "-0.01em",
-          background: "#232329",
+          background: theme === "dark" ? "#232329" : "#ececf4",
           position: "relative",
           minHeight: 36,
           display: "flex",
@@ -193,7 +190,7 @@ export const ZoomBar: React.FC<ZoomBarProps> = ({
           +
         </button>
 
-        {/* Tooltip - only show on desktop */}
+        {/* Tooltip  */}
         {hovered && !isMobile && (
           <div
             style={{
