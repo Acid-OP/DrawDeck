@@ -135,11 +135,24 @@ export function Canvas({ roomId, socket, isSolo = false, isUserAuthenticated = f
     };
 
     window.addEventListener("resize", debouncedResize);
+    
+    // Prevent scrolling on mobile
+    if (isMobile) {
+      document.body.style.overflow = 'hidden';
+      document.documentElement.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+      document.documentElement.style.overflow = '';
+    }
+    
     return () => {
       window.removeEventListener("resize", debouncedResize);
       clearTimeout(timeoutId);
+      // Cleanup on unmount
+      document.body.style.overflow = '';
+      document.documentElement.style.overflow = '';
     };
-  }, [updateSize]);
+  }, [updateSize, isMobile]);
 
   useEffect(() => {
     game?.setTool(selectedTool);
@@ -201,7 +214,7 @@ export function Canvas({ roomId, socket, isSolo = false, isUserAuthenticated = f
   const shouldShowWelcome = game && !hasInteracted && !game.hasShapes() && isSolo;
   
   return (
-    <div className={`w-screen h-screen overflow-hidden relative ${theme === "dark" ? "bg-[#121212]" : "bg-white"}`}>
+    <div className={`w-screen h-screen overflow-hidden relative ${isMobile ? 'touch-none' : ''} ${theme === "dark" ? "bg-[#121212]" : "bg-white"}`}>
       <canvas
         ref={canvasRef}
         width={dimensions.width}
@@ -209,6 +222,7 @@ export function Canvas({ roomId, socket, isSolo = false, isUserAuthenticated = f
         className="touch-none"
         style={{ backgroundColor: theme === "dark" ? "#121212" : "#ffffff" }}
       />
+
 {shouldShowWelcome && (
   <div className="absolute top-[55%] left-1/2 transform -translate-x-1/2 -translate-y-1/2 pointer-events-none z-50">
     <div className="pointer-events-auto">
@@ -217,64 +231,124 @@ export function Canvas({ roomId, socket, isSolo = false, isUserAuthenticated = f
   </div>
 )}
 
-      <div className="absolute top-3 left-0 w-full flex justify-between items-start px-4">
-  <div className="flex-shrink-0">
-    <Menu 
-      theme={theme} 
-      onThemeToggle={toggleTheme} 
-      onClearCanvas={clearCanvasAndShapes}
-      {...(isCollabMode && {
-        isCollabMode: true,
-        roomId: roomId,
-        encryptionKey: encryptionKey,
-        roomType: roomType
-      })}
-    />
-  </div>
+      {/* Desktop/Tablet Layout */}
+      {!isMobile && (
+        <div className="absolute top-3 left-0 w-full flex justify-between items-start px-4">
+          <div className="flex-shrink-0">
+            <Menu 
+              theme={theme} 
+              onThemeToggle={toggleTheme} 
+              onClearCanvas={clearCanvasAndShapes}
+              {...(isCollabMode && {
+                isCollabMode: true,
+                roomId: roomId,
+                encryptionKey: encryptionKey,
+                roomType: roomType
+              })}
+            />
+          </div>
 
-  <div className="flex-1 flex justify-center">
-    <TopBar 
-      selectedTool={selectedTool} 
-      setSelectedTool={setSelectedTool} 
-      theme={theme} 
-    />
-  </div>
+          <div className="flex-1 flex justify-center">
+            <TopBar 
+              selectedTool={selectedTool} 
+              setSelectedTool={setSelectedTool} 
+              theme={theme} 
+            />
+          </div>
 
-  <div className="flex-shrink-0">
-    <ShareButton 
-      onClick={handleShareButtonClick} 
-      isCollabMode={!!isCollabMode}
-    />
-  </div>
-</div>
+          <div className="flex-shrink-0">
+            <ShareButton 
+              onClick={handleShareButtonClick} 
+              isCollabMode={!!isCollabMode}
+            />
+          </div>
+        </div>
+      )}
 
-      
-{shouldShowWelcome && (
+      {/* Mobile Layout */}
+/* Mobile Layout */
+{isMobile && (
   <>
-    
+    {/* Top Toolbar Box - fixed positioning */}
+    <div className="fixed top-3 left-3 right-3 z-50 flex justify-center">
+      <div className={`
+        rounded-md py-1 px-2
+        ${theme === "dark" ? "bg-[#232329]" : "bg-white border border-gray-200"}
+      `}>
+        <TopBar 
+          selectedTool={selectedTool} 
+          setSelectedTool={setSelectedTool} 
+          theme={theme} 
+        />
+      </div>
+    </div>
 
-<div className="absolute top-20 left-1/2 transform -translate-x-1/2 ml-8 pointer-events-none z-40">
- <ToolbarIcon />
-</div>
-
-
-{/* CurvedArrow pointing to Menu Icon */}
-<div className="absolute top-12 -left-1 pointer-events-none z-40">
-  <CurvedArrow />
-</div>
-
-{/* LocalSaveNotice - separate positioning */}
-<div className="absolute top-32 left-18 pointer-events-none z-40">
-  <LocalSaveNotice />
-</div>
-
-  <div className="absolute top-35 left-1/2 transform -translate-x-1/2 pointer-events-none z-40" style={{ marginLeft: '-3rem' }}>
- <ToolIconPointer />
-</div>
+    {/* Bottom Menu Box - fixed positioning */}
+    <div className="fixed bottom-3 left-3 right-3 z-50">
+      <div className={`
+        rounded-md py-1 px-2 flex items-center justify-between gap-2
+        ${theme === "dark" ? "bg-[#232329]" : "bg-white border border-gray-200"}
+      `}>
+        {/* Menu on the left with border */}
+        <div className={`
+          border rounded px-2 py-1 flex-shrink-0
+          ${theme === "dark" ? "border-gray-600" : "border-black"}
+        `}>
+          <Menu 
+            theme={theme} 
+            onThemeToggle={toggleTheme} 
+            onClearCanvas={clearCanvasAndShapes}
+            {...(isCollabMode && {
+              isCollabMode: true,
+              roomId: roomId,
+              encryptionKey: encryptionKey,
+              roomType: roomType
+            })}
+          />
+        </div>
+        
+        {/* ZoomBar on the right with border */}
+        <div className={`
+          border rounded px-2 py-1 flex-shrink-0 ml-auto
+          ${theme === "dark" ? "border-gray-600" : "border-black"}
+        `}>
+          <ZoomBar zoom={zoom} setZoom={setZoom} theme={theme} />
+        </div>
+      </div>
+    </div>
   </>
 )}
 
-      {shouldShowPropertiesPanel && (
+{/* Desktop ZoomBar - keep fixed positioning */}
+{!isMobile && (
+  <div className="absolute bottom-4 right-4">
+    <ZoomBar zoom={zoom} setZoom={setZoom} theme={theme} />
+  </div>
+)}
+      {shouldShowWelcome &&
+        <>
+          <div className="absolute top-20 left-1/2 transform -translate-x-1/2 ml-8 pointer-events-none z-40">
+           <ToolbarIcon />
+          </div>
+
+          <div className="absolute top-35 left-1/2 transform -translate-x-1/2 pointer-events-none z-40" style={{ marginLeft: '-3rem' }}>
+           <ToolIconPointer />
+          </div>
+          {!isMobile && (
+            <>
+          <div className="absolute top-12 -left-1 pointer-events-none z-40">
+            <CurvedArrow />
+          </div>
+
+          <div className="absolute top-32 left-18 pointer-events-none z-40">
+            <LocalSaveNotice />
+          </div>
+            </>
+          )}
+        </>
+      }
+
+      {shouldShowPropertiesPanel && !isMobile && (
         <div className="absolute top-[72px] left-6 z-50">
           <ExcalidrawPropertiesPanel
             strokeSelectedIndex={strokeIndex}
@@ -319,10 +393,11 @@ export function Canvas({ roomId, socket, isSolo = false, isUserAuthenticated = f
           }}
         />
       )}
-
-      <div className="absolute bottom-4 right-4">
-        <ZoomBar zoom={zoom} setZoom={setZoom} theme={theme} />
-      </div>
+      {!isMobile && (
+        <div className="absolute bottom-4 right-4">
+          <ZoomBar zoom={zoom} setZoom={setZoom} theme={theme} />
+        </div>
+      )}
 
       {showLiveModal && (
         <LiveCollabModal onClose={handleCloseLiveModal} source="share" />

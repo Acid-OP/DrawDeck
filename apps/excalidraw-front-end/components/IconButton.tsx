@@ -8,6 +8,7 @@ interface IconButtonProps {
   activated: boolean;
   shortcutKey: number;
   theme: "light" | "dark";
+  isMobile?: boolean;
 }
 
 export function IconButton({
@@ -16,10 +17,13 @@ export function IconButton({
   activated,
   shortcutKey,
   theme,
+  isMobile = false
 }: IconButtonProps) {
   const isActiveLight = activated && theme === "light";
+  
   const styledIcon: Partial<LucideProps> = {
-    size: icon.props.size ?? 16, 
+    size: isMobile ? 14 : (icon.props.size ?? 16),
+    
     color: activated
       ? theme === "light"
         ? "#000000"
@@ -44,15 +48,24 @@ export function IconButton({
     ? "#4a4a4d"
     : "#ffffff";
 
+  // Mobile responsive classes
+  const buttonClasses = isMobile 
+    ? "m-0.5 p-1.5 rounded-md flex items-center justify-center relative cursor-pointer transition-all"
+    : "m-1 p-2 rounded-md flex items-center justify-center relative cursor-pointer transition-all";
+
+  const shortcutClasses = isMobile
+    ? "absolute bottom-[-1px] right-[2px] text-[7px] font-semibold pointer-events-none opacity-60"
+    : "absolute bottom-[-2px] right-[4px] text-[9px] font-semibold pointer-events-none opacity-60";
+
   return (
     <div
-      className={`m-1 p-2 rounded-md flex items-center justify-center relative cursor-pointer transition-all ${hoverBg}`}
+      className={`${buttonClasses} ${hoverBg}`}
       style={{ backgroundColor: bgColor }}
       onClick={onClick}
     >
       {React.cloneElement(icon, styledIcon)}
       <div
-        className="absolute bottom-[-2px] right-[4px] text-[9px] font-semibold pointer-events-none opacity-60"
+        className={shortcutClasses}
         style={{ color: shortcutColor }}
       >
         {shortcutKey}

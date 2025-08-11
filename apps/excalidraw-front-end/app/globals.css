@@ -47,7 +47,9 @@
 .modal-backdrop {
   animation: backdropBlurFadeIn 0.35s ease forwards;
 }
-
+nextjs-portal {
+  display: none;
+}
 .modal-content {
   animation: modalFadeIn 0.3s ease forwards;
 }

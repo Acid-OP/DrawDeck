@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 
 type Theme = "dark" | "light";
 
@@ -20,6 +20,19 @@ export const ZoomBar: React.FC<ZoomBarProps> = ({
   zoomStep = 0.1,
 }) => {
   const [hovered, setHovered] = useState<"minus" | "plus" | "reset" | null>(null);
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Detect mobile
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
 
   const leftFrac = 36;
   const rightFrac = 64;
@@ -46,20 +59,30 @@ export const ZoomBar: React.FC<ZoomBarProps> = ({
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    lineHeight: 1, // ensures vertical alignment
+    lineHeight: 1,
     transition: "color 0.15s ease",
     fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
   };
 
+  // Different container styles for mobile vs desktop
+  const containerStyle = isMobile ? {
+    // Mobile: relative positioning for inline layout
+    position: 'relative' as const,
+    zIndex: 2,
+    pointerEvents: "auto" as const,
+  } : {
+    // Desktop: fixed positioning
+    position: 'fixed' as const,
+    left: 20,
+    bottom: 20,
+    zIndex: 200,
+    pointerEvents: "auto" as const,
+  };
+
   return (
     <div
-      className="fixed"
-      style={{
-        left: 20,
-        bottom: 20,
-        zIndex: 200,
-        pointerEvents: "auto",
-      }}
+      className={isMobile ? "relative" : "fixed"}
+      style={containerStyle}
     >
       <div
         className="relative flex items-center"
@@ -69,7 +92,7 @@ export const ZoomBar: React.FC<ZoomBarProps> = ({
           height: 36,
           padding: "0 8px",
           fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
-          boxShadow:
+          boxShadow: isMobile ? "none" : 
             "rgba(0,0,0,0.12) 0px 2px 10px 0px, rgba(0,0,0,0.08) 0px 1px 4px 0px",
           userSelect: "none",
           touchAction: "manipulation",
@@ -170,8 +193,8 @@ export const ZoomBar: React.FC<ZoomBarProps> = ({
           +
         </button>
 
-        {/* Tooltip */}
-        {hovered && (
+        {/* Tooltip - only show on desktop */}
+        {hovered && !isMobile && (
           <div
             style={{
               position: "absolute",

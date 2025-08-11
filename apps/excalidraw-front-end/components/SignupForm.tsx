@@ -52,12 +52,6 @@ const SignupForm: React.FC<SignupFormProps> = ({ isDark }) => {
   const { signUp, isLoaded } = useSignUp();
   const { loaded: clerkLoaded } = useClerk();
 
-  useEffect(() => {
-    if (signUp && isLoaded) {
-      console.log('SignUp object warmed up:', !!signUp);
-    }
-  }, [signUp, isLoaded]);
-
   const handleOAuth = async (provider: "oauth_google" | "oauth_github" | "oauth_facebook") => {
     
     if (!clerkLoaded || !isLoaded || !signUp) {
