@@ -1,6 +1,4 @@
 import { Tool } from "@/components/Canvas";
-import { useAuth } from "@clerk/nextjs";
-
 
 type BaseShape = { readonly id: string };
 
@@ -249,7 +247,6 @@ private broadcastShape(shape: Shape) {
       default:return "default";
     }
   }
-  // ─── Rounded Square Handle ─────────────────────────────
   private drawHandleBox(
     cx: number,
     cy: number,
@@ -264,14 +261,13 @@ private broadcastShape(shape: Shape) {
     this.ctx.stroke();
     this.ctx.closePath();
   }
-
   // ─── Circle Handle for Line/Arrow ──────────────────────
   private drawCircleHandle(x: number,y: number,isMid: boolean,r: number,isHovered: boolean = false) {
     const ctx = this.ctx;
     if (isHovered) {
       ctx.beginPath();
       ctx.arc(x, y, r + 4, 0, 2 * Math.PI);
-      ctx.strokeStyle = "rgba(98, 80, 223, 0.4)"; // translucent purple outer ring on hover
+      ctx.strokeStyle = "rgba(98, 80, 223, 0.4)"; 
       ctx.lineWidth = 6;
       ctx.stroke();
     }
@@ -279,22 +275,22 @@ private broadcastShape(shape: Shape) {
     ctx.arc(x, y, r, 0, 2 * Math.PI);
 
     if (isMid) {
-      ctx.fillStyle = "#6250df"; // filled purple for middle handle
+      ctx.fillStyle = "#6250df"; 
       ctx.fill();
     } else {
-      ctx.fillStyle = "transparent"; // hollow for start/end handles
+      ctx.fillStyle = "transparent"; 
     }
 
-    ctx.strokeStyle = "#6250df"; // purple border for all
+    ctx.strokeStyle = "#6250df"; 
     ctx.lineWidth = 1.5;
     ctx.stroke();
   }
-  // ─── Line & Arrow Selection Handles ─────────────────────
+  
 private drawLineHandles(
   shape: Extract<Shape, { type: "line" | "arrow" }>
 ) {
   const { startX, startY, endX, endY } = shape;
-  const r = 6;
+  const r = 4;
   const dx = endX - startX;
   const dy = endY - startY;
   const len = Math.hypot(dx, dy);
@@ -314,7 +310,7 @@ private drawLineHandles(
 }
 
 
-  // ─── Line Connecting Selection Box to Handle ────────────
+  // ─── Line Connecting Selection Box to Handle 
 private drawConnectorLineToHandle(
   fromX: number,
   fromY: number,
@@ -334,17 +330,16 @@ private drawConnectorLineToHandle(
   const endY = toY - uy * stopDistance;
 
   this.ctx.beginPath();
-  // Use logical coordinates directly—do NOT subtract this.panOffsetX/Y here!
   this.ctx.moveTo(fromX, fromY);
   this.ctx.lineTo(endX, endY);
   this.ctx.stroke();
 }
 
 
-  // ─── Selection Box with External Handles ────────────────
+  // Selection Box with External Handles 
   private drawSelectionBox(shape: Shape) {
     this.ctx.save();
-    this.ctx.strokeStyle = "#9b7bff";  
+    this.ctx.strokeStyle = "#9b7bff"; 
     this.ctx.lineWidth = 1.5;
     this.ctx.setLineDash([]);
 
@@ -365,16 +360,16 @@ if (shape.type === "rect") {
   const inset = handleSize / 2;
 
   this.ctx.beginPath();
-    this.ctx.moveTo(x + inset, y);                   // top
+    this.ctx.moveTo(x + inset, y);                  
     this.ctx.lineTo(x + w - inset, y);
 
-    this.ctx.moveTo(x + w, y + inset);               // right
+    this.ctx.moveTo(x + w, y + inset);               
     this.ctx.lineTo(x + w, y + h - inset);
 
-    this.ctx.moveTo(x + w - inset, y + h);           // bottom
+    this.ctx.moveTo(x + w - inset, y + h);       
     this.ctx.lineTo(x + inset, y + h);
 
-    this.ctx.moveTo(x, y + h - inset);               // left
+    this.ctx.moveTo(x, y + h - inset);             
     this.ctx.lineTo(x, y + inset);
 
   this.ctx.stroke();
@@ -405,16 +400,16 @@ if (shape.type === "circle") {
   const inset = handleSize / 2;
 
   this.ctx.beginPath();
-  this.ctx.moveTo(x + inset, y);                  // top
+  this.ctx.moveTo(x + inset, y);          
   this.ctx.lineTo(x + w - inset, y);
 
-  this.ctx.moveTo(x + w , y + inset );              // right
+  this.ctx.moveTo(x + w , y + inset );           
   this.ctx.lineTo(x + w , y + h - inset );
 
-  this.ctx.moveTo(x + w - inset, y + h);          // bottom
+  this.ctx.moveTo(x + w - inset, y + h);          
   this.ctx.lineTo(x + inset, y + h);
 
-  this.ctx.moveTo(x, y + h - inset);              // left
+  this.ctx.moveTo(x, y + h - inset);             
   this.ctx.lineTo(x , y + inset );
   this.ctx.stroke();
 
@@ -474,7 +469,7 @@ if (shape.type === "text") {
   this.ctx.font = `${fontSize}px Virgil, Segoe UI, sans-serif`;
   const metrics = this.ctx.measureText(shape.text);
   const width = metrics.width;
-  const height = fontSize; // Use fontSize instead of hardcoded 20
+  const height = fontSize; 
   
   const x = shape.x - pad / 2;
   const y = shape.y - pad / 2;
@@ -941,6 +936,29 @@ public clearAllShapes() {
     this.clearCanvas();
   }
 }
+public toggleDefaultStrokeColors(theme: "light" | "dark") {
+  const defaultBlack = '#1e1e1e';
+  const defaultWhite = '#ffffff';
+  this.existingShapes = this.existingShapes.map(shape => {
+    const sc = shape.strokeColor.toLowerCase();
+    
+    if (sc === defaultBlack.toLowerCase()) {
+      return { ...shape, strokeColor: theme === "dark" ? defaultWhite : defaultBlack };
+    } else if (sc === defaultWhite.toLowerCase()) {
+      return { ...shape, strokeColor: theme === "light" ? defaultBlack : defaultWhite };
+    }
+    return shape;
+  });
+  try {
+    const key = this.getLocalStorageKey();
+    localStorage.setItem(key, JSON.stringify(this.existingShapes));
+    console.log("Updated shapes saved to localStorage after theme change");
+  } catch (err) {
+    console.error("Failed to save updated shapes to localStorage", err);
+  }
+  this.clearCanvas();
+}
+
   initHandlers() {
     if (this.isSolo || !this.socket || !this.roomId) return;
 
@@ -1572,11 +1590,10 @@ if (!this.isSolo) {
 }
 this.scheduleLocalSave();
 
-// ✅ Auto-select the shape (except for arrow/line, handled above)
 this.selectedShapeIndex = this.existingShapes.length - 1;
 this.selectedTool = "select";
 if (this.onToolChange) this.onToolChange("select");
-this.clearCanvas(); // to show the selection box
+this.clearCanvas(); 
 
 this.startX = null;
 this.startY = null;
@@ -1601,7 +1618,6 @@ private savePanOffset() {
   }
 }
 
-// 2. Load pan offset from localStorage
 private loadPanOffset() {
   try {
     const key = this.getPanStorageKey();
@@ -1616,8 +1632,6 @@ private loadPanOffset() {
     console.error("Failed to load pan offset from localStorage", err);
   }
 }
-
-// 3. Get storage key for pan data
 private getPanStorageKey(): string {
   return this.isSolo ? "solo_pan_data" : `pan_data_${this.roomId}`;
 }
@@ -1630,7 +1644,6 @@ public getScreenCoordinates(logicalX: number, logicalY: number): { x: number; y:
 }
   mouseMoveHandler = (e: MouseEvent) => {
    if (this.selectedTool === "hand" && this.isPanning) {
-    // Remove the zoom division - pan offset should be in screen pixels
     const dx = e.clientX - this.lastPanX;
     const dy = e.clientY - this.lastPanY;
     this.panOffsetX += dx;
@@ -1713,7 +1726,6 @@ public getScreenCoordinates(logicalX: number, logicalY: number): { x: number; y:
           }
         }
       }
-      /* ───────── DRAG‑TO‑MOVE / RESIZE ───────── */
       if (this.dragMode !== "none" && this.selectedShapeIndex != null) {
         const p = this.getMousePos(e);
         
@@ -1778,7 +1790,6 @@ public getScreenCoordinates(logicalX: number, logicalY: number): { x: number; y:
               const currentWidth = Math.abs(s.right.x - s.left.x);
               const currentHeight = Math.abs(s.bottom.y - s.top.y);
 
-  // Calculate new dimensions based on which handle is being dragged
               let newWidth = currentWidth;
               let newHeight = currentHeight;
               let newCenterX = currentCenterX;
@@ -1787,13 +1798,11 @@ public getScreenCoordinates(logicalX: number, logicalY: number): { x: number; y:
               const h = this.activeHandle;
   
               if (h === "tl") {
-    // Top-left: moving both top and left edges
                 newCenterX = (p.x + s.right.x) / 2;
                 newCenterY = (p.y + s.bottom.y) / 2;
                 newWidth = Math.abs(s.right.x - p.x);
                 newHeight = Math.abs(s.bottom.y - p.y);
               } else if (h === "tr") {
-    // Top-right: moving top and right edges
                 newCenterX = (s.left.x + p.x) / 2;
                 newCenterY = (p.y + s.bottom.y) / 2;
                 newWidth = Math.abs(p.x - s.left.x);
@@ -1804,14 +1813,12 @@ public getScreenCoordinates(logicalX: number, logicalY: number): { x: number; y:
                 newWidth = Math.abs(s.right.x - p.x);
                 newHeight = Math.abs(p.y - s.top.y);
               } else if (h === "br") {
-    // Bottom-right: moving bottom and right edges
                 newCenterX = (s.left.x + p.x) / 2;
                 newCenterY = (s.top.y + p.y) / 2;
                 newWidth = Math.abs(p.x - s.left.x);
                 newHeight = Math.abs(p.y - s.top.y);
               }
 
-  // Update all four diamond points based on new center and dimensions
               s.top.x = newCenterX;
               s.top.y = newCenterY - newHeight / 2;
   
@@ -1842,30 +1849,24 @@ public getScreenCoordinates(logicalX: number, logicalY: number): { x: number; y:
               let scaleX = 1;
               let scaleY = 1;
   if (h === "tl") {
-    // Top-left: calculate scale based on distance from bottom-right
     const originalBottomRightX = s.x + textWidth;
     const originalBottomRightY = s.y + textHeight;
     scaleX = Math.max(0.5, (originalBottomRightX - p.x) / textWidth);
     scaleY = Math.max(0.5, (originalBottomRightY - p.y) / textHeight);
     
-    // Update position to maintain bottom-right anchor
     s.x = originalBottomRightX - textWidth * scaleX;
     s.y = originalBottomRightY - textHeight * scaleY;
   } else if (h === "tr") {
-    // Top-right: calculate scale based on distance from bottom-left
     const originalBottomLeftY = s.y + textHeight;
     scaleX = Math.max(0.5, (p.x - s.x) / textWidth);
     scaleY = Math.max(0.5, (originalBottomLeftY - p.y) / textHeight);
     
-    // Update y position to maintain bottom anchor
     s.y = originalBottomLeftY - textHeight * scaleY;
   }  else if (h === "bl") {
-    // Bottom-left: calculate scale based on distance from top-right
     const originalTopRightX = s.x + textWidth;
     scaleX = Math.max(0.5, (originalTopRightX - p.x) / textWidth);
     scaleY = Math.max(0.5, (p.y - s.y) / textHeight);
     
-    // Update x position to maintain right anchor
     s.x = originalTopRightX - textWidth * scaleX;
   } else if (h === "br") {
                 scaleX = Math.max(0.5, (p.x - s.x) / textWidth);
@@ -1934,10 +1935,7 @@ if (this.selectedTool === "pencil" && this.clicked) {
     this.pencilPoints.push({ x: newX, y: newY });
   }
   
-  // Clear and redraw everything first
   this.clearCanvas();
-
-  // Now draw the current pencil path with proper transformation
   this.ctx.save();
   this.ctx.setTransform(1, 0, 0, 1, 0, 0);
   this.ctx.translate(this.panOffsetX, this.panOffsetY);
@@ -1947,7 +1945,6 @@ if (this.selectedTool === "pencil" && this.clicked) {
   this.ctx.lineWidth = this.currentStrokeWidth;
   this.ctx.setLineDash(this.getDashArray(this.currentStrokeStyle));
   
-  // Draw the pencil path using logical coordinates (no transformation needed in drawPencilPath)
   this.drawPencilPath(this.pencilPoints);
   this.ctx.restore();
 }
@@ -1957,7 +1954,6 @@ else {
   const width = pos.x - this.startX;
   const height = pos.y - this.startY;
   this.clearCanvas();
-  // Read panel-selected properties
   const strokeCol = this.currentStrokeColor;
   const fillCol = this.currentBackgroundColor;
   const lineWidth = this.currentStrokeWidth;
@@ -1975,8 +1971,7 @@ if (this.selectedTool === "rect") {
     Math.abs(width) * 0.5,
     Math.abs(height) * 0.5
   );
-
-  // Panel-driven styles
+  
   const strokeCol = this.currentStrokeColor;
   const fillCol = this.currentBackgroundColor;
   const lineWidth = this.currentStrokeWidth;

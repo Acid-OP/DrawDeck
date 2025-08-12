@@ -94,10 +94,17 @@ export function Canvas({ roomId, socket, isSolo = false, isUserAuthenticated = f
     setDimensions({ width, height });
     setIsMobile(mobile);
   }, []);
-
-  const toggleTheme = useCallback(() => {
-    setTheme((prev) => (prev === "dark" ? "light" : "dark"));
-  }, []);
+const toggleTheme = useCallback(() => {
+  setTheme(prevTheme => {
+    const newTheme = prevTheme === "dark" ? "light" : "dark";
+    if (game) {
+      game.setTheme(newTheme);
+      // This is the key addition - call toggleDefaultStrokeColors with the new theme
+      game.toggleDefaultStrokeColors(newTheme);
+    }
+    return newTheme;
+  });
+}, [game]);
 
   const clearCanvasAndShapes = useCallback(() => {
     console.log('clearCanvasAndShapes called, game:', game);
