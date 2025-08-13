@@ -87,7 +87,7 @@ export const SidebarModal: React.FC<SidebarModalProps> = ({
   return (
     <div
       className={`rounded-lg shadow-2xl transition-all duration-300 ${
-        theme === 'dark' ? 'bg-[#232329]' : 'bg-white border border-gray-200'
+        theme === 'dark' ? 'bg-[#232329] border-[#232329]' : 'bg-white border border-gray-200'
       }`}
       style={{
         maxHeight: '90vh',

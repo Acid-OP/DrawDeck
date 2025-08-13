@@ -109,10 +109,17 @@ export class Game {
       return v.toString(16);
     }); 
   }
-  public setTheme(theme: "light" | "dark") {
+public setTheme(theme: "light" | "dark") {
   this.theme = theme;
-  this.clearCanvas(); 
+  try {
+    localStorage.setItem("canvas_theme", theme);
+  } catch (err) {
+    console.error("Failed to save theme to localStorage", err);
   }
+  
+  this.clearCanvas(); 
+}
+
   public hasShapes(): boolean {
     return this.existingShapes.length > 0;
   }
@@ -941,7 +948,6 @@ public toggleDefaultStrokeColors(theme: "light" | "dark") {
   const defaultWhite = '#ffffff';
   this.existingShapes = this.existingShapes.map(shape => {
     const sc = shape.strokeColor.toLowerCase();
-    
     if (sc === defaultBlack.toLowerCase()) {
       return { ...shape, strokeColor: theme === "dark" ? defaultWhite : defaultBlack };
     } else if (sc === defaultWhite.toLowerCase()) {

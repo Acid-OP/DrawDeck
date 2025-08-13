@@ -39,7 +39,7 @@ export function TopBar({ selectedTool, setSelectedTool, theme }: TopBarProps) {
       className={`
         flex rounded-md cursor-pointer transition-all py-1 px-2
         ${isMobile ? 'gap-0.5' : 'gap-1.5'}
-        ${theme === "dark" ? "bg-[#232329]" : "bg-white border border-gray-200"}
+        ${theme === "dark" ? "bg-[#232329] border-[#232329]" : "bg-white border border-gray-200"}
       `}
     >
       <IconButton 

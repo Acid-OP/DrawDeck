@@ -35,7 +35,7 @@ export const Header: React.FC<HeaderProps> = ({ theme }) => {
           </div>
         </div>
       </div>
-      {isModalOpen && <LiveCollabModal onClose={() => setIsModalOpen(false)} source="header" />}
+      {isModalOpen && <LiveCollabModal theme={theme} onClose={() => setIsModalOpen(false)} source="header" />}
     </div>
   );
 };

@@ -61,7 +61,14 @@ export function Canvas({ roomId, socket, isSolo = false, isUserAuthenticated = f
   const [strokeWidthIndex, setStrokeWidthIndex] = useState(1);
   const [strokeStyleIndex, setStrokeStyleIndex] = useState(0);
   const [fillIndex, setFillIndex] = useState(0);
-  const [theme, setTheme] = useState<"light" | "dark">("dark");
+  const [theme, setTheme] = useState<"light" | "dark">(() => {
+    if (typeof window !== "undefined") {
+      const savedTheme = localStorage.getItem("canvas_theme");
+      return (savedTheme as "light" | "dark") || "dark";
+    }
+    return "dark";
+  });
+
   const [zoom, setZoom] = useState(1);
   const [isMobile, setIsMobile] = useState(false);
 
@@ -94,17 +101,18 @@ export function Canvas({ roomId, socket, isSolo = false, isUserAuthenticated = f
     setDimensions({ width, height });
     setIsMobile(mobile);
   }, []);
-const toggleTheme = useCallback(() => {
-  setTheme(prevTheme => {
-    const newTheme = prevTheme === "dark" ? "light" : "dark";
-    if (game) {
-      game.setTheme(newTheme);
-      // This is the key addition - call toggleDefaultStrokeColors with the new theme
-      game.toggleDefaultStrokeColors(newTheme);
-    }
-    return newTheme;
-  });
-}, [game]);
+
+  const toggleTheme = useCallback(() => {
+    setTheme(prevTheme => {
+      const newTheme = prevTheme === "dark" ? "light" : "dark";
+      localStorage.setItem("canvas_theme", newTheme); 
+      if (game) {
+        game.setTheme(newTheme);
+        game.toggleDefaultStrokeColors(newTheme);
+      }
+      return newTheme;
+    });
+  }, [game]);
 
   const clearCanvasAndShapes = useCallback(() => {
     console.log('clearCanvasAndShapes called, game:', game);
@@ -397,7 +405,7 @@ const toggleTheme = useCallback(() => {
       )}
 
       {showLiveModal && (
-        <LiveCollabModal onClose={handleCloseLiveModal} source="share" />
+        <LiveCollabModal theme={theme} onClose={handleCloseLiveModal} source="share" />
       )}
 
       {showShareLinkModal && isCollabMode && (
