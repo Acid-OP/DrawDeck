@@ -1,4 +1,3 @@
-
 import React from 'react';
 
 interface SocialButtonProps {
@@ -6,19 +5,22 @@ interface SocialButtonProps {
   label: string;
   highlight?: boolean;
   theme: 'light' | 'dark';
+  onClick?: () => void;
 }
 
 export const SocialButton: React.FC<SocialButtonProps> = ({ 
   icon, 
   label, 
   highlight,
-  theme 
+  theme,
+  onClick
 }) => (
   <button
-    className={`w-full flex items-center gap-3 p-2.5 rounded-lg transition-all duration-200 cursor-pointer hover:bg-[#31303b] ${
+    onClick={onClick}
+    className={`w-full flex items-center gap-3 p-2.5 rounded-md transition-all duration-200 cursor-pointer  ${
       highlight
         ? `${theme === 'dark' 
-            ? 'bg-orange-500/8 border border-orange-500/15 shadow-lg hover:bg-orange-500/12 text-orange-400' 
+            ? 'bg-[#ffe498] border border-[#ffe498]  shadow-lg text-black' 
             : 'bg-orange-50 border border-orange-200 shadow-lg shadow-orange-200/30 hover:bg-orange-100 text-orange-600'
           }`
         : theme === 'dark'

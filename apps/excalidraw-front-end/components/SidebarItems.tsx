@@ -108,27 +108,28 @@ export const SidebarItems: React.FC<SidebarItemsProps> = ({
           />
         </div>
         
-        <SidebarSeparator theme={theme} />
-        
-        <div className="space-y-[3px]">
-          <SocialButton 
-            icon={<Github size={14} />} 
-            label="GitHub" 
-            highlight={true} 
-            theme={theme} 
-          />
-          <SocialButton 
-            icon={<Twitter size={14} />} 
-            label="Twitter/X" 
-            theme={theme} 
-          />
-          <SocialButton 
-            icon={<Linkedin size={14} />} 
-            label="LinkedIn" 
-            theme={theme} 
-          />
-        </div>
-        
+        <SidebarSeparator theme={theme} /><div className="space-y-[3.5px]">
+          
+          <SocialButton
+          icon={<Github size={14} />}
+          label="GitHub"
+          highlight={true}
+          theme={theme}
+          onClick={() => window.open("https://github.com/Acid-OP/excalidraw", "_blank")}
+        />
+        <SocialButton
+          icon={<Twitter size={14} />}
+          label="Twitter/X"
+          theme={theme}
+          onClick={() => window.open("https://x.com/GauravKapurr", "_blank")}
+        />
+        <SocialButton
+          icon={<Linkedin size={14} />}
+          label="LinkedIn"
+          theme={theme}
+          onClick={() => window.open("https://www.linkedin.com/in/gaurav-kapur-a3286b258/", "_blank")}
+        />
+      </div>
         <SidebarSeparator theme={theme} className="my-[6px]" />
         
         <div className={isMobile ? "" : "scale-90 origin-left"}> 
