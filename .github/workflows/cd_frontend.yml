@@ -41,5 +41,5 @@ jobs:
             sudo docker run -d \
               --name frontend-server \
               --restart always \
-              -p 80:3000 \
+              -p 3000:3000 \
               acidop/excalidraw-frontend:${{ github.sha }}          
