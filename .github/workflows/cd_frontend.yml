@@ -25,6 +25,10 @@ jobs:
             CLERK_SECRET_KEY=${{ secrets.CLERK_SECRET_KEY }}
             NEXT_PUBLIC_WS_URL=${{ secrets.NEXT_PUBLIC_WS_URL }}
             NEXT_PUBLIC_RTC_URL=${{ secrets.NEXT_PUBLIC_RTC_URL }}
+            NEXT_PUBLIC_CLERK_SIGN_IN_URL=${{secrets.NEXT_PUBLIC_CLERK_SIGN_IN_URL}}
+            NEXT_PUBLIC_CLERK_SIGN_UP_URL=${{secrets.NEXT_PUBLIC_CLERK_SIGN_UP_URL}}
+            NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL=${{secrets.NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL}}
+            NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL=${{secrets.NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL}}
           push: true
           tags: acidop/excalidraw-frontend:${{ github.sha }}
 
