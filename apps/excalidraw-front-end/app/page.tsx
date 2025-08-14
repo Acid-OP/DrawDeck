@@ -5,10 +5,12 @@ import LoaderAnimation from "@/components/Loader";
 import { useEffect, useState } from "react";
 import Toast from "@/components/Toast";
 import { useAuthToast } from "@/hooks/useAuthToast";
+import { useIsMobile } from "@/hooks/useIsMobile";
 
 export default function HomePage() {
   const { isSignedIn, isLoaded } = useAuth();
   const { toastMessage } = useAuthToast();
+  const isMobile = useIsMobile();
   const [minTimeElapsed, setMinTimeElapsed] = useState(false);
 
   const MIN_LOADING_TIME = 2300;
@@ -28,6 +30,7 @@ export default function HomePage() {
         roomId="__solo"
         socket={null}
         isSolo={true}
+        className={isMobile ? "touch-manipulation" : "touch-none"}
         isUserAuthenticated={isSignedIn}
       />
       {toastMessage && <Toast message={toastMessage} theme="light" />}

@@ -36,9 +36,10 @@ interface CanvasProps {
   encryptionKey?: string;
   roomType?: 'duo' | 'group';
   onThemeChange?: (theme: 'light' | 'dark') => void;
+  className?: string;
 }
 
-export function Canvas({ roomId, socket, isSolo = false, isUserAuthenticated = false, encryptionKey, roomType, onThemeChange }: CanvasProps) {
+export function Canvas({ roomId, socket, isSolo = false, isUserAuthenticated = false, encryptionKey, roomType, onThemeChange, className }: CanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [game, setGame] = useState<Game>();
   const [hasInteracted, setHasInteracted] = useState(false);
@@ -212,47 +213,49 @@ export function Canvas({ roomId, socket, isSolo = false, isUserAuthenticated = f
     game.setFillStyle(fillIndex);
   }, [game, strokeIndex, backgroundIndex, strokeWidthIndex, strokeStyleIndex, fillIndex]);
   
-  useEffect(() => {
-    if (canvasRef.current && dimensions.width !== 0 && dimensions.height !== 0) {
-      const keyToPass = isSolo ? null : (encryptionKey || null);
-      const g = new Game(canvasRef.current, roomId, socket, isSolo, theme, keyToPass);
-      g.onToolChange = (tool) => setSelectedTool(tool);
-      g.onTextInsert = (logicalX, logicalY) => {
-        if ((window as any).justBlurredTextInput) return;
-        const screenX = logicalX * g.zoom + g.panOffsetX;
-        const screenY = logicalY * g.zoom + g.panOffsetY;
-        setInputBox({ x: screenX, y: screenY, logicalX, logicalY });
-      };
-      setGame(g);
-      return () => g.destroy();
-    }
-  }, [canvasRef, isSolo, roomId, socket, dimensions, theme, encryptionKey]);
+useEffect(() => {
+  if (canvasRef.current && dimensions.width !== 0 && dimensions.height !== 0) {
+    const keyToPass = isSolo ? null : (encryptionKey || null);
+    const g = new Game(canvasRef.current, roomId, socket, isSolo, theme, keyToPass);
+    g.onToolChange = (tool) => setSelectedTool(tool);
+    g.onTextInsert = (logicalX, logicalY) => {
+      if ((window as any).justBlurredTextInput) return;
+      const screenX = logicalX * g.zoom + g.panOffsetX;
+      const screenY = logicalY * g.zoom + g.panOffsetY;
+      setInputBox({ x: screenX, y: screenY, logicalX, logicalY });
+    };
+    
+    // Initialize touch handlers for all devices (won't interfere with mouse)
+    g.initTouchHandlers();
+    
+    setGame(g);
+    return () => g.destroy();
+  }
+}, [canvasRef, isSolo, roomId, socket, dimensions, theme, encryptionKey]);
 
   const shouldShowPropertiesPanel = ["rect", "diamond", "circle", "arrow", "line", "pencil", "text"].includes(selectedTool);
   
   const shouldShowWelcome = game && !hasInteracted && !game.hasShapes() && isSolo;
   
   return (
-    <div className={`w-screen h-screen overflow-hidden relative ${isMobile ? 'touch-none' : ''} ${theme === "dark" ? "bg-[#121212]" : "bg-white"}`}>
+    <div className={`w-screen h-screen overflow-hidden relative ${theme === "dark" ? "bg-[#121212]" : "bg-white"} ${className || ''}`}>
       <canvas
         ref={canvasRef}
         width={dimensions.width}
         height={dimensions.height}
-        className="touch-none"
+        className="" // Removed touch-none from canvas to allow touch events
         style={{ backgroundColor: theme === "dark" ? "#121212" : "#ffffff" }}
       />
-
-{shouldShowWelcome && (
-  <div className="absolute top-[55%] left-1/2 transform -translate-x-1/2 -translate-y-1/2 pointer-events-none z-50">
-    <div className="pointer-events-auto">
-      <Header theme={theme} />
-    </div>
-  </div>
-)}
-
-      {/* Desktop/Tablet Layout */}
+      
+      {shouldShowWelcome && (
+        <div className="absolute top-[55%] left-1/2 transform -translate-x-1/2 -translate-y-1/2 pointer-events-none z-50">
+          <div className="pointer-events-auto">
+            <Header theme={theme} />
+          </div>
+        </div>
+      )}
       {!isMobile && (
-        <div className="absolute top-3 left-0 w-full flex justify-between items-start px-4">
+        <div className="absolute top-3 left-0 w-full flex justify-between items-start px-4 touch-none">
           <div className="flex-shrink-0">
             <Menu 
               theme={theme} 
@@ -286,54 +289,50 @@ export function Canvas({ roomId, socket, isSolo = false, isUserAuthenticated = f
       )}
 
       {/* Mobile Layout */}
-/* Mobile Layout */
-{isMobile && (
-  <>
-    {/* Top Toolbar Box - fixed positioning */}
-    <div className="fixed top-3 left-3 right-3 z-50 flex justify-center">
-      <div>
-        <TopBar 
-          selectedTool={selectedTool} 
-          setSelectedTool={setSelectedTool} 
-          theme={theme} 
-        />
-      </div>
-    </div>
-    {/* Bottom Menu Box - fixed positioning */}
-    <div className="fixed bottom-3 left-3 right-3 z-50">
-      <div className={`
-        rounded-md py-1 px-2 flex items-center justify-between gap-2
-        ${theme === "dark" ? "bg-[#232329]" : "bg-white border border-gray-200"}
-      `}>
-        <div className={`
-        flex-shrink-0
-        `}>
-          <Menu 
-            theme={theme} 
-            onThemeToggle={toggleTheme} 
-            onClearCanvas={clearCanvasAndShapes}
-            isMobile={true}
-            {...(isCollabMode && {
-              isCollabMode: true,
-              roomId: roomId,
-              encryptionKey: encryptionKey,
-              roomType: roomType
-            })}
-          />
-        </div>
-        <div className={`rounded flex-shrink-0 ml-auto
-        `}>
+      {isMobile && (
+        <>
+          <div className="fixed top-3 left-3 right-3 z-50 flex justify-center touch-none">
+            <div>
+              <TopBar 
+                selectedTool={selectedTool} 
+                setSelectedTool={setSelectedTool} 
+                theme={theme} 
+              />
+            </div>
+          </div>
+          
+          <div className="fixed bottom-3 left-3 right-3 z-50 touch-none">
+            <div className={`rounded-md py-1 px-2 flex items-center justify-between gap-2
+            ${theme === "dark" ? "bg-[#232329]" : "bg-white border border-gray-200"}
+            `}>
+              <div className={`flex-shrink-0`}>
+                <Menu 
+                  theme={theme} 
+                  onThemeToggle={toggleTheme} 
+                  onClearCanvas={clearCanvasAndShapes}
+                  isMobile={true}
+                  {...(isCollabMode && {
+                    isCollabMode: true,
+                    roomId: roomId,
+                    encryptionKey: encryptionKey,
+                    roomType: roomType
+                  })}
+                />
+              </div>
+              <div className={`rounded flex-shrink-0 ml-auto`}>
+                <ZoomBar zoom={zoom} setZoom={setZoom} theme={theme} />
+              </div>      
+            </div>
+          </div>
+        </>
+      )}
+      
+      {!isMobile && (
+        <div className="absolute bottom-4 right-4 touch-none">
           <ZoomBar zoom={zoom} setZoom={setZoom} theme={theme} />
         </div>
-      </div>
-    </div>
-  </>
-)}
-{!isMobile && (
-  <div className="absolute bottom-4 right-4">
-    <ZoomBar zoom={zoom} setZoom={setZoom} theme={theme} />
-  </div>
-)}
+      )}
+
       {shouldShowWelcome &&
         <>
           <div className="absolute top-20 left-1/2 transform -translate-x-1/2 ml-8 pointer-events-none z-40">
@@ -358,7 +357,7 @@ export function Canvas({ roomId, socket, isSolo = false, isUserAuthenticated = f
       }
 
       {shouldShowPropertiesPanel && !isMobile && (
-        <div className="absolute top-[72px] left-6 z-50">
+        <div className="absolute top-[72px] left-6 z-50 touch-none">
           <ExcalidrawPropertiesPanel
             strokeSelectedIndex={strokeIndex}
             backgroundSelectedIndex={backgroundIndex}
@@ -380,7 +379,7 @@ export function Canvas({ roomId, socket, isSolo = false, isUserAuthenticated = f
         <textarea
           autoFocus
           rows={1}
-          className="absolute bg-transparent px-0 py-0 m-0 border-none outline-none resize-none whitespace-pre-wrap break-words"
+          className="absolute bg-transparent px-0 py-0 m-0 border-none outline-none resize-none whitespace-pre-wrap break-words touch-none"
           style={{
             color: getStrokeColors(theme)[strokeIndex],
             font: `${isMobile ? '16px' : '20px'} Virgil, Segoe UI, sans-serif`,
@@ -401,11 +400,6 @@ export function Canvas({ roomId, socket, isSolo = false, isUserAuthenticated = f
             }, 300);
           }}
         />
-      )}
-      {!isMobile && (
-        <div className="absolute bottom-4 right-4">
-          <ZoomBar zoom={zoom} setZoom={setZoom} theme={theme} />
-        </div>
       )}
 
       {showLiveModal && (

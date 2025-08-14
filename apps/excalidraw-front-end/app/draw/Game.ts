@@ -316,7 +316,6 @@ private drawLineHandles(
   this.drawCircleHandle(midCx, midCy, true, r, this.hoveredEndpoint === "mid");
 }
 
-// commit to load env variables properly again 
   // ─── Line Connecting Selection Box to Handle 
 private drawConnectorLineToHandle(
   fromX: number,
@@ -587,6 +586,58 @@ if (shape.type === "line" || shape.type === "arrow") {
   private getLocalStorageKey(): string {
   return this.isSolo ? "solo_shapes" : `shapes_${this.roomId}`;
 }
+// Add to Game class
+initTouchHandlers() {
+  if (!this.canvas) return;
+  this.canvas.addEventListener("touchstart", this.touchStartHandler, { passive: false });
+  this.canvas.addEventListener("touchend", this.touchEndHandler, { passive: false });
+  this.canvas.addEventListener("touchmove", this.touchMoveHandler, { passive: false });
+}
+
+private getTouchPos = (e: TouchEvent): { x: number; y: number } => {
+  const rect = this.canvas.getBoundingClientRect();
+  const touch = e.touches[0] || e.changedTouches[0];
+  return {
+    x: (touch.clientX - rect.left) / this.zoom - this.panOffsetX / this.zoom,
+    y: (touch.clientY - rect.top) / this.zoom - this.panOffsetY / this.zoom,
+  };
+};
+
+touchStartHandler = (e: TouchEvent) => {
+  e.preventDefault();
+  const touch = e.touches[0];
+  const mockEvent = {
+    clientX: touch.clientX,
+    clientY: touch.clientY,
+    preventDefault: () => e.preventDefault()
+  } as MouseEvent;
+  
+  this.mouseDownHandler(mockEvent);
+};
+
+touchEndHandler = (e: TouchEvent) => {
+  e.preventDefault();
+  const touch = e.changedTouches[0];
+  const mockEvent = {
+    clientX: touch.clientX,
+    clientY: touch.clientY,
+    preventDefault: () => e.preventDefault()
+  } as MouseEvent;
+  
+  this.mouseUpHandler(mockEvent);
+};
+
+touchMoveHandler = (e: TouchEvent) => {
+  e.preventDefault();
+  const touch = e.touches[0];
+  const mockEvent = {
+    clientX: touch.clientX,
+    clientY: touch.clientY,
+    preventDefault: () => e.preventDefault()
+  } as MouseEvent;
+  
+  this.mouseMoveHandler(mockEvent);
+};
 
   constructor(canvas: HTMLCanvasElement, roomId: string | null, socket: WebSocket | null , isSolo:boolean=false , theme: "light" | "dark" , encryptionKey: string | null = null) {
     this.canvas = canvas;
@@ -597,6 +648,7 @@ if (shape.type === "line" || shape.type === "arrow") {
     this.roomId = roomId;
     this.socket = socket;
     this.theme = theme;
+    this.initTouchHandlers();
     this.clearCanvas();
     this.encryptionKey = encryptionKey;
     this.panOffsetX = 0;
@@ -882,6 +934,10 @@ if (shape.type === "text") {
     this.canvas.removeEventListener("mousedown", this.mouseDownHandler);
     this.canvas.removeEventListener("mouseup", this.mouseUpHandler);
     this.canvas.removeEventListener("mousemove", this.mouseMoveHandler);
+
+      this.canvas.removeEventListener("touchstart", this.touchStartHandler);
+  this.canvas.removeEventListener("touchend", this.touchEndHandler);
+  this.canvas.removeEventListener("touchmove", this.touchMoveHandler);
 
   }
 

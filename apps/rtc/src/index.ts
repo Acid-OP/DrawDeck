@@ -17,10 +17,10 @@ interface RTCClient {
 
 const rtcClients: Set<RTCClient> = new Set();
 
-function broadcastToRoom(roomName: string, sender: RTCClient, payload: any) {
+function broadcastToRoom(roomId: string, sender: RTCClient, payload: any) {
   const msg = JSON.stringify(payload);
   rtcClients.forEach((client) => {
-    if (client !== sender && client.rooms.has(roomName)) {
+    if (client !== sender && client.rooms.has(roomId)) {
       try {
         if (client.ws.readyState === WebSocket.OPEN) {
           client.ws.send(msg);
@@ -52,20 +52,20 @@ wss.on("connection", (ws: WebSocket, request: IncomingMessage) => {
 
     switch (type) {
       case "join_room": {
-        client.rooms.add(String(payload.roomName));
+        client.rooms.add(String(payload.roomId));
         break;
       }
 
       case "leave_room": {
-        client.rooms.delete(String(payload.roomName));
+        client.rooms.delete(String(payload.roomId));
         break;
       }
 
       case "rtc:offer":
       case "rtc:answer":
       case "rtc:candidate": {
-        const { roomName } = payload;
-        broadcastToRoom(String(roomName), client, payload);
+        const { roomId } = payload;
+        broadcastToRoom(String(roomId), client, payload);
         break;
       }
 
