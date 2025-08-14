@@ -1,44 +1,36 @@
 "use client";
-import { useAuth } from '@clerk/nextjs';
+import { useAuth } from "@clerk/nextjs";
 import { Canvas } from "@/components/Canvas";
-import LoaderAnimation from '@/components/Loader';
-import { useEffect, useState } from 'react';
+import LoaderAnimation from "@/components/Loader";
+import { useEffect, useState } from "react";
 import Toast from "@/components/Toast";
+import { useAuthToast } from "@/hooks/useAuthToast";
 
 export default function HomePage() {
   const { isSignedIn, isLoaded } = useAuth();
+  const { toastMessage } = useAuthToast();
   const [minTimeElapsed, setMinTimeElapsed] = useState(false);
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  const MIN_LOADING_TIME = 2300; 
-  
+  const MIN_LOADING_TIME = 2300;
+
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setMinTimeElapsed(true);
-    }, MIN_LOADING_TIME);
-    
+    const timer = setTimeout(() => setMinTimeElapsed(true), MIN_LOADING_TIME);
     return () => clearTimeout(timer);
   }, []);
 
-  useEffect(() => {
-    if (isLoaded && isSignedIn) {
-      setToastMessage("✅ Successfully signed in!");
-    }
-  }, [isLoaded, isSignedIn]);
-
   if (!isLoaded || !minTimeElapsed) {
-    return <LoaderAnimation />
+    return <LoaderAnimation />;
   }
-  
+
   return (
     <>
-      <Canvas 
+      <Canvas
         roomId="__solo"
         socket={null}
         isSolo={true}
         isUserAuthenticated={isSignedIn}
       />
-      {toastMessage && <Toast message="Successfully signed up!" theme="dark" />}
+      {toastMessage && <Toast message={toastMessage} theme="light" />}
     </>
   );
 }

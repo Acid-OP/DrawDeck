@@ -35,9 +35,10 @@ interface CanvasProps {
   isUserAuthenticated?: boolean;
   encryptionKey?: string;
   roomType?: 'duo' | 'group';
+  onThemeChange?: (theme: 'light' | 'dark') => void;
 }
 
-export function Canvas({ roomId, socket, isSolo = false, isUserAuthenticated = false, encryptionKey, roomType }: CanvasProps) {
+export function Canvas({ roomId, socket, isSolo = false, isUserAuthenticated = false, encryptionKey, roomType, onThemeChange }: CanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [game, setGame] = useState<Game>();
   const [hasInteracted, setHasInteracted] = useState(false);
@@ -126,6 +127,10 @@ export function Canvas({ roomId, socket, isSolo = false, isUserAuthenticated = f
     sessionStorage.setItem('collabModalShown', 'true');
     setShowLiveModal(false);
   }, []);
+  
+  useEffect(() => {
+    onThemeChange?.(theme);
+  }, [theme, onThemeChange]);
 
   const handleCloseShareLinkModal = useCallback(() => {
     setShowShareLinkModal(false);
@@ -151,7 +156,6 @@ export function Canvas({ roomId, socket, isSolo = false, isUserAuthenticated = f
 
     window.addEventListener("resize", debouncedResize);
     
-    // Prevent scrolling on mobile
     if (isMobile) {
       document.body.style.overflow = 'hidden';
       document.documentElement.style.overflow = 'hidden';

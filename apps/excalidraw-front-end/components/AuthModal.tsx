@@ -1,5 +1,7 @@
 "use client";
 import { useRouter } from 'next/navigation';
+import { X, Lock, ArrowRight } from 'lucide-react';
+import { useEffect, useRef } from 'react';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -7,6 +9,17 @@ interface AuthModalProps {
 
 export default function AuthModal({ isOpen }: AuthModalProps) {
   const router = useRouter();
+  const modalRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    }
+    
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -15,42 +28,30 @@ export default function AuthModal({ isOpen }: AuthModalProps) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl max-w-md mx-4 overflow-hidden">
-        {/* Header */}
-        <div className="bg-gray-50 px-6 py-4 border-b">
-          <div className="flex items-center space-x-3">
-            <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-              <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-              </svg>
-            </div>
-            <h3 className="text-lg font-medium text-gray-900">
-              collabydraw.xyz says
-            </h3>
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div
+        ref={modalRef}
+        className="relative bg-[#232329] text-white w-full max-w-md p-6 rounded-2xl shadow-2xl border border-[#333] animate-in fade-in duration-200"
+      >
+        <div className="text-center">
+          <div className="w-14 h-14 mx-auto mb-4 bg-[#9e9aea]/20 rounded-full flex items-center justify-center">
+            <Lock size={28} className="text-[#9e9aea]" />
           </div>
-        </div>
 
-        {/* Content */}
-        <div className="px-6 py-6">
-          <p className="text-gray-800 font-medium mb-4">
+          <h2 className="text-xl font-bold mb-3" style={{ color: "#9e9aea" }}>
+            Authentication Required
+          </h2>
+
+          <p className="text-white/90 text-sm leading-relaxed mb-6">
             You need to be logged in to join this collaborative room.
           </p>
-          
-          <p className="text-gray-600 text-sm leading-relaxed">
-            Please sign up or log in to your account to continue. Collaborative 
-            features require authentication to ensure secure access and proper 
-            identification of participants.
-          </p>
-        </div>
 
-        {/* Footer */}
-        <div className="px-6 py-4 bg-gray-50 flex justify-end">
           <button
             onClick={handleSignIn}
-            className="bg-blue-600 text-white px-6 py-2 rounded-md font-medium hover:bg-blue-700 transition-colors"
+            className="w-full bg-[#9e9aea] text-black px-6 py-3 rounded-lg hover:bg-[#bbb8ff] transition-all duration-200 font-medium flex items-center justify-center gap-2 cursor-pointer"
           >
-            OK
+            Continue to Sign In
+            <ArrowRight size={18} />
           </button>
         </div>
       </div>
