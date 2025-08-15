@@ -5,7 +5,6 @@ import FloatingDoodles from "@/components/FloatingDoodles";
 import GraphicSection from "@/components/GraphicSession";
 import SignupForm from "@/components/SignupForm";
 import SignupHeader from "@/components/SignupHeader";
-import ThemeToggle from "@/components/Themetoggle";
 import { useState } from "react";
 
 const ExcalidrawSignup: React.FC = () => {

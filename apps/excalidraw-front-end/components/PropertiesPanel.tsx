@@ -40,7 +40,7 @@ export const ExcalidrawPropertiesPanel: React.FC<ExcalidrawPropertiesPanelProps>
 }) => {
   const {theme} = useTheme();
   const strokeColors = [
-    { color: '#1e1e1e', name: 'Black' },
+    { color: theme === 'light' ? '#1e1e1e' : '#ffffff', name: 'Default' },
     { color: '#e03131', name: 'Red' },
     { color: '#2f9e44', name: 'Green' },
     { color: '#1971c2', name: 'Blue' },

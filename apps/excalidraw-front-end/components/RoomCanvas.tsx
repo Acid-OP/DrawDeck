@@ -198,7 +198,7 @@ export function RoomCanvas({ slug, encryptionKey, roomType: propRoomType }: { sl
   }
 
   if (connectionError) {
-    return <ConnectionError error={connectionError} />;
+    return <ConnectionError error={connectionError}/>;
   }
   if (!minDelayElapsed) return null;
   if (!minDelayElapsed || isConnecting || !socket || !isRoomAccessible) {

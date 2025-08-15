@@ -977,21 +977,21 @@ setTool(tool: Tool) {
   }
 
   if (!this.roomId) return;
-
+  
   const saved = localStorage.getItem(`shapes_${this.roomId}`);
   const shapes: Shape[] = saved ? JSON.parse(saved) : [];
 
   const seenIds = new Set(this.existingShapes.map(s => s.id));
   shapes.forEach((shape: Shape) => {
     if (!seenIds.has(shape.id)) {
-      this.existingShapes.push(shape);
+      const adaptedShape = this.adaptShapeToTheme(shape);
+      this.existingShapes.push(adaptedShape);
     }
   });
 
   this.clearCanvas();
 }
 public clearAllShapes() {
-  console.log('clearAllShapes called, current shapes:', this.existingShapes.length);
   if (this.isSolo) {
     this.existingShapes = [];
     const key = this.getLocalStorageKey(); 
@@ -1014,7 +1014,6 @@ public toggleDefaultStrokeColors(theme: "light" | "dark") {
   try {
     const key = this.getLocalStorageKey();
     localStorage.setItem(key, JSON.stringify(this.existingShapes));
-    console.log("Updated shapes saved to localStorage after theme change");
   } catch (err) {
     console.error("Failed to save updated shapes to localStorage", err);
   }
@@ -1032,12 +1031,12 @@ public toggleDefaultStrokeColors(theme: "light" | "dark") {
         const shape = msg.shape;
         const exists = this.existingShapes.some(s => s.id === shape.id);
         if (!exists) {
-          this.existingShapes.push(shape);
+          const adaptedShape = this.adaptShapeToTheme(shape);
+          this.existingShapes.push(adaptedShape);
           this.clearCanvas();
         }
         break;
       }
-
       case "shape_delete": {
         const shapeId = msg.shapeId;
         const index = this.existingShapes.findIndex(s => s.id === shapeId);
@@ -1080,7 +1079,18 @@ public deleteShapeByIndex(index: number) {
     if (style === 2 || style === "dotted") return [2, 6];
     return [];
   }
-
+  private adaptShapeToTheme(shape: Shape): Shape {
+    const lightDefault = '#1e1e1e';
+    const darkDefault = '#ffffff';
+    const isDefaultColor = shape.strokeColor.toLowerCase() === lightDefault.toLowerCase() ||  shape.strokeColor.toLowerCase() === darkDefault.toLowerCase();
+  
+    if (isDefaultColor) {
+      const newStrokeColor = this.theme === "dark" ? darkDefault : lightDefault;
+      return { ...shape, strokeColor: newStrokeColor };
+    }
+  
+    return shape; 
+  }
   clearCanvas() {
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
     this.ctx.fillStyle = this.theme === "dark" ? "#121212" : "#ffffff";
@@ -1561,8 +1571,7 @@ if (distance < minDistance && toolsRequiringMovement.includes(this.selectedTool)
   }
 
   if (this.selectedTool === "eraser") {
-    this.clicked = false; // End gesture
-    // No deletion needed if all is done in mouse move
+    this.clicked = false;
     return;
   }
 

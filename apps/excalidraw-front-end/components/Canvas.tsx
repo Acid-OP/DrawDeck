@@ -45,6 +45,7 @@ export function Canvas({ roomId, socket, isSolo = false, isUserAuthenticated = f
   const [selectedTool, setSelectedTool] = useState<Tool>("hand");
   const { getToken } = useAuth();
   const { theme, toggleTheme } = useTheme();
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [inputBox, setInputBox] = useState<{ 
     x: number; 
     y: number; 
@@ -147,7 +148,6 @@ export function Canvas({ roomId, socket, isSolo = false, isUserAuthenticated = f
     return () => {
       window.removeEventListener("resize", debouncedResize);
       clearTimeout(timeoutId);
-      // Cleanup on unmount
       document.body.style.overflow = '';
       document.documentElement.style.overflow = '';
     };
@@ -238,6 +238,8 @@ useEffect(() => {
             <Menu 
               onClearCanvas={clearCanvasAndShapes}
               isMobile={false}
+                onOpen={() => setIsMenuOpen(true)}
+                onClose={() => setIsMenuOpen(false)}
               {...(isCollabMode && {
                 isCollabMode: true,
                 roomId: roomId,
@@ -327,7 +329,7 @@ useEffect(() => {
         </>
       }
 
-      {shouldShowPropertiesPanel && !isMobile && (
+      {shouldShowPropertiesPanel && !isMobile && !isMenuOpen && (
         <div className="absolute top-[72px] left-6 z-50 touch-none">
           <ExcalidrawPropertiesPanel
             strokeSelectedIndex={strokeIndex}

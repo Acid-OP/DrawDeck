@@ -11,6 +11,8 @@ interface MenuProps {
   encryptionKey?: string;
   roomType?: 'duo' | 'group';
   isMobile?: boolean; 
+  onOpen?: () => void; 
+  onClose?: () => void; 
 }
 
 export function Menu({
@@ -19,7 +21,9 @@ export function Menu({
   roomId,
   encryptionKey,
   roomType,
-  isMobile = false
+  isMobile = false,
+  onOpen,
+  onClose
 }: MenuProps) {
   const { theme } = useTheme(); 
   const [activated, setActivated] = useState(false);
@@ -28,7 +32,14 @@ export function Menu({
   const menuRef = useRef<HTMLDivElement>(null);
 
   const handleClick = () => {
-    setActivated((prev) => !prev);
+    setActivated((prev) => {
+      const newState = !prev;
+
+      if (newState) onOpen?.();
+      else onClose?.();
+
+      return newState;
+    });
     setClicked(true);
     setTimeout(() => setClicked(false), 300);
   };
@@ -37,6 +48,7 @@ export function Menu({
     const handleOutsideClick = (e: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
         setActivated(false);
+        onClose?.(); 
       }
     };
 
@@ -47,7 +59,7 @@ export function Menu({
     }
 
     return () => document.removeEventListener("mousedown", handleOutsideClick);
-  }, [activated]);
+  }, [activated, onClose]);
 
   return (
     <div className="relative inline-block" ref={menuRef}>
@@ -74,7 +86,10 @@ export function Menu({
         > 
           <SidebarModal
             isOpen={true}
-            onClose={() => setActivated(false)}
+            onClose={() => {
+              setActivated(false);
+              onClose?.(); 
+            }}
             onClearCanvas={onClearCanvas}
             isCollabMode={isCollabMode}
             roomId={roomId}

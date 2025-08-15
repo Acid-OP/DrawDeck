@@ -11,6 +11,7 @@ interface SidebarModalProps {
   encryptionKey?: string;
   roomType?: 'duo' | 'group';
   isMobile?: boolean;
+  onOpen?: () => void;
 }
 
 export const SidebarModal: React.FC<SidebarModalProps> = ({ 
@@ -21,28 +22,34 @@ export const SidebarModal: React.FC<SidebarModalProps> = ({
   roomId,
   encryptionKey,
   roomType,
-  isMobile = false
+  isMobile = false,
+  onOpen
 }) => {
   const { theme } = useTheme(); 
   const [isAnimating, setIsAnimating] = useState(false);
   const [shouldRender, setShouldRender] = useState(isOpen);
 
-  useEffect(() => {
-    if (isOpen) {
-      setShouldRender(true);
-      setTimeout(() => setIsAnimating(true), 10);
-    } else {
-      setIsAnimating(false);
-      setTimeout(() => setShouldRender(false), 300);
-    }
-  }, [isOpen]);
+useEffect(() => {
+  if (isOpen) {
+    setShouldRender(true);
+    setTimeout(() => {
+      setIsAnimating(true);
+      onOpen?.(); 
+    }, 10);
+  } else {
+    setIsAnimating(false);
+    setTimeout(() => setShouldRender(false), 300);
+  }
+}, [isOpen, onOpen]);
+
 
   if (!shouldRender) return null;
 
-  const handleClose = () => {
-    setIsAnimating(false);
-    setTimeout(() => onClose(), 250);
-  };
+const handleClose = () => {
+  setIsAnimating(false);
+  setTimeout(() => onClose(), 250);
+};
+
 
   if (isMobile) {
     return (

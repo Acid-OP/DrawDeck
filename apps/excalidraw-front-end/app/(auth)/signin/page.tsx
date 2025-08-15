@@ -5,7 +5,6 @@ import FloatingDoodles from "@/components/FloatingDoodles";
 import GraphicSection from "@/components/GraphicSession";
 import SignInForm from "@/components/SigninForm";
 import SignupHeader from "@/components/SignupHeader";
-import ThemeToggle from "@/components/Themetoggle";
 import { useState } from "react";
 
 
