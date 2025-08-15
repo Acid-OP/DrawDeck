@@ -1,5 +1,6 @@
 "use client";
 import React, { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Play, Users, Video } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@clerk/nextjs";
@@ -7,15 +8,18 @@ import { generateRoomId } from "@/lib/generateRoomId";
 import { generateSecureKey } from "@/lib/crypto";
 import { MobileRestrictionModal } from "./MobileLiveCollabModal";
 import { useTheme } from "@/context/ThemeContext";
+
 interface Props {
   onClose: () => void;
   source?: 'header' | 'sidebar' | 'share';
 }
 
 type RoomType = "duo" | "group";
+
 export const LiveCollabModal: React.FC<Props> = ({ onClose, source = 'header'}) => {
   const [isMobile, setIsMobile] = useState<boolean | null>(null);
-    const { theme } = useTheme();
+  const { theme } = useTheme();
+  
   useEffect(() => {
     const checkDevice = () => {
       const isMobileDevice = window.innerWidth < 1024;
@@ -41,7 +45,7 @@ export const LiveCollabModal: React.FC<Props> = ({ onClose, source = 'header'}) 
 const DesktopCollabModal: React.FC<Props> = ({ onClose, source = 'header'}) => {
   const modalRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
-   const { theme } = useTheme();
+  const { theme } = useTheme();
   const { isSignedIn } = useAuth();
   const [selectedRoomType, setSelectedRoomType] = useState<RoomType>("duo");
   const [isLoading, setIsLoading] = useState(false);
@@ -92,7 +96,7 @@ const DesktopCollabModal: React.FC<Props> = ({ onClose, source = 'header'}) => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 flex items-center justify-center z-50 bg-black/20 backdrop-blur-sm">
       <div
         ref={modalRef}
@@ -107,7 +111,7 @@ const DesktopCollabModal: React.FC<Props> = ({ onClose, source = 'header'}) => {
         }`}
         style={{
           boxShadow: theme === 'dark' 
-            ? ''// ? '0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(158, 154, 234, 0.1)'
+            ? '' // ? '0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(158, 154, 234, 0.1)'
             : '0 25px 50px -12px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(158, 154, 234, 0.1)'
         }}
       >
@@ -236,6 +240,7 @@ const DesktopCollabModal: React.FC<Props> = ({ onClose, source = 'header'}) => {
           </span>
         </button>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

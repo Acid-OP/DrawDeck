@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, useRef, useEffect } from "react";
 import { Copy, Check, X } from "lucide-react";
+import { useTheme } from "@/context/ThemeContext"; // or wherever your global theme is
 
 interface Props {
   roomId: string;
@@ -15,11 +16,13 @@ export const ShareLinkModal: React.FC<Props> = ({
   encryptionKey, 
   roomType,
   onClose,
-  isManualTrigger = false 
+  isManualTrigger = false
 }) => {
+  const { theme } = useTheme(); // get global theme
   const [isVisible, setIsVisible] = useState(false);
   const [copied, setCopied] = useState(false);
   const modalRef = useRef<HTMLDivElement>(null);
+
   const shareableLink = `${window.location.origin}/${roomId}?key=${encryptionKey}&type=${roomType}`;
 
   const handleCopy = async () => {
@@ -48,9 +51,7 @@ export const ShareLinkModal: React.FC<Props> = ({
 
   const handleClose = () => {
     setIsVisible(false);
-    if (onClose) {
-      onClose();
-    }
+    if (onClose) onClose();
   };
 
   useEffect(() => {
@@ -73,11 +74,18 @@ export const ShareLinkModal: React.FC<Props> = ({
 
   if (!isVisible) return null;
 
+  // Dark/Light styles based on global theme
+  const modalBg = theme === "dark" ? "#232329" : "#ffffff";
+  const modalText = theme === "dark" ? "text-white" : "text-black";
+  const inputBg = theme === "dark" ? "#1a1a1f" : "#e0dfff";
+  const inputBorder = theme === "dark" ? "#333" : "#c9bfff";
+
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
       <div
         ref={modalRef}
-        className="relative bg-[#232329] text-white w-[480px] max-w-[90%] p-6 rounded-xl shadow-[0_0_30px_rgba(0,0,0,0.6)] border border-[#444] transition-all"
+        className={`relative w-[480px] max-w-[90%] p-6 rounded-xl shadow-[0_0_30px_rgba(0,0,0,0.6)] border transition-all`}
+        style={{ backgroundColor: modalBg, borderColor: theme === "dark" ? "#444" : inputBorder }}
       >
         <button
           onClick={handleClose}
@@ -90,18 +98,19 @@ export const ShareLinkModal: React.FC<Props> = ({
           Share Collaboration Link
         </h2>
 
-        <p className="text-white/80 mb-6 leading-relaxed text-sm">
+        <p className={`${modalText} mb-6 leading-relaxed text-sm`}>
           Send this link to anyone you want to collaborate with. They'll be able to draw with you in real-time.
         </p>
 
         <div className="mb-4">
-          <label className="block text-xs font-medium text-white/90 mb-2">Link</label>
+          <label className={`block text-xs font-medium mb-2 ${modalText}`}>Link</label>
           <div className="flex items-center gap-2">
             <input
               type="text"
               readOnly
               value={shareableLink}
-              className="flex-1 bg-[#1a1a1f] border border-[#333] rounded-lg px-3 py-2 text-white/90 text-xs font-mono cursor-default"
+              className={`flex-1 rounded-lg px-3 py-2 text-xs font-mono cursor-default`}
+              style={{ backgroundColor: inputBg, border: `1px solid ${inputBorder}`, color: theme === "dark" ? "#fff" : "#000" }}
             />
             <button
               onClick={handleCopy}
@@ -122,7 +131,7 @@ export const ShareLinkModal: React.FC<Props> = ({
           </div>
         </div>
 
-        <div className="text-xs text-white/60 space-y-1">
+        <div className={`text-xs space-y-1 ${modalText}`}>
           <p>💡 Anyone with this link can join your collaborative session.</p>
           <p>🔒 Your session is end-to-end encrypted and private.</p>
         </div>

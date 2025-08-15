@@ -204,8 +204,6 @@ useEffect(() => {
       const screenY = logicalY * g.zoom + g.panOffsetY;
       setInputBox({ x: screenX, y: screenY, logicalX, logicalY });
     };
-    
-    // Initialize touch handlers for all devices (won't interfere with mouse)
     g.initTouchHandlers();
     
     setGame(g);
@@ -223,7 +221,7 @@ useEffect(() => {
         ref={canvasRef}
         width={dimensions.width}
         height={dimensions.height}
-        className="" // Removed touch-none from canvas to allow touch events
+        className="" 
         style={{ backgroundColor: theme === "dark" ? "#121212" : "#ffffff" }}
       />
       
@@ -265,7 +263,6 @@ useEffect(() => {
         </div>
       )}
 
-      {/* Mobile Layout */}
       {isMobile && (
         <>
           <div className="fixed top-3 left-3 right-3 z-50 flex justify-center touch-none">

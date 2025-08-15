@@ -23,7 +23,7 @@ export function RoomCanvas({ slug, encryptionKey, roomType: propRoomType }: { sl
   } | null>(null);
   const [creatorLeftError, setCreatorLeftError] = useState<boolean>(false);
   const [isRoomAccessible, setIsRoomAccessible] = useState(false); 
-
+  const [minDelayElapsed, setMinDelayElapsed] = useState(false);
   const roomTypeFromStorage = typeof window !== 'undefined' 
     ? sessionStorage.getItem(`roomType-${slug}`) as 'duo' | 'group' | null
     : null;
@@ -41,7 +41,6 @@ export function RoomCanvas({ slug, encryptionKey, roomType: propRoomType }: { sl
 
     const connectWebSocket = async () => {
       try {
-        console.log(`🔌 Connecting to room "${slug}" with key...`);
         setIsConnecting(true);
         setConnectionError(null);
         setRoomFullError(null);
@@ -51,16 +50,10 @@ export function RoomCanvas({ slug, encryptionKey, roomType: propRoomType }: { sl
         const ws = new WebSocket(wsUrl ??WS_URL);
 
         ws.onopen = () => {
-          console.log('✅ WebSocket connected');
           const isCreator = sessionStorage.getItem(`creator-${slug}`) === 'true';
-          
-          console.log(`👤 User role: ${isCreator ? 'Creator' : 'Participant'}`);
-
           const payload = isCreator
             ? { type: 'create_room', roomId: slug, encryptionKey, roomType }
             : { type: 'join-room', roomId: slug, encryptionKey }; 
-
-          console.log(payload.encryptionKey);
           ws.send(JSON.stringify(payload));
           setSocket(ws);
         };
@@ -68,8 +61,6 @@ export function RoomCanvas({ slug, encryptionKey, roomType: propRoomType }: { sl
         ws.onmessage = (event) => {
           const data = JSON.parse(event.data);
           const { type, ...rest } = data;
-
-          console.log("📨 WS message received:", data);
 
           switch (type) {
             case 'room_created':
@@ -97,7 +88,6 @@ export function RoomCanvas({ slug, encryptionKey, roomType: propRoomType }: { sl
               break;
 
             case 'creator_left':
-              console.log(`👑 Room creator left: ${rest.message}`);
               setCreatorLeftError(true);
               setIsRoomAccessible(false);
               setIsConnecting(false);
@@ -107,30 +97,22 @@ export function RoomCanvas({ slug, encryptionKey, roomType: propRoomType }: { sl
               break;
 
             case 'user_joined':
-              console.log(`👤 User ${rest.userId} joined room "${rest.roomId}"`);
-              console.log(`👥 Total participants: ${rest.participantCount}`);
               break;
 
             case 'user_left':
-              console.log(`👋 User ${rest.userId} left room "${rest.roomId}"`);
-              console.log(`👥 Remaining participants: ${rest.participantCount}`);
               break;
 
             case 'shape_added':
-              console.log(`➕ Shape added by ${rest.userId} (ID: ${rest.shape?.id})`);
               break;
 
             case 'shape_updated':
-              console.log(`✏️ Shape updated by ${rest.userId} (ID: ${rest.shape?.id})`);
               break;
 
             case 'shape_deleted':
-              console.log(`❌ Shape deleted by ${rest.userId} (ID: ${rest.shapeId})`);
               break;
 
             case 'error':
               console.error(`🚨 Server error: ${rest.message}`);
-              // Check if error is related to room not existing (creator left scenario)
               if (rest.message && rest.message.includes('does not exist')) {
                 setCreatorLeftError(true);
               } else {
@@ -153,7 +135,6 @@ export function RoomCanvas({ slug, encryptionKey, roomType: propRoomType }: { sl
         };
 
         ws.onclose = (event) => {
-          console.log('🔌 WebSocket closed:', event.code, event.reason);
           setSocket(null);
           setIsConnecting(false);
           setIsRoomAccessible(false);
@@ -174,12 +155,16 @@ export function RoomCanvas({ slug, encryptionKey, roomType: propRoomType }: { sl
 
     return () => {
       if (socket?.readyState === WebSocket.OPEN) {
-        console.log('🚪 Leaving room...');
         socket.send(JSON.stringify({ type: 'leave_room', roomId: slug }));
         socket.close(1000, 'Component unmounting');
       }
     };
   }, [slug, encryptionKey, roomType]); 
+
+  useEffect(() => {
+    const timer = setTimeout(() => setMinDelayElapsed(true), 150);
+    return () => clearTimeout(timer);
+  }, []);
 
   const handleGoBack = () => {
     setRoomFullError(null);
@@ -215,9 +200,15 @@ export function RoomCanvas({ slug, encryptionKey, roomType: propRoomType }: { sl
   if (connectionError) {
     return <ConnectionError error={connectionError} />;
   }
-
-  if (isConnecting || !socket || !isRoomAccessible) {
-    return <RoomConnecting slug={slug} roomType={roomType} />;
+  if (!minDelayElapsed) return null;
+  if (!minDelayElapsed || isConnecting || !socket || !isRoomAccessible) {
+    return (
+      <>
+      <div className="fade-in">
+        <RoomConnecting slug={slug} roomType={roomType} />
+      </div>
+      </>
+    )
   }
 
   return (
