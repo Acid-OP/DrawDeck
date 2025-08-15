@@ -1,11 +1,9 @@
 import React, { useState, useEffect } from "react";
-
-type Theme = "dark" | "light";
+import { useTheme } from "@/context/ThemeContext";
 
 interface ZoomBarProps {
   zoom: number;
   setZoom: React.Dispatch<React.SetStateAction<number>>;
-  theme: Theme;
   minZoom?: number;
   maxZoom?: number;
   zoomStep?: number;
@@ -14,22 +12,18 @@ interface ZoomBarProps {
 export const ZoomBar: React.FC<ZoomBarProps> = ({
   zoom,
   setZoom,
-  theme,
   minZoom = 0.2,
   maxZoom = 4,
   zoomStep = 0.1,
 }) => {
+  const { theme } = useTheme();
   const [hovered, setHovered] = useState<"minus" | "plus" | "reset" | null>(null);
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-    
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
     checkMobile();
     window.addEventListener("resize", checkMobile);
-    
     return () => window.removeEventListener("resize", checkMobile);
   }, []);
 
@@ -62,48 +56,39 @@ export const ZoomBar: React.FC<ZoomBarProps> = ({
     transition: "color 0.15s ease",
     fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
   };
-  const containerStyle = isMobile ? {
-    position: 'relative' as const,
-    zIndex: 2,
-    pointerEvents: "auto" as const,
-  } : {
-    position: 'fixed' as const,
-    left: 20,
-    bottom: 20,
-    zIndex: 200,
-    pointerEvents: "auto" as const,
-  };
+
+  const containerStyle = isMobile
+    ? { position: "relative" as const, zIndex: 2, pointerEvents: "auto" as const }
+    : { position: "fixed" as const, left: 20, bottom: 20, zIndex: 200, pointerEvents: "auto" as const };
+
+  const background = theme === "dark" ? "#232329" : "#ececf4";
 
   return (
-    <div
-      className={isMobile ? "relative" : "fixed"}
-      style={containerStyle}
-    >
+    <div className={isMobile ? "relative" : "fixed"} style={containerStyle}>
       <div
-        className={`relative flex items-center ${
-          isMobile && theme === "dark" ? "border border-black" : ""
-        }`}
+        className={`relative flex items-center ${isMobile && theme === "dark" ? "border border-black" : ""}`}
         style={{
           borderRadius: 8,
           minWidth: 120,
           height: 36,
           padding: "0 8px",
           fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
-          boxShadow: isMobile ? "none" : 
-            "rgba(0,0,0,0.12) 0px 2px 10px 0px, rgba(0,0,0,0.08) 0px 1px 4px 0px",
+          boxShadow: isMobile
+            ? "none"
+            : "rgba(0,0,0,0.12) 0px 2px 10px 0px, rgba(0,0,0,0.08) 0px 1px 4px 0px",
           userSelect: "none",
           touchAction: "manipulation",
           fontWeight: 400,
           fontSize: 13,
           letterSpacing: "-0.01em",
-          background: theme === "dark" ? "#232329" : "#ececf4",
+          background,
           position: "relative",
           minHeight: 36,
           display: "flex",
           alignItems: "center",
         }}
       >
-        {/* Hover BG Left */}
+        {/* Hover backgrounds */}
         <div
           style={{
             position: "absolute",
@@ -111,10 +96,7 @@ export const ZoomBar: React.FC<ZoomBarProps> = ({
             left: 0,
             bottom: 0,
             right: `${100 - leftFrac}%`,
-            background:
-              hovered === "minus"
-                ? "rgba(255,255,255,0.05)"
-                : "transparent",
+            background: hovered === "minus" ? "rgba(255,255,255,0.05)" : "transparent",
             borderTopLeftRadius: 8,
             borderBottomLeftRadius: 8,
             transition: "background 0.15s ease",
@@ -122,7 +104,6 @@ export const ZoomBar: React.FC<ZoomBarProps> = ({
             pointerEvents: "none",
           }}
         />
-        {/* Hover BG Right */}
         <div
           style={{
             position: "absolute",
@@ -130,10 +111,7 @@ export const ZoomBar: React.FC<ZoomBarProps> = ({
             left: `${rightFrac}%`,
             bottom: 0,
             right: 0,
-            background:
-              hovered === "plus"
-                ? "rgba(255,255,255,0.05)"
-                : "transparent",
+            background: hovered === "plus" ? "rgba(255,255,255,0.05)" : "transparent",
             borderTopRightRadius: 8,
             borderBottomRightRadius: 8,
             transition: "background 0.15s ease",
@@ -149,11 +127,7 @@ export const ZoomBar: React.FC<ZoomBarProps> = ({
           onMouseEnter={() => setHovered("minus")}
           onMouseLeave={() => setHovered(null)}
           style={{ ...buttonBaseStyle, width: 40, fontSize: 18 }}
-          onClick={() =>
-            setZoom(z =>
-              Math.max(Number((z - zoomStep).toFixed(2)), minZoom)
-            )
-          }
+          onClick={() => setZoom(z => Math.max(Number((z - zoomStep).toFixed(2)), minZoom))}
         >
           −
         </button>
@@ -164,11 +138,7 @@ export const ZoomBar: React.FC<ZoomBarProps> = ({
           aria-label="Reset zoom to 100%"
           onMouseEnter={() => setHovered("reset")}
           onMouseLeave={() => setHovered(null)}
-          style={{
-            ...buttonBaseStyle,
-            width: 50,
-            fontSize: 14,
-          }}
+          style={{ ...buttonBaseStyle, width: 50, fontSize: 14 }}
           onClick={() => setZoom(1)}
         >
           {Math.round(zoom * 100)}%
@@ -181,16 +151,12 @@ export const ZoomBar: React.FC<ZoomBarProps> = ({
           onMouseEnter={() => setHovered("plus")}
           onMouseLeave={() => setHovered(null)}
           style={{ ...buttonBaseStyle, width: 40, fontSize: 18 }}
-          onClick={() =>
-            setZoom(z =>
-              Math.min(Number((z + zoomStep).toFixed(2)), maxZoom)
-            )
-          }
+          onClick={() => setZoom(z => Math.min(Number((z + zoomStep).toFixed(2)), maxZoom))}
         >
           +
         </button>
 
-        {/* Tooltip  */}
+        {/* Tooltip */}
         {hovered && !isMobile && (
           <div
             style={{
@@ -202,8 +168,7 @@ export const ZoomBar: React.FC<ZoomBarProps> = ({
               color: "#1e1e1e",
               borderRadius: 6,
               border: "1px solid #e0e0e0",
-              boxShadow:
-                "0 4px 20px rgba(0,0,0,0.15), 0 2px 8px rgba(0,0,0,0.10)",
+              boxShadow: "0 4px 20px rgba(0,0,0,0.15), 0 2px 8px rgba(0,0,0,0.10)",
               fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
               fontWeight: 300,
               fontSize: 12,

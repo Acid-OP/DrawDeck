@@ -1,6 +1,7 @@
 'use client';
 import React from 'react';
 import { cn } from '@repo/ui/lib/utils';
+import { useTheme } from '@/context/ThemeContext';
 
 export interface StyleButtonProps {
   selected?: boolean;
@@ -9,7 +10,6 @@ export interface StyleButtonProps {
   children: React.ReactNode;
   size?: 'sm' | 'md' | 'lg';
   className?: string;
-  theme: 'light' | 'dark';
 }
 
 export const StyleButton: React.FC<StyleButtonProps> = ({
@@ -19,8 +19,8 @@ export const StyleButton: React.FC<StyleButtonProps> = ({
   children,
   size = 'md',
   className,
-  theme,
 }) => {
+  const {theme} = useTheme()
   const sizeClasses = {
     sm: 'w-5 h-5',
     md: 'w-6 h-6',

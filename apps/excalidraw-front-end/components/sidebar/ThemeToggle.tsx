@@ -1,18 +1,18 @@
 import React from 'react';
-import { Sun, Moon, Monitor } from 'lucide-react';
+import { Sun, Moon } from 'lucide-react';
 import { ToggleGroup, ToggleGroupItem } from '@repo/ui/components/base/toggle-group';
+import { useTheme } from '@/context/ThemeContext';
 
 interface ThemeToggleProps {
-  theme: 'light' | 'dark' | 'system';
-  onThemeChange: (theme: 'light' | 'dark' | 'system') => void;
   isMobile?: boolean;
 }
 
-export const ThemeToggle: React.FC<ThemeToggleProps> = ({ theme, onThemeChange, isMobile = false }) => {
+export const ThemeToggle: React.FC<ThemeToggleProps> = ({ isMobile = false }) => {
+  const { theme, setTheme } = useTheme(); // Get global theme from context
   const isLight = theme === 'light';
 
-  const getIconColor = (target: 'light' | 'dark' | 'system') => {
-    if (theme === 'light') return 'black';
+  const getIconColor = (target: 'light' | 'dark') => {
+    if (theme === 'light') return target === 'light' ? 'black' : '#666666';
     if (theme === 'dark') return target === 'dark' ? 'black' : '#a8a5ff';
     return '#a8a5ff';
   };
@@ -34,12 +34,13 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({ theme, onThemeChange, 
       >
         Theme
       </div>
+
       <ToggleGroup
         type="single"
         value={theme}
         onValueChange={(value) => {
-          if (value === 'light' || value === 'dark' || value === 'system') {
-            onThemeChange(value);
+          if (value === 'light' || value === 'dark') {
+            setTheme(value);
           }
         }}
         className="flex gap-2 rounded-md px-[4px] py-[3px] transition-all duration-300"
@@ -63,14 +64,6 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({ theme, onThemeChange, 
         >
           <Moon size={15} color={getIconColor('dark')} />
         </ToggleGroupItem>
-
-        {/* <ToggleGroupItem
-          value="system"
-          className="h-10 w-10 flex items-center justify-center rounded-md transition-all cursor-pointer duration-300 hover:bg-background/40 data-[state=on]:bg-[#a8a5ff]"
-          aria-label="System theme"
-        >
-          <Monitor size={15} color={getIconColor('system')} />
-        </ToggleGroupItem> */}
       </ToggleGroup>
     </div>
   );

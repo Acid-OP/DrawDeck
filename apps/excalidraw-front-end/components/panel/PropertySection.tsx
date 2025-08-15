@@ -1,16 +1,16 @@
-// PropertySection Component (resized)
 'use client';
 import React from 'react';
 import { cn } from '@repo/ui/lib/utils';
+import { useTheme } from '@/context/ThemeContext';
 
 interface PropertySectionProps {
   label: string;
   children: React.ReactNode;
   compact?: boolean;
-  theme: 'light' | 'dark';
 }
 
-export const PropertySection: React.FC<PropertySectionProps> = ({ label, children, compact , theme }) => {
+export const PropertySection: React.FC<PropertySectionProps> = ({ label, children, compact }) => {
+  const {theme} = useTheme();
   return (
     <div className={cn('mb-4')}>
       <label

@@ -4,6 +4,7 @@ import "./globals.css";
 import { Caveat } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
 import colorPalette from "./color-palette.png";
+import { ThemeProvider } from '@/context/ThemeContext';
 // Load local fonts
 const excalifont = localFont({
   src: "./fonts/excalifont-Regular.woff2",
@@ -40,7 +41,9 @@ export default function RootLayout({
            <link rel="icon" href={colorPalette.src} type="image/png" />
         </head>
         <body className={`${caveat.variable} ${excalifont.variable} ${virgil.variable} antialiased`}>
+          <ThemeProvider>
           {children}
+        </ThemeProvider>
         </body>
       </html>
     </ClerkProvider>

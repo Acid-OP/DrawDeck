@@ -1,18 +1,18 @@
 import React, { useState } from 'react';
 import { UserPlus } from 'lucide-react';
+import { useTheme } from '@/context/ThemeContext';
 
 interface SignupButtonProps {
   onClick?: () => void;
   className?: string;
-  theme: "light" | "dark";
 }
 
 const SignupButton: React.FC<SignupButtonProps> = ({
   onClick,
-  className = '',
-  theme
+  className = ''
 }) => {
   const [isHovered, setIsHovered] = useState<boolean>(false);
+  const { theme } = useTheme();
 
   const bgColor =
     theme === 'dark'

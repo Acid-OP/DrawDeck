@@ -1,4 +1,3 @@
-// FillPattern Component (resized)
 export const FillPattern = ({ type, color, size = 8 }: { type: 'hachure' | 'cross-hatch' | 'dots' | 'solid', color: string, size?: number }) => {
   const patterns = {
     hachure: '///',

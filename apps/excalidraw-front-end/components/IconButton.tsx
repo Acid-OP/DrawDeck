@@ -1,3 +1,4 @@
+import { useTheme } from "@/context/ThemeContext";
 import { LucideProps } from "lucide-react";
 import { ReactElement } from "react";
 import React from "react";
@@ -7,7 +8,6 @@ interface IconButtonProps {
   onClick: () => void;
   activated: boolean;
   shortcutKey: number;
-  theme: "light" | "dark";
   isMobile?: boolean;
 }
 
@@ -16,9 +16,9 @@ export function IconButton({
   onClick,
   activated,
   shortcutKey,
-  theme,
   isMobile = false
 }: IconButtonProps) {
+  const {theme} = useTheme();
   const isActiveLight = activated && theme === "light";
   
   const styledIcon: Partial<LucideProps> = {

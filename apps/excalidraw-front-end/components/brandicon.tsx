@@ -1,18 +1,18 @@
+import { useTheme } from '@/context/ThemeContext';
 import React from 'react';
 
 interface BrandIconProps {
  size?: number;
  strokeWidth?: number;
  className?: string;
- theme : "light" | "dark";
 }
 
 const BrandIcon: React.FC<BrandIconProps> = ({
  size = 24,
  strokeWidth = 2,
  className = '',
- theme
 }) => {
+   const { theme } = useTheme();
   const iconColor = theme === "dark" ? "#a8a5ff" : "#6965db";
  return (
    <svg

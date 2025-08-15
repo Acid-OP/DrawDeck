@@ -7,35 +7,36 @@ import { useAuth } from '@clerk/nextjs';
 import { LiveCollabModal } from './modal/LiveCollabModal';
 import LiveCollaborationButton from './CollaborationButton ';
 import { useRouter } from "next/navigation";
+import { useTheme } from "@/context/ThemeContext";
 
-interface HeaderProps {
-  theme: 'light' | 'dark';
-}
+interface HeaderProps {}
 
-export const Header: React.FC<HeaderProps> = ({ theme }) => {
+export const Header: React.FC<HeaderProps> = () => {
+  const { theme } = useTheme();
   const { isSignedIn, isLoaded } = useAuth();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const router = useRouter();
-   useEffect(() => {
+
+  useEffect(() => {
     router.prefetch("/signup");
   }, [router]);
 
   return (
     <div>
       <div className="flex flex-col items-center justify-center p-4 pointer-events-auto">
-        <BrandTitle theme={theme} />
+        <BrandTitle/>
         <span className='virgil text-lg text-[#7a7a7a] p-4'>
           All your data is saved locally in your browser
         </span>
 
         <div className='flex items-center justify-start w-full cursor-pointer'>
           <div className="w-full p-4">
-            <LiveCollaborationButton theme={theme} onClick={() => setIsModalOpen(true)} />
-            {isLoaded && !isSignedIn && <SignupButton theme={theme} onClick={() => router.push('/signup')}/>}
+            <LiveCollaborationButton onClick={() => setIsModalOpen(true)} />
+            {isLoaded && !isSignedIn && <SignupButton onClick={() => router.push('/signup')}/>}
           </div>
         </div>
       </div>
-      {isModalOpen && <LiveCollabModal theme={theme} onClose={() => setIsModalOpen(false)} source="header" />}
+      {isModalOpen && <LiveCollabModal onClose={() => setIsModalOpen(false)} source="header" />}
     </div>
   );
 };

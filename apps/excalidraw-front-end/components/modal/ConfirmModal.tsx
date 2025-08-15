@@ -1,18 +1,20 @@
+"use client";
+
 import React from "react";
+import { useTheme } from "@/context/ThemeContext";
 
 interface ConfirmModalProps {
   open: boolean;
   setOpen: (open: boolean) => void;
   onConfirm: () => void;
-  theme: "light" | "dark";
 }
 
-export const ConfirmModal = ({
+export const ConfirmModal: React.FC<ConfirmModalProps> = ({
   open,
   setOpen,
   onConfirm,
-  theme
-}: ConfirmModalProps) => {
+}) => {
+  const { theme } = useTheme();
   const handleCancel = () => setOpen(false);
 
   // Button styles

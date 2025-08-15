@@ -6,17 +6,16 @@ import { useAuth } from "@clerk/nextjs";
 import { generateRoomId } from "@/lib/generateRoomId";
 import { generateSecureKey } from "@/lib/crypto";
 import { MobileRestrictionModal } from "./MobileLiveCollabModal";
-
+import { useTheme } from "@/context/ThemeContext";
 interface Props {
   onClose: () => void;
   source?: 'header' | 'sidebar' | 'share';
-  theme: 'light' | 'dark';
 }
 
 type RoomType = "duo" | "group";
-export const LiveCollabModal: React.FC<Props> = ({ onClose, source = 'header', theme }) => {
+export const LiveCollabModal: React.FC<Props> = ({ onClose, source = 'header'}) => {
   const [isMobile, setIsMobile] = useState<boolean | null>(null);
-  
+    const { theme } = useTheme();
   useEffect(() => {
     const checkDevice = () => {
       const isMobileDevice = window.innerWidth < 1024;
@@ -29,19 +28,20 @@ export const LiveCollabModal: React.FC<Props> = ({ onClose, source = 'header', t
   }, []);
 
   if (isMobile === true) {
-    return <MobileRestrictionModal onClose={onClose} source={source} theme={theme} />;
+    return <MobileRestrictionModal onClose={onClose} source={source}/>;
   }
   
   if (isMobile === null) {
     return null;
   }
 
-  return <DesktopCollabModal onClose={onClose} source={source} theme={theme} />;
+  return <DesktopCollabModal onClose={onClose} source={source} />;
 };
 
-const DesktopCollabModal: React.FC<Props> = ({ onClose, source = 'header', theme }) => {
+const DesktopCollabModal: React.FC<Props> = ({ onClose, source = 'header'}) => {
   const modalRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
+   const { theme } = useTheme();
   const { isSignedIn } = useAuth();
   const [selectedRoomType, setSelectedRoomType] = useState<RoomType>("duo");
   const [isLoading, setIsLoading] = useState(false);

@@ -15,7 +15,7 @@ import LocalSaveNotice from "./menuiconpointer";
 import ToolbarIcon from "./ToolBarIcon";
 import ToolIconPointer from "./toolbariconpointer";
 import { useAuth } from "@clerk/nextjs";
-
+import { useTheme } from "@/context/ThemeContext";
 export type Tool =
   | "hand"
   | "select"
@@ -35,16 +35,16 @@ interface CanvasProps {
   isUserAuthenticated?: boolean;
   encryptionKey?: string;
   roomType?: 'duo' | 'group';
-  onThemeChange?: (theme: 'light' | 'dark') => void;
   className?: string;
 }
 
-export function Canvas({ roomId, socket, isSolo = false, isUserAuthenticated = false, encryptionKey, roomType, onThemeChange, className }: CanvasProps) {
+export function Canvas({ roomId, socket, isSolo = false, isUserAuthenticated = false, encryptionKey, roomType,className }: CanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [game, setGame] = useState<Game>();
   const [hasInteracted, setHasInteracted] = useState(false);
   const [selectedTool, setSelectedTool] = useState<Tool>("hand");
   const { getToken } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const [inputBox, setInputBox] = useState<{ 
     x: number; 
     y: number; 
@@ -63,13 +63,6 @@ export function Canvas({ roomId, socket, isSolo = false, isUserAuthenticated = f
   const [strokeWidthIndex, setStrokeWidthIndex] = useState(1);
   const [strokeStyleIndex, setStrokeStyleIndex] = useState(0);
   const [fillIndex, setFillIndex] = useState(0);
-  const [theme, setTheme] = useState<"light" | "dark">(() => {
-    if (typeof window !== "undefined") {
-      const savedTheme = localStorage.getItem("canvas_theme");
-      return (savedTheme as "light" | "dark") || "dark";
-    }
-    return "dark";
-  });
 
   const [zoom, setZoom] = useState(1);
   const [isMobile, setIsMobile] = useState(false);
@@ -104,17 +97,6 @@ export function Canvas({ roomId, socket, isSolo = false, isUserAuthenticated = f
     setIsMobile(mobile);
   }, []);
 
-  const toggleTheme = useCallback(() => {
-    setTheme(prevTheme => {
-      const newTheme = prevTheme === "dark" ? "light" : "dark";
-      localStorage.setItem("canvas_theme", newTheme); 
-      if (game) {
-        game.setTheme(newTheme);
-        game.toggleDefaultStrokeColors(newTheme);
-      }
-      return newTheme;
-    });
-  }, [game]);
 
   const clearCanvasAndShapes = useCallback(() => {
     console.log('clearCanvasAndShapes called, game:', game);
@@ -129,9 +111,6 @@ export function Canvas({ roomId, socket, isSolo = false, isUserAuthenticated = f
     setShowLiveModal(false);
   }, []);
   
-  useEffect(() => {
-    onThemeChange?.(theme);
-  }, [theme, onThemeChange]);
 
   const handleCloseShareLinkModal = useCallback(() => {
     setShowShareLinkModal(false);
@@ -200,6 +179,7 @@ export function Canvas({ roomId, socket, isSolo = false, isUserAuthenticated = f
   useEffect(() => {
     if (game) {
       game.setTheme(theme);
+      game.toggleDefaultStrokeColors(theme);
     }
   }, [theme, game]);
 
@@ -250,7 +230,7 @@ useEffect(() => {
       {shouldShowWelcome && (
         <div className="absolute top-[55%] left-1/2 transform -translate-x-1/2 -translate-y-1/2 pointer-events-none z-50">
           <div className="pointer-events-auto">
-            <Header theme={theme} />
+            <Header/>
           </div>
         </div>
       )}
@@ -258,8 +238,6 @@ useEffect(() => {
         <div className="absolute top-3 left-0 w-full flex justify-between items-start px-4 touch-none">
           <div className="flex-shrink-0">
             <Menu 
-              theme={theme} 
-              onThemeToggle={toggleTheme} 
               onClearCanvas={clearCanvasAndShapes}
               isMobile={false}
               {...(isCollabMode && {
@@ -274,8 +252,7 @@ useEffect(() => {
           <div className="flex-1 flex justify-center">
             <TopBar 
               selectedTool={selectedTool} 
-              setSelectedTool={setSelectedTool} 
-              theme={theme} 
+              setSelectedTool={setSelectedTool}  
             />
           </div>
 
@@ -296,7 +273,6 @@ useEffect(() => {
               <TopBar 
                 selectedTool={selectedTool} 
                 setSelectedTool={setSelectedTool} 
-                theme={theme} 
               />
             </div>
           </div>
@@ -307,8 +283,6 @@ useEffect(() => {
             `}>
               <div className={`flex-shrink-0`}>
                 <Menu 
-                  theme={theme} 
-                  onThemeToggle={toggleTheme} 
                   onClearCanvas={clearCanvasAndShapes}
                   isMobile={true}
                   {...(isCollabMode && {
@@ -320,7 +294,7 @@ useEffect(() => {
                 />
               </div>
               <div className={`rounded flex-shrink-0 ml-auto`}>
-                <ZoomBar zoom={zoom} setZoom={setZoom} theme={theme} />
+                <ZoomBar zoom={zoom} setZoom={setZoom}/>
               </div>      
             </div>
           </div>
@@ -329,7 +303,7 @@ useEffect(() => {
       
       {!isMobile && (
         <div className="absolute bottom-4 right-4 touch-none">
-          <ZoomBar zoom={zoom} setZoom={setZoom} theme={theme} />
+          <ZoomBar zoom={zoom} setZoom={setZoom}/>
         </div>
       )}
 
@@ -369,8 +343,6 @@ useEffect(() => {
             onStrokeWidthSelect={setStrokeWidthIndex}
             onStrokeStyleSelect={setStrokeStyleIndex}
             onFillStyleSelect={setFillIndex}
-            theme={theme}
-            onThemeToggle={toggleTheme}
           />
         </div>
       )}
@@ -403,7 +375,7 @@ useEffect(() => {
       )}
 
       {showLiveModal && (
-        <LiveCollabModal theme={theme} onClose={handleCloseLiveModal} source="share" />
+        <LiveCollabModal onClose={handleCloseLiveModal} source="share" />
       )}
 
       {showShareLinkModal && isCollabMode && (

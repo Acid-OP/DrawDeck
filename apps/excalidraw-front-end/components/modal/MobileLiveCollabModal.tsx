@@ -1,18 +1,20 @@
+"use client";
+
 import React, { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Monitor, Smartphone } from "lucide-react";
+import { useTheme } from "@/context/ThemeContext";
 
 interface MobileRestrictionModalProps {
   onClose: () => void;
   source?: "header" | "sidebar" | "share";
-  theme: "light" | "dark";
 }
 
 export const MobileRestrictionModal: React.FC<MobileRestrictionModalProps> = ({
   onClose,
   source = "header",
-  theme,
 }) => {
+  const { theme } = useTheme();
   const modalRef = useRef<HTMLDivElement>(null);
   const [isMobileOrTablet, setIsMobileOrTablet] = useState(false);
   const isCompact = source === "sidebar" || source === "share";

@@ -1,11 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { SidebarItems } from './SidebarItems';
+import { useTheme } from '@/context/ThemeContext';
 
 interface SidebarModalProps {
   isOpen: boolean;
   onClose: () => void;
-  theme: 'light' | 'dark';
-  onThemeToggle: () => void;
   onClearCanvas: () => void;
   isCollabMode?: boolean;
   roomId?: string;
@@ -17,8 +16,6 @@ interface SidebarModalProps {
 export const SidebarModal: React.FC<SidebarModalProps> = ({ 
   isOpen, 
   onClose, 
-  theme, 
-  onThemeToggle, 
   onClearCanvas,
   isCollabMode = false,
   roomId,
@@ -26,6 +23,7 @@ export const SidebarModal: React.FC<SidebarModalProps> = ({
   roomType,
   isMobile = false
 }) => {
+  const { theme } = useTheme(); 
   const [isAnimating, setIsAnimating] = useState(false);
   const [shouldRender, setShouldRender] = useState(isOpen);
 
@@ -58,9 +56,7 @@ export const SidebarModal: React.FC<SidebarModalProps> = ({
         <div
           className={`fixed bottom-0 left-0 right-0 z-50 rounded-t-lg shadow-2xl transition-transform duration-300 ${
             theme === 'dark' ? 'bg-[#232329]' : 'bg-white border border-gray-200'
-          } ${
-            isAnimating ? 'translate-y-0' : 'translate-y-full'
-          }`}
+          } ${isAnimating ? 'translate-y-0' : 'translate-y-full'}`}
           style={{
             maxHeight: '80vh',
             overflowY: 'auto',
@@ -68,8 +64,6 @@ export const SidebarModal: React.FC<SidebarModalProps> = ({
         >
           <div className="p-4">
             <SidebarItems
-              theme={theme}
-              onThemeToggle={onThemeToggle}
               onClearCanvas={onClearCanvas}
               isCollabMode={isCollabMode}
               roomId={roomId}
@@ -83,7 +77,6 @@ export const SidebarModal: React.FC<SidebarModalProps> = ({
     );
   }
 
-  // Desktop 
   return (
     <div
       className={`rounded-lg shadow-2xl transition-all duration-300 ${
@@ -96,8 +89,6 @@ export const SidebarModal: React.FC<SidebarModalProps> = ({
     >
       <div className="p-2">
         <SidebarItems
-          theme={theme}
-          onThemeToggle={onThemeToggle}
           onClearCanvas={onClearCanvas}
           isCollabMode={isCollabMode}
           roomId={roomId}

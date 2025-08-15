@@ -2,10 +2,9 @@
 import { useState, useRef, useEffect } from "react";
 import { SidebarModal } from "./SidebarModal";
 import { MenuIcon } from "lucide-react";
+import { useTheme } from "@/context/ThemeContext"; 
 
 interface MenuProps {
-  theme: 'light' | 'dark';
-  onThemeToggle: () => void;
   onClearCanvas: () => void;
   isCollabMode?: boolean;
   roomId?: string;
@@ -15,8 +14,6 @@ interface MenuProps {
 }
 
 export function Menu({
-  theme,
-  onThemeToggle,
   onClearCanvas,
   isCollabMode = false,
   roomId,
@@ -24,6 +21,7 @@ export function Menu({
   roomType,
   isMobile = false
 }: MenuProps) {
+  const { theme } = useTheme(); 
   const [activated, setActivated] = useState(false);
   const [clicked, setClicked] = useState(false);
 
@@ -68,15 +66,15 @@ export function Menu({
       </div>
 
       {activated && (
-        <div className={`
-          absolute left-0 z-50
-          ${isMobile ? "bottom-full mb-1" : "top-full mt-1"}
-        `}> 
+        <div
+          className={`
+            absolute left-0 z-50
+            ${isMobile ? "bottom-full mb-1" : "top-full mt-1"}
+          `}
+        > 
           <SidebarModal
             isOpen={true}
             onClose={() => setActivated(false)}
-            theme={theme}
-            onThemeToggle={onThemeToggle}
             onClearCanvas={onClearCanvas}
             isCollabMode={isCollabMode}
             roomId={roomId}

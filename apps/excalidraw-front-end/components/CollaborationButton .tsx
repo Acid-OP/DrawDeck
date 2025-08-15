@@ -1,18 +1,18 @@
 import React, { useState } from 'react';
 import { Users } from 'lucide-react';
+import { useTheme } from '@/context/ThemeContext';
 
 interface LiveCollaborationButtonProps {
   onClick?: () => void;
   className?: string;
-  theme: "light" | "dark";
 }
 
 const LiveCollaborationButton: React.FC<LiveCollaborationButtonProps> = ({
   onClick,
-  className = '',
-  theme
+  className = ''
 }) => {
   const [isHovered, setIsHovered] = useState<boolean>(false);
+  const { theme } = useTheme();
 
   const bgColor =
     theme === 'dark'

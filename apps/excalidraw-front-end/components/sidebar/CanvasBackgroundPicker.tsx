@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { SidebarSeparator } from './SidebarSeparator';
+import { useTheme } from '@/context/ThemeContext';
 
 interface CanvasBackgroundPickerProps {
   theme: 'light' | 'dark';
@@ -11,12 +12,12 @@ const backgroundColors = [
   '#f5faff',
   '#fffce8',
   '#fdf8f6',
-  '#e6f4ea', // 6th color
+  '#e6f4ea', 
 ];
 
-export const CanvasBackgroundPicker: React.FC<CanvasBackgroundPickerProps> = ({ theme }) => {
+export const CanvasBackgroundPicker: React.FC<CanvasBackgroundPickerProps> = () => {
   const [selectedColor, setSelectedColor] = useState('#ffffff');
-
+  const { theme } = useTheme();
   const handleColorSelect = (color: string) => {
     setSelectedColor(color);
   };
@@ -51,7 +52,6 @@ export const CanvasBackgroundPicker: React.FC<CanvasBackgroundPickerProps> = ({ 
 
         {/* Vertical Separator */}
         <SidebarSeparator
-          theme={theme}
           orientation="vertical"
           length="h-6"
           className="mx-1"

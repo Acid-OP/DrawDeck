@@ -1,11 +1,10 @@
-// ArrowIcon.tsx
 import React from 'react';
 
 interface ArrowIconProps {
     direction: 'up' | 'down' | 'left' | 'right';
     label: string;
 }
-// just for commit of env variables
+
 export const ArrowIcon: React.FC<ArrowIconProps> = ({ direction, label }) => {
     const arrowStyles = {
         up: 'rotate-180',

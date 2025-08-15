@@ -1,6 +1,7 @@
 // ColorSwatch Component (resized)
 import React from 'react';
 import { cn } from '@repo/ui/lib/utils';
+import { useTheme } from '@/context/ThemeContext';
 
 interface ColorSwatchProps {
   color: string;
@@ -9,7 +10,6 @@ interface ColorSwatchProps {
   title?: string;
   size?: 'sm' | 'md';
   isTransparent?: boolean;
-  theme: 'light' | 'dark';
 }
 
 export const ColorSwatch: React.FC<ColorSwatchProps> = ({
@@ -19,8 +19,8 @@ export const ColorSwatch: React.FC<ColorSwatchProps> = ({
   title,
   size = 'md',
   isTransparent = false,
-  theme,
 }) => {
+  const {theme} = useTheme()
   const sizeClasses = {
     sm: 'w-5 h-5',
     md: 'w-6 h-6'

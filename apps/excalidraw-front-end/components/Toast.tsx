@@ -10,7 +10,7 @@ interface ToastProps {
 export default function Toast({
   message,
   duration = 3000,
-  theme = "light",
+  theme,
 }: ToastProps) {
   const [phase, setPhase] = useState<'entering' | 'visible' | 'exiting'>('entering');
 
@@ -34,8 +34,8 @@ export default function Toast({
   const bgClass =
     theme === "light"
       ? "bg-gray-900 text-white"
-      : "bg-white text-black";
-
+      : "bg-white text-black";  
+      
   const getAnimationClass = () => {
     switch (phase) {
       case 'entering':

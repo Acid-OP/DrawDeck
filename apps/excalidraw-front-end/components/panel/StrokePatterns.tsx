@@ -1,4 +1,3 @@
-// StrokePatterns Components (resized)
 export const StrokeWidthPattern = ({ width, color }: { width: 'thin' | 'medium' | 'thick', color: string }) => {
   const strokeMap = {
     thin: 1,
