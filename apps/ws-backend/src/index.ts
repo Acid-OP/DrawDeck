@@ -91,7 +91,8 @@ wss.on("connection", (ws, request) => {
   ws.on("message", (raw) => {
     try {
       const data = JSON.parse(raw.toString());
-      const { type, roomId, shape, shapeId, updatedShape } = data;
+      console.log("📨 Received WebSocket message:", data);
+      const { type, roomId, shape, shapeId} = data;
       
       switch (type) {
         case "create_room": {
@@ -255,19 +256,40 @@ wss.on("connection", (ws, request) => {
           }, client);
           break;
         }
+case "shape_update": {
+  console.log("🔄 Backend received shape_update:", data);
+  
+  // The frontend sends: { type: "shape_update", roomId, shape, encryptionKey }
+  if (!roomId || !data.shape) {
+    console.log("❌ Missing required fields:", { roomId, shape: data.shape });
+    return;
+  }
 
-        case "shape_update": {
-          if (!roomId || !updatedShape || !updatedShape.id) return;
-          
-          broadcastToRoom(roomId, {
-            type: "shape_updated",
-            roomId,
-            userId: client.userId,
-            shape: updatedShape,
-            timestamp: new Date().toISOString(),
-          }, client);
-          break;
-        }
+  const encryptionKey = data.encryptionKey;
+  const expectedKey = roomSecrets.get(roomId);
+
+  if (!expectedKey || encryptionKey !== expectedKey) {
+    console.log("❌ Invalid encryption key");
+    ws.send(JSON.stringify({
+      type: "error",
+      message: "Invalid or missing encryption key.",
+    }));
+    return;
+  }
+
+  console.log("✅ Broadcasting shape_update to room:", roomId);
+  
+  // Broadcast the entire shape object, not just updates
+  broadcastToRoom(roomId, {
+    type: "shape_update",
+    roomId,
+    userId: client.userId,
+    shape: data.shape,  // Send the entire shape object
+    timestamp: new Date().toISOString(),
+  }, client);
+  
+  break;
+}
 
         default:
           break;
