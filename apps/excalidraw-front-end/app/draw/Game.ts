@@ -170,34 +170,31 @@ public setTheme(theme: "light" | "dark") {
     console.error("[CLIENT] WS send failed:", error);
   }
 }
-
 private broadcastShape(shape: Shape) {
-  console.log("🟢 CREATING new shape:", shape.type, shape.id.substring(0, 8));
+  console.log("🟢 BROADCASTING new shape:", shape.type, shape.id.substring(0, 8));
   
   if (this.isSolo) {
-    // Solo mode: just add locally
     this.existingShapes.push(shape);
     this.scheduleLocalSave();
     return;
   }
   
-  // Collaborative mode:
-  // 1. Add to local array immediately
-  this.existingShapes.push(shape);
+  // 🔥 FIX: DON'T add locally - that's already done in mouseUpHandler
+  // this.existingShapes.push(shape); // ← REMOVE THIS LINE
   
-  // 2. Save to localStorage
+  // Only save and broadcast
   this.scheduleWriteAll();
-  
-  // 3. Broadcast ONLY the creation (not the current state)
   this.safeSend({
     type: "shape_add", 
     roomId: this.roomId?.toString(),
-    shape: shape, // Send the original shape as created
+    shape: shape,
     encryptionKey: this.encryptionKey
   });
   
-  console.log("✅ Shape created and broadcasted:", shape.id.substring(0, 8));
+  console.log("✅ Shape broadcasted:", shape.id.substring(0, 8));
 }
+
+
 
   hitTestShapeHandle(shape: Shape, mouseX: number, mouseY: number): "tl" | "tr" | "bl" | "br" | null {
     const handleSize = 10;
@@ -1048,6 +1045,29 @@ public toggleDefaultStrokeColors(theme: "light" | "dark") {
   }
   this.clearCanvas();
 }
+private getShapePosition(shape: Shape): string {
+  switch (shape.type) {
+    case "rect": return `(${shape.x}, ${shape.y})`;
+    case "circle": return `(${shape.centerX}, ${shape.centerY})`;
+    case "line":
+    case "arrow": return `(${shape.startX}, ${shape.startY}) -> (${shape.endX}, ${shape.endY})`;
+    case "text": return `(${shape.x}, ${shape.y})`;
+    case "diamond": return `center: (${(shape.left.x + shape.right.x)/2}, ${(shape.top.y + shape.bottom.y)/2})`;
+    case "pencil": return shape.points.length > 0 ? `start: (${shape.points[0].x}, ${shape.points[0].y})` : "empty";
+    default: return "unknown";
+  }
+}
+
+// Add duplicate detection method:
+private checkForDuplicates() {
+  const ids = this.existingShapes.map(s => s.id);
+  const duplicates = ids.filter((id, index) => ids.indexOf(id) !== index);
+  if (duplicates.length > 0) {
+    console.error("🚨 DUPLICATE SHAPES DETECTED:", duplicates);
+    console.log("📊 Current shapes:", this.existingShapes.map(s => `${s.type}-${s.id.substring(0, 8)}`));
+  }
+}
+
 initHandlers() {
   if (this.isSolo || !this.socket || !this.roomId) return;
 
@@ -1079,28 +1099,31 @@ initHandlers() {
       }
       
       case "shape_update": {
-        const updatedShape = msg.shape;
-        
-        // Find existing shape by ID
-        const existingIndex = this.existingShapes.findIndex(s => s.id === updatedShape.id);
-        
-        if (existingIndex === -1) {
-          console.log("❌ Update for non-existent shape, ignoring:", updatedShape.id.substring(0, 8));
-          return; // Don't create shapes from updates
-        }
-        
-        console.log(`🔄 Updating shape at index ${existingIndex}:`, updatedShape.id.substring(0, 8));
-        
-        // Replace the existing shape completely
-        const adaptedShape = this.adaptShapeToTheme(updatedShape);
-        this.existingShapes[existingIndex] = adaptedShape;
-        
-        this.scheduleWriteAll();
-        this.clearCanvas();
-        
-        console.log("✅ Shape updated from broadcast:", updatedShape.id.substring(0, 8));
-        break;
-      }
+  const updatedShape = msg.shape;
+  console.log(`📨 RECEIVED UPDATE for shape: ${updatedShape.id.substring(0, 8)}`);
+  
+  // Find existing shape by ID
+  const existingIndex = this.existingShapes.findIndex(s => s.id === updatedShape.id);
+  
+  if (existingIndex === -1) {
+    console.log("❌ UPDATE IGNORED: Shape not found:", updatedShape.id.substring(0, 8));
+    return;
+  }
+  
+  console.log(`🔄 UPDATING shape at index ${existingIndex}:`, updatedShape.id.substring(0, 8));
+  console.log(`   Old pos:`, this.getShapePosition(this.existingShapes[existingIndex]));
+  console.log(`   New pos:`, this.getShapePosition(updatedShape));
+  
+  // Replace the existing shape completely
+  const adaptedShape = this.adaptShapeToTheme(updatedShape);
+  this.existingShapes[existingIndex] = adaptedShape;
+  
+  this.scheduleWriteAll();
+  this.clearCanvas();
+  
+  console.log("✅ SHAPE UPDATED from broadcast:", updatedShape.id.substring(0, 8));
+  break;
+}
       
       case "shape_delete": {
         const shapeId = msg.shapeId;
@@ -1142,8 +1165,8 @@ private broadcastShapeUpdate(shape: Shape) {
     return;
   }
   
-  // Update our local copy first
-  this.existingShapes[localIndex] = { ...shape };
+  // 🔥 FIX: DON'T update local array here - it's already updated by drag logic
+  // this.existingShapes[localIndex] = { ...shape }; // ← Remove this line
   this.scheduleWriteAll();
   
   // Broadcast the update
@@ -1354,6 +1377,8 @@ public deleteShapeByIndex(index: number) {
 }
 
   mouseDownHandler = (e: MouseEvent) => {
+    const pos = this.getMousePos(e);
+  console.log(`🔽 MOUSE-DOWN: Tool=${this.selectedTool}, Selected=${this.selectedShapeIndex}, Shapes=${this.existingShapes.length}`);
     if (this.selectedTool === "hand") {
       this.isPanning = true;
       this.lastPanX = e.clientX;
@@ -1362,7 +1387,7 @@ public deleteShapeByIndex(index: number) {
       this.clearCanvas();
       return;
     }
-    const pos = this.getMousePos(e);
+    // const pos = this.getMousePos(e);
 if (this.selectedTool === "select" && this.selectedShapeIndex !== null) {
     this.dragStartPos = { x: pos.x, y: pos.y };
     this.hasDragged = false;
@@ -1573,17 +1598,24 @@ mouseUpHandler = async (e: MouseEvent) => {
     }
     this.clearCanvas();
     
-   if (this.selectedShapeIndex !== null && this.hasDragged) {
+    if (this.selectedShapeIndex !== null && this.hasDragged && !this.isNewlyCreated) {
       const shape = this.existingShapes[this.selectedShapeIndex];
       if (shape) {
-        console.log("🟦 Broadcasting update for dragged shape:", shape.id.substring(0, 8));
+        console.log("🟦 DRAG-UPDATE: Broadcasting update for existing shape:", shape.id.substring(0, 8));
         this.broadcastShapeUpdate(shape);
       }
+    } else if (this.isNewlyCreated && this.hasDragged) {
+      console.log("🟢 CREATION-DRAG: Skipping update broadcast for newly created shape");
     }
     
     this.dragStartPos = null;
     this.hasDragged = false;
-    this.isNewlyCreated = false; // Reset the flag
+  if (this.isNewlyCreated) {
+      setTimeout(() => {
+        this.isNewlyCreated = false;
+        console.log("🔄 Reset isNewlyCreated flag");
+      }, 500);
+    }
     return;
   }
   this.clicked = false;

@@ -27,7 +27,7 @@ export function RoomCanvas({ slug, encryptionKey, roomType: propRoomType }: { sl
   const roomTypeFromStorage = typeof window !== 'undefined' 
     ? sessionStorage.getItem(`roomType-${slug}`) as 'duo' | 'group' | null
     : null;
-  const wsUrl = process.env.NEXT_PUBLIC_WS_URL;
+  // const wsUrl = process.env.NEXT_PUBLIC_WS_URL;
 
   const roomType = propRoomType;
   const shouldShowVideoCall = roomType === 'duo';
@@ -47,7 +47,7 @@ export function RoomCanvas({ slug, encryptionKey, roomType: propRoomType }: { sl
         setCreatorLeftError(false);
         setIsRoomAccessible(false); 
 
-        const ws = new WebSocket(wsUrl ??WS_URL);
+        const ws = new WebSocket(WS_URL);
 
         ws.onopen = () => {
           const isCreator = sessionStorage.getItem(`creator-${slug}`) === 'true';
