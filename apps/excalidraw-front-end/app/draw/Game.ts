@@ -164,25 +164,18 @@ public setTheme(theme: "light" | "dark") {
  private safeSend(payload: any) {
   if (this.isSolo || !this.socket || this.socket.readyState !== WebSocket.OPEN || !this.roomId) return;
   try {
-    console.log("inside safe sent shappe")
     this.socket.send(JSON.stringify(payload));
   } catch (error) {
     console.error("[CLIENT] WS send failed:", error);
   }
 }
 private broadcastShape(shape: Shape) {
-  console.log("🟢 BROADCASTING new shape:", shape.type, shape.id.substring(0, 8));
   
   if (this.isSolo) {
     this.existingShapes.push(shape);
     this.scheduleLocalSave();
     return;
   }
-  
-  // 🔥 FIX: DON'T add locally - that's already done in mouseUpHandler
-  // this.existingShapes.push(shape); // ← REMOVE THIS LINE
-  
-  // Only save and broadcast
   this.scheduleWriteAll();
   this.safeSend({
     type: "shape_add", 
@@ -190,8 +183,6 @@ private broadcastShape(shape: Shape) {
     shape: shape,
     encryptionKey: this.encryptionKey
   });
-  
-  console.log("✅ Shape broadcasted:", shape.id.substring(0, 8));
 }
 
 
@@ -223,14 +214,22 @@ private broadcastShape(shape: Shape) {
       height = maxY - minY;
     } else if (shape.type === "text") {
       const fontSize = shape.fontSize || 20;
+      const lines = shape.text.split('\n');
+      const lineHeight = fontSize * 1.2;
+  
       this.ctx.font = `${fontSize}px Virgil, Segoe UI, sans-serif`;
-      const metrics = this.ctx.measureText(shape.text);
-      const textWidth = metrics.width;
-      const textHeight = fontSize;
+      let maxWidth = 0;
+      lines.forEach(line => {
+        const metrics = this.ctx.measureText(line);
+        maxWidth = Math.max(maxWidth, metrics.width);
+      });
+  
+      const totalHeight = lines.length * lineHeight;
+  
       x = shape.x;
       y = shape.y;
-      width = textWidth;
-      height = textHeight;
+      width = maxWidth;
+      height = totalHeight;
     } else if (shape.type === "pencil") {
       const xs = shape.points.map(p => p.x);
       const ys = shape.points.map(p => p.y);
@@ -357,8 +356,7 @@ private drawConnectorLineToHandle(
 }
 
 
-  // Selection Box with External Handles 
-  private drawSelectionBox(shape: Shape) {
+private drawSelectionBox(shape: Shape) {
     this.ctx.save();
     this.ctx.strokeStyle = "#9b7bff"; 
     this.ctx.lineWidth = 1.5;
@@ -487,28 +485,33 @@ if (shape.type === "diamond") {
 }
 if (shape.type === "text") {
   const fontSize = shape.fontSize || 20;
+  const lines = shape.text.split('\n');
+  const lineHeight = fontSize * 1.2;
+  
+  // Calculate dimensions for all lines
   this.ctx.font = `${fontSize}px Virgil, Segoe UI, sans-serif`;
-  const metrics = this.ctx.measureText(shape.text);
-  const width = metrics.width;
-  const height = fontSize; 
+  let maxWidth = 0;
+  lines.forEach(line => {
+    const metrics = this.ctx.measureText(line);
+    maxWidth = Math.max(maxWidth, metrics.width);
+  });
+  
+  const totalHeight = lines.length * lineHeight;
   
   const x = shape.x - pad / 2;
   const y = shape.y - pad / 2;
-  const w = width + pad;
-  const h = height + pad;
+  const w = maxWidth + pad;
+  const h = totalHeight + pad;
 
   const inset = handleSize / 2;
 
   this.ctx.beginPath();
   this.ctx.moveTo(x + inset, y);          
   this.ctx.lineTo(x + w - inset, y);
-
   this.ctx.moveTo(x + w, y + inset);     
   this.ctx.lineTo(x + w, y + h - inset);
-
   this.ctx.moveTo(x + w - inset, y + h);  
   this.ctx.lineTo(x + inset, y + h);
-
   this.ctx.moveTo(x, y + h - inset);       
   this.ctx.lineTo(x, y + inset);
   this.ctx.stroke();
@@ -805,6 +808,19 @@ private forceRedraw() {
 
     return x >= boxX && x <= boxX + boxW && y >= boxY && y <= boxY + boxH;
   }  
+private drawMultilineText(text: string, x: number, y: number, fontSize: number, fillStyle: string) {
+  const lines = text.split('\n');
+  const lineHeight = fontSize * 1.2; 
+  
+  this.ctx.font = `${fontSize}px Virgil, Segoe UI, sans-serif`;
+  this.ctx.textBaseline = "top";
+  this.ctx.fillStyle = fillStyle;
+  
+  lines.forEach((line, index) => {
+    this.ctx.fillText(line, x, y + (index * lineHeight));
+  });
+}
+
 
 addTextShape(x: number, y: number, text: string) {
   const shape = {
@@ -829,10 +845,17 @@ addTextShape(x: number, y: number, text: string) {
     this.broadcastShape(shape);
   }
   this.selectedShapeIndex = this.existingShapes.length - 1;
+   this.isNewlyCreated = true;
+   setTimeout(() => {
+    this.isNewlyCreated = false;
+  }, 200);
+
   this.selectedTool = "select";
   if (this.onToolChange) this.onToolChange("select");
   
-  this.clearCanvas();
+  setTimeout(() => {
+    this.clearCanvas();
+  }, 100);
 }
 
 getMousePos = (e: MouseEvent) => {
@@ -876,26 +899,29 @@ getMousePos = (e: MouseEvent) => {
       const minY = Math.min(...ys) - pad;
       const maxY = Math.max(...ys) + pad;
       return x >= minX && x <= maxX && y >= minY && y <= maxY;
+    }if (shape.type === "text") {
+      const fontSize = shape.fontSize || 20;
+      const lines = shape.text.split('\n');
+      const lineHeight = fontSize * 1.2;
+  
+  // Calculate total height based on number of lines
+      const totalHeight = lines.length * lineHeight;
+  
+  // Calculate max width of all lines
+      this.ctx.font = `${fontSize}px Virgil, Segoe UI, sans-serif`;
+      let maxWidth = 0;
+      lines.forEach(line => {
+        const metrics = this.ctx.measureText(line);
+        maxWidth = Math.max(maxWidth, metrics.width);
+      });
+      const pad = 6;
+      return (
+        x >= shape.x - pad &&
+        x <= shape.x + maxWidth + pad &&
+        y >= shape.y - pad &&
+        y <= shape.y + totalHeight + pad
+      );
     }
-    
-if (shape.type === "text") {
-  const fontSize = shape.fontSize || 20;
-  this.ctx.font = `${fontSize}px Virgil, Segoe UI, sans-serif`;
-  const metrics = this.ctx.measureText(shape.text);
-  const textWidth = metrics.width;
-  const textHeight = fontSize; // Use fontSize instead of hardcoded 20
-  
-  const pad = 6;
-  
-  return (
-    x >= shape.x - pad &&
-    x <= shape.x + textWidth + pad &&
-    y >= shape.y - pad &&
-    y <= shape.y + textHeight + pad
-  );
-}
-
-
     if (shape.type === "pencil") {
       for (let i = 0; i < shape.points.length - 1; i++) {
         if (
@@ -1064,7 +1090,6 @@ private checkForDuplicates() {
   const duplicates = ids.filter((id, index) => ids.indexOf(id) !== index);
   if (duplicates.length > 0) {
     console.error("🚨 DUPLICATE SHAPES DETECTED:", duplicates);
-    console.log("📊 Current shapes:", this.existingShapes.map(s => `${s.type}-${s.id.substring(0, 8)}`));
   }
 }
 
@@ -1072,9 +1097,7 @@ initHandlers() {
   if (this.isSolo || !this.socket || !this.roomId) return;
 
   this.socket.onmessage = (event) => {
-    let msg = JSON.parse(event.data);
-    console.log(`📨 Received: ${msg.type} for shape ${msg.shape?.id?.substring(0, 8) || msg.shapeId?.substring(0, 8)}`);
-    
+    let msg = JSON.parse(event.data);;
     switch (msg.type) {
       case "shape_add": {
         const shape = msg.shape;
@@ -1083,57 +1106,37 @@ initHandlers() {
         const existingIndex = this.existingShapes.findIndex(s => s.id === shape.id);
         
         if (existingIndex !== -1) {
-          console.log("⚠️ Shape already exists, ignoring add:", shape.id.substring(0, 8));
-          return; // Don't add duplicates
+          return; // duplicates
         }
-        
-        // Add the new shape
         const adaptedShape = this.adaptShapeToTheme(shape);
         this.existingShapes.push(adaptedShape);
         this.scheduleWriteAll();
         this.clearCanvas();
-        
-        console.log("✅ Added new shape from broadcast:", shape.id.substring(0, 8));
-        console.log(`📊 Total shapes now: ${this.existingShapes.length}`);
         break;
       }
       
       case "shape_update": {
-  const updatedShape = msg.shape;
-  console.log(`📨 RECEIVED UPDATE for shape: ${updatedShape.id.substring(0, 8)}`);
+        const updatedShape = msg.shape;
+        const existingIndex = this.existingShapes.findIndex(s => s.id === updatedShape.id);
   
-  // Find existing shape by ID
-  const existingIndex = this.existingShapes.findIndex(s => s.id === updatedShape.id);
+        if (existingIndex === -1) {
+          return;
+        }
+        const adaptedShape = this.adaptShapeToTheme(updatedShape);
+        this.existingShapes[existingIndex] = adaptedShape;
   
-  if (existingIndex === -1) {
-    console.log("❌ UPDATE IGNORED: Shape not found:", updatedShape.id.substring(0, 8));
-    return;
-  }
-  
-  console.log(`🔄 UPDATING shape at index ${existingIndex}:`, updatedShape.id.substring(0, 8));
-  console.log(`   Old pos:`, this.getShapePosition(this.existingShapes[existingIndex]));
-  console.log(`   New pos:`, this.getShapePosition(updatedShape));
-  
-  // Replace the existing shape completely
-  const adaptedShape = this.adaptShapeToTheme(updatedShape);
-  this.existingShapes[existingIndex] = adaptedShape;
-  
-  this.scheduleWriteAll();
-  this.clearCanvas();
-  
-  console.log("✅ SHAPE UPDATED from broadcast:", updatedShape.id.substring(0, 8));
-  break;
-}
+        this.scheduleWriteAll();
+        this.clearCanvas();
+        break;
+      }
       
       case "shape_delete": {
         const shapeId = msg.shapeId;
         const existingIndex = this.existingShapes.findIndex(s => s.id === shapeId);
         
         if (existingIndex !== -1) {
-          console.log(`🗑️ Deleting shape at index ${existingIndex}:`, shapeId.substring(0, 8));
           this.existingShapes.splice(existingIndex, 1);
           
-          // Clear selection if we deleted the selected shape
           if (this.selectedShapeIndex === existingIndex) {
             this.selectedShapeIndex = null;
           } else if (this.selectedShapeIndex !== null && this.selectedShapeIndex > existingIndex) {
@@ -1142,7 +1145,6 @@ initHandlers() {
           
           this.scheduleWriteAll();
           this.clearCanvas();
-          console.log("✅ Shape deleted from broadcast:", shapeId.substring(0, 8));
         }
         break;
       }
@@ -1151,33 +1153,23 @@ initHandlers() {
 }
 
 private broadcastShapeUpdate(shape: Shape) {
-  console.log(`🟦 UPDATING existing shape: ${shape.id.substring(0, 8)}, Type: ${shape.type}`);
-  
   if (this.isSolo) {
     this.scheduleLocalSave();
     return;
   }
   
-  // Find the shape in our local array to make sure it exists
   const localIndex = this.existingShapes.findIndex(s => s.id === shape.id);
   if (localIndex === -1) {
     console.error("❌ Attempted to update non-existent shape:", shape.id);
     return;
   }
-  
-  // 🔥 FIX: DON'T update local array here - it's already updated by drag logic
-  // this.existingShapes[localIndex] = { ...shape }; // ← Remove this line
-  this.scheduleWriteAll();
-  
-  // Broadcast the update
+  this.scheduleWriteAll();  
   this.safeSend({
     type: "shape_update",
     roomId: this.roomId?.toString(), 
     shape: shape,
     encryptionKey: this.encryptionKey
   });
-  
-  console.log("✅ Shape update broadcasted:", shape.id.substring(0, 8));
 }
 
 deleteShapeById(id: string) {
@@ -1342,12 +1334,10 @@ public deleteShapeByIndex(index: number) {
 
         }
       } else if (shape.type === "text") {
-  const fontSize = shape.fontSize || 20;
-  this.ctx.font = `${fontSize}px Virgil, Segoe UI, sans-serif`; 
-  this.ctx.textBaseline = "top";
-  this.ctx.fillStyle = shape.strokeColor ?? (this.theme === "dark" ? "#fff" : "#000");
-  this.ctx.fillText(shape.text, shape.x, shape.y);
-}
+        const fontSize = shape.fontSize || 20;
+        const fillStyle = shape.strokeColor ?? (this.theme === "dark" ? "#fff" : "#000");
+        this.drawMultilineText(shape.text, shape.x, shape.y, fontSize, fillStyle);
+      }
       if (
         this.selectedTool === "select" &&
         this.selectedShapeIndex !== null &&
@@ -1378,7 +1368,6 @@ public deleteShapeByIndex(index: number) {
 
   mouseDownHandler = (e: MouseEvent) => {
     const pos = this.getMousePos(e);
-  console.log(`🔽 MOUSE-DOWN: Tool=${this.selectedTool}, Selected=${this.selectedShapeIndex}, Shapes=${this.existingShapes.length}`);
     if (this.selectedTool === "hand") {
       this.isPanning = true;
       this.lastPanX = e.clientX;
@@ -1387,15 +1376,14 @@ public deleteShapeByIndex(index: number) {
       this.clearCanvas();
       return;
     }
-    // const pos = this.getMousePos(e);
-if (this.selectedTool === "select" && this.selectedShapeIndex !== null) {
-    this.dragStartPos = { x: pos.x, y: pos.y };
-    this.hasDragged = false;
-  } else {
-    // 🔥 CLEAR drag state when not in select mode
-    this.dragStartPos = null;
-    this.hasDragged = false;
-  }
+    
+    if (this.selectedTool === "select" && this.selectedShapeIndex !== null) {
+      this.dragStartPos = { x: pos.x, y: pos.y };
+      this.hasDragged = false;
+    } else {
+      this.dragStartPos = null;
+      this.hasDragged = false;
+    }
     
     if (this.selectedTool==="select" && this.selectedShapeIndex!=null){
       const shape=this.existingShapes[this.selectedShapeIndex];
@@ -1561,22 +1549,12 @@ drawArrow(
   ctx.restore();
 }
 
-
 private scheduleWriteAll() {
   if (!this.roomId) return;
   const key = `shapes_${this.roomId}`;
   localStorage.setItem(key, JSON.stringify(this.existingShapes));
 }
-private debugCurrentState() {
-  console.log("🔍 Current State:");
-  console.log(`   - Total shapes: ${this.existingShapes.length}`);
-  console.log(`   - Selected index: ${this.selectedShapeIndex}`);
-  console.log(`   - Shape IDs:`, this.existingShapes.map(s => s.id.substring(0, 8)));
-  if (this.selectedShapeIndex !== null) {
-    const selected = this.existingShapes[this.selectedShapeIndex];
-    console.log(`   - Selected shape: ${selected?.type} ${selected?.id.substring(0, 8)}`);
-  }
-}
+
 mouseUpHandler = async (e: MouseEvent) => {
   const pos = this.getMousePos(e);
 
@@ -1601,11 +1579,8 @@ mouseUpHandler = async (e: MouseEvent) => {
     if (this.selectedShapeIndex !== null && this.hasDragged && !this.isNewlyCreated) {
       const shape = this.existingShapes[this.selectedShapeIndex];
       if (shape) {
-        console.log("🟦 DRAG-UPDATE: Broadcasting update for existing shape:", shape.id.substring(0, 8));
         this.broadcastShapeUpdate(shape);
       }
-    } else if (this.isNewlyCreated && this.hasDragged) {
-      console.log("🟢 CREATION-DRAG: Skipping update broadcast for newly created shape");
     }
     
     this.dragStartPos = null;
@@ -1613,7 +1588,6 @@ mouseUpHandler = async (e: MouseEvent) => {
   if (this.isNewlyCreated) {
       setTimeout(() => {
         this.isNewlyCreated = false;
-        console.log("🔄 Reset isNewlyCreated flag");
       }, 500);
     }
     return;
@@ -1657,21 +1631,19 @@ if (this.selectedTool === "pencil") {
 
 
   if (!this.isSolo) {
-    console.log("🟢 Broadcasting NEW PENCIL shape:");
     this.broadcastShape(pencilShape);
-
   }
-
   this.scheduleLocalSave();
 
-  
   this.selectedTool = "select";
   this.selectedShapeIndex = this.existingShapes.length - 1; 
   this.isNewlyCreated = true;
+   setTimeout(() => {
+    this.isNewlyCreated = false;
+  }, 200);
   if (this.onToolChange) this.onToolChange("select");
   this.clearCanvas(); 
 
-  // Reset drawing state
   this.startX = null;
   this.startY = null;
   this.endX = null; 
@@ -1681,17 +1653,13 @@ if (this.selectedTool === "pencil") {
   return;
 }
 
-
-  // ---- All other tool logic remains as previous ----
   if (this.startX == null || this.startY == null) return;
-  const minDistance = 5; // pixels
+  const minDistance = 5; 
 const distance = Math.hypot(pos.x - this.startX, pos.y - this.startY);
 
-// List of tools that should check for minimum distance
 const toolsRequiringMovement = ["line", "arrow", "rect", "circle", "diamond"];
 
 if (distance < minDistance && toolsRequiringMovement.includes(this.selectedTool)) {
-  // No significant movement detected, don't create shape
   this.startX = null;
   this.startY = null;
   this.endX = null;
@@ -1715,12 +1683,15 @@ if (distance < minDistance && toolsRequiringMovement.includes(this.selectedTool)
 
     this.existingShapes.push(shape);
     if (!this.isSolo) {
-      this.broadcastShape(shape); // ✅ UNCOMMENT THIS
+      this.broadcastShape(shape); 
     }
     this.scheduleLocalSave();
 
     this.selectedShapeIndex = this.existingShapes.length - 1;
 this.isNewlyCreated = true;
+  setTimeout(() => {
+    this.isNewlyCreated = false;
+  }, 200)
     if (this.onToolChange) this.onToolChange("select");
     this.selectedTool = "select";
     this.clearCanvas();
@@ -1814,13 +1785,15 @@ if (!shape) return;
 this.existingShapes.push(shape);
 
 if (!this.isSolo) {
-  console.log("🟢 Broadcasting NEW shape:", shape.type);
   this.broadcastShape(shape);
 }
 this.scheduleLocalSave();
 
 this.selectedShapeIndex = this.existingShapes.length - 1;
 this.isNewlyCreated = true;
+setTimeout(() => {
+  this.isNewlyCreated = false;
+}, 200);
 this.selectedTool = "select";
 if (this.onToolChange) this.onToolChange("select");
 this.clearCanvas(); 
@@ -1882,7 +1855,6 @@ public getScreenCoordinates(logicalX: number, logicalY: number): { x: number; y:
     
     if (distance > this.MIN_DRAG_DISTANCE) {
       this.hasDragged = true;
-      console.log("🔵 SELECT MODE - Drag detected - distance:", distance);
     }
   }
   

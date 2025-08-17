@@ -91,7 +91,6 @@ wss.on("connection", (ws, request) => {
   ws.on("message", (raw) => {
     try {
       const data = JSON.parse(raw.toString());
-      console.log("📨 Received WebSocket message:", data);
       const { type, roomId, shape, shapeId} = data;
       
       switch (type) {
@@ -190,8 +189,7 @@ wss.on("connection", (ws, request) => {
               }
             }
           }
-          
-          // Add new user
+
           room.participants.set(client.userId, client);
           client.rooms.add(roomId);
 
@@ -256,86 +254,37 @@ wss.on("connection", (ws, request) => {
           }, client);
           break;
         }
-case "shape_update": {
-  const startTime = Date.now();
-  console.log("🔄 Backend received shape_update:", {
-    roomId,
-    shapeId: data.shape?.id?.substring(0, 8),
-    shapeType: data.shape?.type,
-    clientId: client.userId,
-    timestamp: new Date().toISOString()
-  });
+        
+        case "shape_update": {
+          if (!roomId || !data.shape) return;
+          const encryptionKey = data.encryptionKey;
+          const expectedKey = roomSecrets.get(roomId);
+
+          if (!expectedKey || encryptionKey !== expectedKey) {
+            ws.send(JSON.stringify({
+              type: "error",
+              message: "Invalid or missing encryption key.",
+            }));
+            return;
+          }
+          broadcastToRoom(roomId, {
+            type: "shape_update",
+            roomId,
+            userId: client.userId,
+            shape: data.shape,  
+            timestamp: new Date().toISOString(),
+          }, client);
   
-  // Detailed validation logging
-  if (!roomId || !data.shape) {
-    console.log("❌ Missing required fields:", { 
-      roomId: !!roomId, 
-      shape: !!data.shape,
-      shapeId: data.shape?.id?.substring(0, 8)
+          break;
+        }
+
+        default:
+          break;
+        }
+      } catch (err) {
+
+      }
     });
-    return;
-  }
-
-  const encryptionKey = data.encryptionKey;
-  const expectedKey = roomSecrets.get(roomId);
-
-  if (!expectedKey || encryptionKey !== expectedKey) {
-    console.log("❌ Invalid encryption key for update:", {
-      roomId,
-      shapeId: data.shape.id.substring(0, 8),
-      hasExpectedKey: !!expectedKey,
-      clientId: client.userId
-    });
-    ws.send(JSON.stringify({
-      type: "error",
-      message: "Invalid or missing encryption key.",
-    }));
-    return;
-  }
-
-  // Log shape position details for debugging
-  console.log("📍 Shape position data:", {
-    shapeId: data.shape.id.substring(0, 8),
-    type: data.shape.type,
-    position: getShapePosition(data.shape), // Helper function below
-    clientId: client.userId
-  });
-
-  // Log room participants before broadcast
-  const roomClients = Array.from(rooms.get(roomId) || []);
-  console.log("📡 Broadcasting to room participants:", {
-    roomId,
-    totalClients: roomClients.length,
-    excludingClient: client.userId,
-    targetClients: roomClients.filter(c => c.userId !== client.userId).map(c => c.userId)
-  });
-
-  console.log("✅ Broadcasting shape_update to room:", roomId);
-  
-  // Enhanced broadcast with more details
-  const broadcastMessage = {
-    type: "shape_update",
-    roomId,
-    userId: client.userId,
-    shape: data.shape,
-    timestamp: new Date().toISOString(),
-  };
-
-  const broadcastResult = broadcastToRoom(roomId, broadcastMessage, client);
-  
-  // Log broadcast results
-  const processingTime = Date.now() - startTime;
-  console.log("📤 Shape update broadcast completed:", {
-    roomId,
-    shapeId: data.shape.id.substring(0, 8),
-    broadcastSuccess: broadcastResult !== false, // Assuming your broadcastToRoom returns false on failure
-    processingTimeMs: processingTime,
-    clientId: client.userId
-  });
-  
-  break;
-}
-
 
   client.heartbeatTimer = setInterval(() => {
     if (ws.readyState === WSWebSocket.OPEN) {

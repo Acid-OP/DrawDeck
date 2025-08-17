@@ -41,6 +41,7 @@ interface CanvasProps {
 export function Canvas({ roomId, socket, isSolo = false, isUserAuthenticated = false, encryptionKey, roomType,className }: CanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [game, setGame] = useState<Game>();
+  const [textareaRows, setTextareaRows] = useState(1);
   const [hasInteracted, setHasInteracted] = useState(false);
   const [selectedTool, setSelectedTool] = useState<Tool>("hand");
   const { getToken } = useAuth();
@@ -111,7 +112,13 @@ export function Canvas({ roomId, socket, isSolo = false, isUserAuthenticated = f
     sessionStorage.setItem('collabModalShown', 'true');
     setShowLiveModal(false);
   }, []);
-  
+
+  const handleTextareaChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const textarea = e.target;
+    const lines = textarea.value.split('\n').length;
+    const maxRows = 10;
+    setTextareaRows(Math.min(lines, maxRows));
+  }, []);
 
   const handleCloseShareLinkModal = useCallback(() => {
     setShowShareLinkModal(false);
@@ -345,11 +352,10 @@ useEffect(() => {
           />
         </div>
       )}
-
       {inputBox && (
         <textarea
           autoFocus
-          rows={1}
+          rows={textareaRows}
           className="absolute bg-transparent px-0 py-0 m-0 border-none outline-none resize-none whitespace-pre-wrap break-words touch-none"
           style={{
             color: getStrokeColors(theme)[strokeIndex],
@@ -360,19 +366,20 @@ useEffect(() => {
             maxWidth: isMobile ? "280px" : "500px",
             overflow: "hidden",
           }}
-          onBlur={(e) => {
+          onChange={handleTextareaChange}
+          onBlur={(e: React.FocusEvent<HTMLTextAreaElement>) => {  
             if (game && e.target.value.trim()) {
-               game.addTextShape(inputBox.logicalX, inputBox.logicalY, e.target.value);
+              game.addTextShape(inputBox.logicalX, inputBox.logicalY, e.target.value);
             }
             (window as any).justBlurredTextInput = true;
             setInputBox(null);
+            setTextareaRows(1);
             setTimeout(() => {
               (window as any).justBlurredTextInput = false;
             }, 300);
           }}
-        />
-      )}
-
+          />
+          )}
       {showLiveModal && (
         <LiveCollabModal onClose={handleCloseLiveModal} source="share" />
       )}
