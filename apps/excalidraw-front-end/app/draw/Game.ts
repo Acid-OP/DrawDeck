@@ -2054,41 +2054,36 @@ public getScreenCoordinates(logicalX: number, logicalY: number): { x: number; y:
       s.endY = p.y;
     }
   }  else if (s.type === "text") {
-              const h = this.activeHandle;
-              const fontSize = s.fontSize || 20;
-              this.ctx.font = `${fontSize}px Virgil, Segoe UI, sans-serif`;
-              const metrics = this.ctx.measureText(s.text);
-              const textWidth = metrics.width;
-              const textHeight = fontSize;
-              let scaleX = 1;
-              let scaleY = 1;
+  const h = this.activeHandle;
+  const fontSize = s.fontSize || 20;
+  this.ctx.font = `${fontSize}px Virgil, Segoe UI, sans-serif`;
+  const metrics = this.ctx.measureText(s.text);
+  const textWidth = metrics.width;
+  const textHeight = fontSize;
+  let scaleX = 1;
+  let scaleY = 1;
+
   if (h === "tl") {
     const originalBottomRightX = s.x + textWidth;
     const originalBottomRightY = s.y + textHeight;
     scaleX = Math.max(0.5, (originalBottomRightX - p.x) / textWidth);
     scaleY = Math.max(0.5, (originalBottomRightY - p.y) / textHeight);
-    
-    s.x = originalBottomRightX - textWidth * scaleX;
-    s.y = originalBottomRightY - textHeight * scaleY;
   } else if (h === "tr") {
     const originalBottomLeftY = s.y + textHeight;
     scaleX = Math.max(0.5, (p.x - s.x) / textWidth);
     scaleY = Math.max(0.5, (originalBottomLeftY - p.y) / textHeight);
-    
-    s.y = originalBottomLeftY - textHeight * scaleY;
-  }  else if (h === "bl") {
+  } else if (h === "bl") {
     const originalTopRightX = s.x + textWidth;
     scaleX = Math.max(0.5, (originalTopRightX - p.x) / textWidth);
     scaleY = Math.max(0.5, (p.y - s.y) / textHeight);
-    
-    s.x = originalTopRightX - textWidth * scaleX;
   } else if (h === "br") {
-                scaleX = Math.max(0.5, (p.x - s.x) / textWidth);
+    scaleX = Math.max(0.5, (p.x - s.x) / textWidth);
     scaleY = Math.max(0.5, (p.y - s.y) / textHeight);
-              }
-               const avgScale = (scaleX + scaleY) / 2;
+  }
+  const avgScale = (scaleX + scaleY) / 2;
   s.fontSize = Math.max(8, Math.min(100, fontSize * avgScale));
-            }
+}
+
             }
             this.clearCanvas();
             if (this.isSolo) {

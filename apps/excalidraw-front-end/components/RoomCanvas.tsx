@@ -47,7 +47,7 @@ export function RoomCanvas({ slug, encryptionKey, roomType: propRoomType }: { sl
         setCreatorLeftError(false);
         setIsRoomAccessible(false); 
 
-        const ws = new WebSocket(wsUrl ??WS_URL);
+        const ws = new WebSocket(WS_URL);
 
         ws.onopen = () => {
           const isCreator = sessionStorage.getItem(`creator-${slug}`) === 'true';

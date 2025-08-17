@@ -47,6 +47,7 @@ export function Canvas({ roomId, socket, isSolo = false, isUserAuthenticated = f
   const { getToken } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [inputBox, setInputBox] = useState<{ 
     x: number; 
     y: number; 
@@ -112,6 +113,63 @@ export function Canvas({ roomId, socket, isSolo = false, isUserAuthenticated = f
     sessionStorage.setItem('collabModalShown', 'true');
     setShowLiveModal(false);
   }, []);
+
+useEffect(() => {
+  if (!inputBox || !textareaRef.current) return;
+
+  const textarea = textareaRef.current;
+  
+  const focusTextarea = () => {
+    textarea.focus();
+    const len = textarea.value.length;
+    textarea.setSelectionRange(len, len);
+
+    if (isMobile) {
+      textarea.click();
+    }
+  };
+
+  requestAnimationFrame(() => {
+    setTimeout(focusTextarea, isMobile ? 150 : 50);
+  });
+}, [inputBox, isMobile]);
+useEffect(() => {
+  if (!inputBox) return;
+
+  const handleTouchStart = (ev: TouchEvent) => {
+    const textarea = textareaRef.current;
+    if (!textarea || document.activeElement !== textarea) return;
+
+    const rect = textarea.getBoundingClientRect();
+    const touch = ev.touches[0];
+    const isInsideTextarea = 
+      touch.clientX >= rect.left && touch.clientX <= rect.right &&
+      touch.clientY >= rect.top && touch.clientY <= rect.bottom;
+
+    if (!isInsideTextarea) {
+      ev.preventDefault();
+      textarea.blur();
+    }
+  };
+
+  document.addEventListener('touchstart', handleTouchStart);
+  return () => document.removeEventListener('touchstart', handleTouchStart);
+}, [inputBox]);
+useEffect(() => {
+  if (!inputBox || !textareaRef.current || !isMobile) return;
+
+  const textarea = textareaRef.current;
+  
+  const handleTouchEnd = (e: TouchEvent) => {
+    e.stopPropagation();
+    if (document.activeElement !== textarea) {
+      setTimeout(() => textarea.focus(), 10);
+    }
+  };
+
+  textarea.addEventListener('touchend', handleTouchEnd);
+  return () => textarea.removeEventListener('touchend', handleTouchEnd);
+}, [inputBox, isMobile]);
 
   const handleTextareaChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const textarea = e.target;
@@ -354,32 +412,42 @@ useEffect(() => {
       )}
       {inputBox && (
         <textarea
-          autoFocus
-          rows={textareaRows}
-          className="absolute bg-transparent px-0 py-0 m-0 border-none outline-none resize-none whitespace-pre-wrap break-words touch-none"
-          style={{
-            color: getStrokeColors(theme)[strokeIndex],
-            font: `${isMobile ? '16px' : '20px'} Virgil, Segoe UI, sans-serif`,
-            top: inputBox.y,
-            left: inputBox.x,
-            minWidth: "1ch",
-            maxWidth: isMobile ? "280px" : "500px",
-            overflow: "hidden",
-          }}
-          onChange={handleTextareaChange}
-          onBlur={(e: React.FocusEvent<HTMLTextAreaElement>) => {  
-            if (game && e.target.value.trim()) {
-              game.addTextShape(inputBox.logicalX, inputBox.logicalY, e.target.value);
-            }
-            (window as any).justBlurredTextInput = true;
-            setInputBox(null);
-            setTextareaRows(1);
-            setTimeout(() => {
-              (window as any).justBlurredTextInput = false;
-            }, 300);
-          }}
-          />
-          )}
+        ref={textareaRef}
+        rows={textareaRows}
+        className="absolute bg-transparent px-0 py-0 m-0 border-none outline-none resize-none whitespace-pre-wrap break-words"
+        style={{
+          color: getStrokeColors(theme)[strokeIndex],
+          font: `${isMobile ? '16px' : '20px'} Virgil, Segoe UI, sans-serif`,
+          top: inputBox.y,
+          left: inputBox.x,
+          minWidth: "1ch",
+          maxWidth: isMobile ? "280px" : "500px",
+          overflow: "hidden",
+          touchAction: 'manipulation',
+          WebkitTouchCallout: 'none',
+          WebkitUserSelect: 'text',
+        }}
+        onChange={handleTextareaChange}
+        onTouchStart={(e) => {
+          e.stopPropagation();
+          if (document.activeElement !== e.currentTarget) {
+            e.currentTarget.focus();
+          }
+        }}
+        onBlur={(e: React.FocusEvent<HTMLTextAreaElement>) => {  
+          if (game && e.target.value.trim()) {
+            game.addTextShape(inputBox.logicalX, inputBox.logicalY, e.target.value);
+          }
+          (window as any).justBlurredTextInput = true;
+          setInputBox(null);
+          setTextareaRows(1);
+          setTimeout(() => {
+            (window as any).justBlurredTextInput = false;
+          }, 300);
+         }}
+      />
+    )}
+
       {showLiveModal && (
         <LiveCollabModal onClose={handleCloseLiveModal} source="share" />
       )}
