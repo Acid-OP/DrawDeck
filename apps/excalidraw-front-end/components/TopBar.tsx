@@ -14,7 +14,7 @@ import {
 import { IconButton } from "./IconButton";
 import { Tool } from "./Canvas";
 import { useState, useEffect } from "react";
-import { useTheme } from "@/context/ThemeContext"; // ✅ use global theme
+import { useTheme } from "@/context/ThemeContext";
 
 interface TopBarProps {
   selectedTool: Tool;

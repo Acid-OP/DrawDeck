@@ -31,7 +31,7 @@ export function VideoCall({ roomId }: VideoCallProps) {
   const rtcUrl = process.env.NEXT_PUBLIC_RTC_URL;
 
   useEffect(() => {
-    const rtc = new WebSocket(RTC_URL);
+    const rtc = new WebSocket(rtcUrl ?? RTC_URL);
     setRtcSocket(rtc);
 
     rtc.onopen = () => {
@@ -81,7 +81,6 @@ export function VideoCall({ roomId }: VideoCallProps) {
 
   useEffect(() => {
     if (!rtcSocket) return;
-
     const pc = new RTCPeerConnection({
       iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
     });

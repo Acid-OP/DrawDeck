@@ -1,19 +1,18 @@
 "use client";
 import { useEffect, useState } from "react";
+import { useTheme } from "@/context/ThemeContext";
 
 interface ToastProps {
   message: string;
   duration?: number;
-  theme?: "light" | "dark";
 }
 
 export default function Toast({
   message,
-  duration = 3000,
-  theme,
+  duration = 3000
 }: ToastProps) {
   const [phase, setPhase] = useState<'entering' | 'visible' | 'exiting'>('entering');
-
+  const { theme } = useTheme();
   useEffect(() => {
     setPhase('entering');
     

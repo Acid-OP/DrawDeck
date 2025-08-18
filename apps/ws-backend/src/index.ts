@@ -190,6 +190,12 @@ const rateLimiter = new WebSocketRateLimiter({
   connectionWindow: 5 * 60 * 1000
 });
 
+const allowedOrigins = [
+  'https://drawdeck.xyz',
+  'https://www.drawdeck.xyz'
+  // 'http://localhost:3000' 
+];
+
 const wss = new WebSocketServer({ 
   port: 8080,
   verifyClient: (info: { origin: string; secure: boolean; req: IncomingMessage }) => {
@@ -209,6 +215,11 @@ const wss = new WebSocketServer({
     const concurrentCheck = rateLimiter.checkConcurrentConnections(ip);
     if (!concurrentCheck.allowed) {
       console.log(`🚫 Connection rejected - IP ${ip} has too many connections`);
+      return false;
+    }
+
+    if (!allowedOrigins.includes(info.origin)) {
+      console.log(`🚫 Connection rejected - Invalid origin: ${info.origin} from IP: ${ip}`);
       return false;
     }
     

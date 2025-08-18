@@ -3,10 +3,23 @@ import WebSocket from "ws";
 import { IncomingMessage } from "http";
 import { randomUUID } from "crypto";
 
-const wss = new WebSocketServer({ port: 8081 });
+const allowedOrigins = [
+  'https://drawdeck.xyz',
+  'https://www.drawdeck.xyz'
+  // 'http://localhost:3000' // For development only
+];
+const wss = new WebSocketServer({port: 8081,
+  verifyClient: (info: { origin: string; secure: boolean; req: IncomingMessage }) => {
+    if (!allowedOrigins.includes(info.origin)) {
+      console.log(`🚫 RTC connection rejected - Invalid origin: ${info.origin}`);
+      return false;
+    }
+    return true;
+  }
+});
 
 wss.on("listening", () => {
-  console.log("🎥 WebRTC signaling server running on ws://localhost:8081");
+  console.log("🎥 WebRTC signaling server running");
 });
 
 interface RTCClient {
