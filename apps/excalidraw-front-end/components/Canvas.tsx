@@ -46,9 +46,18 @@ interface CanvasProps {
     blockUntil: number;
     retryAfter: number;
   };
+  connectionError?: string | null;
+  roomFullError?: {
+    message: string;
+    maxCapacity: number;
+    currentCount: number;
+  } | null;
+  creatorLeftError?: boolean;
+  isConnecting?: boolean;
+  isRoomAccessible?: boolean;
 }
 
-export function Canvas({ roomId, socket, isSolo = false, isUserAuthenticated = false, encryptionKey, roomType,className , sendMessage, rateLimitState }: CanvasProps) {
+export function Canvas({ roomId, socket, isSolo = false, isUserAuthenticated = false, encryptionKey, roomType,className , sendMessage, rateLimitState,connectionError,roomFullError, creatorLeftError, isConnecting, isRoomAccessible }: CanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [game, setGame] = useState<Game>();
   const [textareaRows, setTextareaRows] = useState(1);
@@ -118,6 +127,39 @@ export function Canvas({ roomId, socket, isSolo = false, isUserAuthenticated = f
       game.clearAllShapes();
     }
   }, [game]);
+  
+  useEffect(() => {
+    const isSuccessfulConnection = (
+      socket && 
+      socket.readyState === WebSocket.OPEN &&
+      isRoomAccessible &&
+      !connectionError && 
+      !roomFullError && 
+      !creatorLeftError && 
+      !isConnecting &&
+      roomType &&
+      encryptionKey
+    );
+
+    if (isSuccessfulConnection) {
+      const hasShownShareLink = sessionStorage.getItem(`sharelink-shown-${roomId}`);
+    
+      if (!hasShownShareLink) {
+        setShowShareLinkModal(true);
+        sessionStorage.setItem(`sharelink-shown-${roomId}`, 'true');
+      }
+    }
+  }, [
+    socket,
+    isRoomAccessible,
+    connectionError,
+    roomFullError, 
+    creatorLeftError,
+    isConnecting,
+    roomType,
+    encryptionKey,
+    roomId
+  ]);
 
   const handleCloseLiveModal = useCallback(() => {
     sessionStorage.setItem('collabModalShown', 'true');
@@ -462,15 +504,15 @@ useEffect(() => {
       {showLiveModal && (
         <LiveCollabModal onClose={handleCloseLiveModal} source="share" />
       )}
-
-      {showShareLinkModal && isCollabMode && (
+      
+      {showShareLinkModal && isCollabMode && !connectionError && !roomFullError && !creatorLeftError && (
         <ShareLinkModal 
-          roomId={roomId}
-          encryptionKey={encryptionKey!}
-          roomType={roomType!}
-          onClose={handleCloseShareLinkModal}
-          isManualTrigger={true}
-        />
+        roomId={roomId}
+        encryptionKey={encryptionKey!}
+        roomType={roomType!}
+        onClose={handleCloseShareLinkModal}
+        isManualTrigger={false}
+      />
       )}
     </div>
   );
