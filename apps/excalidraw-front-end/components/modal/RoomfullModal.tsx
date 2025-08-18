@@ -60,7 +60,6 @@ export const RoomFullModal: React.FC<RoomFullModalProps> = ({
         ref={modalRef}
         className="relative bg-[#232329] text-white w-full max-w-md p-8 rounded-2xl shadow-2xl border border-[#333] animate-in fade-in duration-200"
       >
-        {/* Close button */}
         <button
           onClick={onClose}
           className="absolute top-4 right-4 text-white/60 hover:text-white transition-colors p-2 rounded-lg hover:bg-white/10"

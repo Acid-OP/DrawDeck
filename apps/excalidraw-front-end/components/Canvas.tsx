@@ -16,6 +16,8 @@ import ToolbarIcon from "./ToolBarIcon";
 import ToolIconPointer from "./toolbariconpointer";
 import { useAuth } from "@clerk/nextjs";
 import { useTheme } from "@/context/ThemeContext";
+import { CanvasRateLimitNotification } from "./RateLimitlAlert";
+
 export type Tool =
   | "hand"
   | "select"
@@ -290,6 +292,7 @@ useEffect(() => {
   
   return (
     <div className={`w-screen h-screen overflow-hidden relative ${theme === "dark" ? "bg-[#121212]" : "bg-white"} ${className || ''}`}>
+      <CanvasRateLimitNotification rateLimitState={rateLimitState} />
       <canvas
         ref={canvasRef}
         width={dimensions.width}

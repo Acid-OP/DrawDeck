@@ -1,7 +1,7 @@
 import { WebSocketServer, WebSocket as WSWebSocket } from "ws";
 import { IncomingMessage } from "http";
 import { Socket } from "net";
-// Add this after your imports
+
 class WebSocketRateLimiter {
   private windowSize: number;
   private maxMessages: number;
@@ -181,10 +181,7 @@ getClientIP(req: IncomingMessage): string {
     }
   }
 }
-// Replace this line:
-// const wss = new WebSocketServer({ port: 8080 });
 
-// With this:
 const rateLimiter = new WebSocketRateLimiter({
   maxMessages: 50,
   maxConnections: 3,
