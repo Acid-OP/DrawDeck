@@ -36,9 +36,17 @@ interface CanvasProps {
   encryptionKey?: string;
   roomType?: 'duo' | 'group';
   className?: string;
+  sendMessage?: (message: any, priority?: number) => boolean;
+  rateLimitState?: {
+    messagesRemaining: number;
+    lastReset: number;
+    isBlocked: boolean;
+    blockUntil: number;
+    retryAfter: number;
+  };
 }
 
-export function Canvas({ roomId, socket, isSolo = false, isUserAuthenticated = false, encryptionKey, roomType,className }: CanvasProps) {
+export function Canvas({ roomId, socket, isSolo = false, isUserAuthenticated = false, encryptionKey, roomType,className , sendMessage, rateLimitState }: CanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [game, setGame] = useState<Game>();
   const [textareaRows, setTextareaRows] = useState(1);
@@ -261,7 +269,7 @@ useEffect(() => {
 useEffect(() => {
   if (canvasRef.current && dimensions.width !== 0 && dimensions.height !== 0) {
     const keyToPass = isSolo ? null : (encryptionKey || null);
-    const g = new Game(canvasRef.current, roomId, socket, isSolo, theme, keyToPass);
+    const g = new Game(canvasRef.current, roomId, socket, isSolo, theme, keyToPass , sendMessage);
     g.onToolChange = (tool) => setSelectedTool(tool);
     g.onTextInsert = (logicalX, logicalY) => {
       if ((window as any).justBlurredTextInput) return;
@@ -274,7 +282,7 @@ useEffect(() => {
     setGame(g);
     return () => g.destroy();
   }
-}, [canvasRef, isSolo, roomId, socket, dimensions, theme, encryptionKey]);
+}, [canvasRef, isSolo, roomId, socket, dimensions, theme, encryptionKey , sendMessage]);
 
   const shouldShowPropertiesPanel = ["rect", "diamond", "circle", "arrow", "line", "pencil", "text"].includes(selectedTool);
   

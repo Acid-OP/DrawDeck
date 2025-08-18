@@ -94,6 +94,7 @@ export class Game {
   public zoom: number = 1;
   private readonly MAX_CORNER_RADIUS = 10;
   private isSolo: boolean;
+  private sendMessage?: (message: any, priority?: number) => boolean;
   public currentStrokeColor: string = '#1e1e1e';    
   public currentBackgroundColor: string = 'transparent';
   public currentStrokeWidth: number = 2;
@@ -161,31 +162,45 @@ public setTheme(theme: "light" | "dark") {
     localStorage.setItem(key, JSON.stringify(this.existingShapes));
   }
 
- private safeSend(payload: any) {
+private safeSend(payload: any, priority: number = 1) {
   if (this.isSolo || !this.socket || this.socket.readyState !== WebSocket.OPEN || !this.roomId) return;
+  
   try {
-    this.socket.send(JSON.stringify(payload));
+    // Use the passed sendMessage if available (with rate limiting)
+    if (this.sendMessage) {
+      const sent = this.sendMessage(payload, priority);
+      if (!sent) {
+        console.warn('⚠️ [CLIENT] Message rate limited, queued:', payload.type);
+      }
+      return sent;
+    } else {
+      // Fallback to direct send (no rate limiting)
+      this.socket.send(JSON.stringify(payload));
+      return true;
+    }
   } catch (error) {
-    console.error("[CLIENT] WS send failed:", error);
+    console.error('❌ [CLIENT] WS send failed:', error);
+    return false;
   }
 }
+
 private broadcastShape(shape: Shape) {
-  
   if (this.isSolo) {
     this.existingShapes.push(shape);
     this.scheduleLocalSave();
     return;
   }
+  
   this.scheduleWriteAll();
+  
+  // Use priority 2 for shape creation (important but not critical)
   this.safeSend({
-    type: "shape_add", 
+    type: "shape_add",
     roomId: this.roomId?.toString(),
     shape: shape,
     encryptionKey: this.encryptionKey
-  });
+  }, 2);
 }
-
-
 
   hitTestShapeHandle(shape: Shape, mouseX: number, mouseY: number): "tl" | "tr" | "bl" | "br" | null {
     const handleSize = 10;
@@ -668,7 +683,7 @@ private forceRedraw() {
   // Redraw everything
   this.clearCanvas();
 }
-  constructor(canvas: HTMLCanvasElement, roomId: string | null, socket: WebSocket | null , isSolo:boolean=false , theme: "light" | "dark" , encryptionKey: string | null = null) {
+  constructor(canvas: HTMLCanvasElement, roomId: string | null, socket: WebSocket | null , isSolo:boolean=false , theme: "light" | "dark" , encryptionKey: string | null = null , sendMessage?: (message: any, priority?: number) => boolean) {
     this.canvas = canvas;
     this.ctx = canvas.getContext("2d")!;
     this.existingShapes = [];
@@ -681,6 +696,7 @@ private forceRedraw() {
     this.clearCanvas();
     this.encryptionKey = encryptionKey;
     this.panOffsetX = 0;
+    this.sendMessage = sendMessage;
     this.panOffsetY = 0;
     this.loadPanOffset();
     this.clicked = false;
@@ -1160,17 +1176,21 @@ private broadcastShapeUpdate(shape: Shape) {
   
   const localIndex = this.existingShapes.findIndex(s => s.id === shape.id);
   if (localIndex === -1) {
-    console.error("❌ Attempted to update non-existent shape:", shape.id);
+    console.error('❌ Attempted to update non-existent shape:', shape.id);
     return;
   }
-  this.scheduleWriteAll();  
+  
+  this.scheduleWriteAll();
+  
+  // Use priority 1 for shape updates (normal priority, can be queued)
   this.safeSend({
     type: "shape_update",
-    roomId: this.roomId?.toString(), 
+    roomId: this.roomId?.toString(),
     shape: shape,
     encryptionKey: this.encryptionKey
-  });
+  }, 1);
 }
+
 
 deleteShapeById(id: string) {
   this.existingShapes = this.existingShapes.filter(shape => shape.id !== id);
@@ -1180,22 +1200,26 @@ deleteShapeById(id: string) {
 public deleteShapeByIndex(index: number) {
   const shape = this.existingShapes[index];
   if (!shape) return;
+  
   this.existingShapes.splice(index, 1);
 
   if (this.isSolo) {
-  this.scheduleLocalSave();
-} else {
-  this.scheduleWriteAll();
-  this.safeSend({
-    type: "shape_delete",
-    roomId: this.roomId?.toString(),
-    shapeId: shape.id,
-    encryptionKey: this.encryptionKey
-  });
-}
+    this.scheduleLocalSave();
+  } else {
+    this.scheduleWriteAll();
+    
+    // Use priority 2 for deletions (important)
+    this.safeSend({
+      type: "shape_delete",
+      roomId: this.roomId?.toString(),
+      shapeId: shape.id,
+      encryptionKey: this.encryptionKey
+    }, 2);
+  }
 
   this.clearCanvas();
 }
+
   getDashArray(style: number | string): number[] {
     if (style === 1 || style === "dashed") return [8, 6];
     if (style === 2 || style === "dotted") return [2, 6];
@@ -1480,7 +1504,7 @@ public deleteShapeByIndex(index: number) {
           shapeId: deletedShape.id,
           encryptionKey: this.encryptionKey
   
-        });
+        } , 2);
       this.scheduleWriteAll();
     } else if (this.isSolo) {
       // For local only, ensure storage updates if deleteShapeByIndex doesn't do it
@@ -2111,7 +2135,7 @@ public getScreenCoordinates(logicalX: number, logicalY: number): { x: number; y:
             shapeId: shape.id,
             encryptionKey: this.encryptionKey
 
-          });
+          },2);
         this.scheduleWriteAll();
       } else if (this.isSolo) {
         this.scheduleLocalSave?.();
