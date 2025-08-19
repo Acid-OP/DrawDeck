@@ -86,18 +86,23 @@ const DesktopCollabModal: React.FC<Props> = ({ onClose, source = 'header'}) => {
     onClose();
   };
 
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (modalRef.current && !modalRef.current.contains(e.target as Node)) {
-        handleClose();
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
+useEffect(() => {
+  const handleClickOutside = (e: MouseEvent) => {
+    // Check if the click is actually outside the modal
+    if (modalRef.current && e.target instanceof Node && !modalRef.current.contains(e.target)) {
+      handleClose();
+    }
+  };
+  
+  // Use capture phase to handle the event before it bubbles
+  document.addEventListener("click", handleClickOutside, true);
+  
+  return () => {
+    document.removeEventListener("click", handleClickOutside, true);
+  };
+}, []);
   return createPortal(
-    <div className="fixed inset-0 flex items-center justify-center z-50 bg-black/20 backdrop-blur-sm">
+    <div className="fixed inset-0 flex items-center justify-center z-50 bg-black/20 backdrop-blur-sm" data-modal="true" >
       <div
         ref={modalRef}
         className={`relative rounded-2xl text-center border transform transition-all duration-300 scale-100 ${

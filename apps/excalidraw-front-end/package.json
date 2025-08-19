@@ -12,6 +12,9 @@
     "@clerk/nextjs": "^6.25.4",
     "@clerk/types": "^4.70.0",
     "@repo/ui": "workspace:*",
+    "@supabase/ssr": "^0.6.1",
+    "@supabase/supabase-js": "^2.55.0",
+    "@tailwindcss/postcss": "^4.1.11",
     "axios": "^1.9.0",
     "framer-motion": "^12.23.6",
     "lucide-react": "^0.511.0",
@@ -19,7 +22,6 @@
     "next-auth": "^4.24.11",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "@tailwindcss/postcss": "^4.1.11",
     "tailwindcss": "^4"
   },
   "devDependencies": {

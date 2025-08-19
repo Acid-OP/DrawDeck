@@ -11,42 +11,31 @@ export default function Toast({
   message,
   duration = 3000
 }: ToastProps) {
-  const [phase, setPhase] = useState<'entering' | 'visible' | 'exiting'>('entering');
+  const [phase, setPhase] = useState<"entering" | "visible" | "exiting">(
+    "entering"
+  );
   const { theme } = useTheme();
+
   useEffect(() => {
-    setPhase('entering');
-    
-    const showTimer = setTimeout(() => {
-      setPhase('visible');
-    }, 300); 
-    
-    const hideTimer = setTimeout(() => {
-      setPhase('exiting');
-    }, 1300); 
-    
+    const showTimer = setTimeout(() => setPhase("visible"), 300);
+    const hideTimer = setTimeout(() => setPhase("exiting"), 300 + duration);
     return () => {
       clearTimeout(showTimer);
       clearTimeout(hideTimer);
     };
-  }, []);
+  }, [duration]);
 
   const bgClass =
     theme === "light"
       ? "bg-gray-900 text-white"
-      : "bg-white text-black";  
-      
-  const getAnimationClass = () => {
-    switch (phase) {
-      case 'entering':
-        return "translate-y-6 opacity-0"; 
-      case 'visible':
-        return "translate-y-0 opacity-100"; 
-      case 'exiting':
-        return "translate-y-6 opacity-100"; 
-      default:
-        return "translate-y-6 opacity-0";
-    }
-  };
+      : "bg-white text-black";
+
+  const animationClass =
+    phase === "entering"
+      ? "translate-y-6 opacity-0"
+      : phase === "visible"
+      ? "translate-y-0 opacity-100"
+      : "translate-y-6 opacity-100";
 
   return (
     <div
@@ -54,14 +43,14 @@ export default function Toast({
         fixed bottom-5 right-5 z-50
         flex items-center gap-1 px-2 py-2 rounded-md shadow-lg
         transition-all duration-300 ease-in-out
-        ${bgClass}
-        ${getAnimationClass()}
+        ${bgClass} ${animationClass}
       `}
       style={{ minWidth: 220, maxWidth: 320 }}
       role="alert"
       aria-live="assertive"
     >
       <svg
+        aria-hidden
         xmlns="http://www.w3.org/2000/svg"
         width="20"
         height="20"
@@ -71,8 +60,6 @@ export default function Toast({
         strokeWidth={3}
         strokeLinecap="round"
         strokeLinejoin="round"
-        aria-hidden="true"
-        focusable="false"
       >
         <path d="M5 13l4 4L19 7" />
       </svg>

@@ -44,22 +44,29 @@ export function Menu({
     setTimeout(() => setClicked(false), 300);
   };
 
-  useEffect(() => {
-    const handleOutsideClick = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setActivated(false);
-        onClose?.(); 
-      }
-    };
-
-    if (activated) {
-      document.addEventListener("mousedown", handleOutsideClick);
-    } else {
-      document.removeEventListener("mousedown", handleOutsideClick);
+useEffect(() => {
+  const handleOutsideClick = (e: MouseEvent) => {
+    const target = e.target as Element;
+    
+    // Check if click is inside any modal
+    if (target.closest('[data-modal="true"]')) {
+      return; // Don't close if clicking inside a modal
     }
+    
+    if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+      setActivated(false);
+      onClose?.();
+    }
+  };
 
-    return () => document.removeEventListener("mousedown", handleOutsideClick);
-  }, [activated, onClose]);
+  if (activated) {
+    document.addEventListener("mousedown", handleOutsideClick);
+  } else {
+    document.removeEventListener("mousedown", handleOutsideClick);
+  }
+
+  return () => document.removeEventListener("mousedown", handleOutsideClick);
+}, [activated, onClose]);
 
   return (
     <div className="relative inline-block" ref={menuRef}>
