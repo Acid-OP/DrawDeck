@@ -33,7 +33,7 @@ export default function HomePage() {
         className={isMobile ? "touch-manipulation" : "touch-none"}
         isUserAuthenticated={isSignedIn}
       />
-      {toastMessage && <Toast message={toastMessage} theme="light" />}
+      {toastMessage && <Toast message={toastMessage}/>}
     </>
   );
 }
