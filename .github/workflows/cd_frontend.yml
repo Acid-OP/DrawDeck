@@ -5,6 +5,7 @@ on:
 jobs: 
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - name: Checkout the code
         uses: actions/checkout@v2
@@ -17,6 +18,7 @@ jobs:
       
       - name: Build and push 
         uses: docker/build-push-action@v4
+        timeout-minutes: 20
         with:
           context: .
           file: ./docker/Dockerfile.frontend
@@ -30,6 +32,7 @@ jobs:
 
       - name: Deploy to VM
         uses: appleboy/ssh-action@v1.1.0
+        timeout-minutes: 15
         with:
           host: ${{ secrets.VM_HOST }}
           username: ${{ secrets.VM_USERNAME }}
