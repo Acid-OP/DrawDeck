@@ -33,10 +33,6 @@ export const Header: React.FC<HeaderProps> = () => {
   }, [supabase]);
 
 
-  useEffect(() => {
-    router.prefetch("/auth/signup");
-  }, [router]);
-
   return (
     <div>
       <div className="flex flex-col items-center justify-center p-4 pointer-events-auto">
