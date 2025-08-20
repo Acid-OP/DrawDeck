@@ -57,7 +57,7 @@ const SignupForm: React.FC<SignupFormProps> = ({ isDark }) => {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: provider,
         options: {
-          redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'}/api/auth/callback`,
+          redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL!}/api/auth/callback`,
           queryParams: {
             access_type: 'offline',
             prompt: 'consent',
