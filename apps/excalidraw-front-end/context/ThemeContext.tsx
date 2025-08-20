@@ -1,4 +1,3 @@
-// contexts/ThemeContext.tsx
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
@@ -19,15 +18,13 @@ interface ThemeProviderProps {
 
 export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
   const [theme, setTheme] = useState<Theme>(() => {
-    // Initialize theme from localStorage (matches your canvas logic)
     if (typeof window !== "undefined") {
       const savedTheme = localStorage.getItem("canvas_theme");
-      return (savedTheme as Theme) || "dark"; // Default to dark like your canvas
+      return (savedTheme as Theme) || "dark"; 
     }
     return "dark";
   });
 
-  // Sync theme to localStorage whenever it changes
   useEffect(() => {
     if (typeof window !== "undefined") {
       localStorage.setItem("canvas_theme", theme);
