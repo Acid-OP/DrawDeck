@@ -14,7 +14,6 @@ import CurvedArrow from "./CurveArrow";
 import LocalSaveNotice from "./menuiconpointer";
 import ToolbarIcon from "./ToolBarIcon";
 import ToolIconPointer from "./toolbariconpointer";
-import { useAuth } from "@clerk/nextjs";
 import { useTheme } from "@/context/ThemeContext";
 import { CanvasRateLimitNotification } from "./RateLimitlAlert";
 
@@ -63,7 +62,6 @@ export function Canvas({ roomId, socket, isSolo = false, isUserAuthenticated = f
   const [textareaRows, setTextareaRows] = useState(1);
   const [hasInteracted, setHasInteracted] = useState(false);
   const [selectedTool, setSelectedTool] = useState<Tool>("hand");
-  const { getToken } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);

@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useRef, useEffect } from "react";
 import { Copy, Check, X } from "lucide-react";
-import { useTheme } from "@/context/ThemeContext"; // or wherever your global theme is
+import { useTheme } from "@/context/ThemeContext"; 
 
 interface Props {
   roomId: string;
@@ -18,7 +18,7 @@ export const ShareLinkModal: React.FC<Props> = ({
   onClose,
   isManualTrigger = false
 }) => {
-  const { theme } = useTheme(); // get global theme
+  const { theme } = useTheme(); 
   const [isVisible, setIsVisible] = useState(false);
   const [copied, setCopied] = useState(false);
   const modalRef = useRef<HTMLDivElement>(null);
@@ -74,7 +74,6 @@ export const ShareLinkModal: React.FC<Props> = ({
 
   if (!isVisible) return null;
 
-  // Dark/Light styles based on global theme
   const modalBg = theme === "dark" ? "#232329" : "#ffffff";
   const modalText = theme === "dark" ? "text-white" : "text-black";
   const inputBg = theme === "dark" ? "#1a1a1f" : "#e0dfff";

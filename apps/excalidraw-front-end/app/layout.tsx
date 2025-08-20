@@ -2,10 +2,9 @@ import type { Metadata } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
 import { Caveat } from "next/font/google";
-import { ClerkProvider } from "@clerk/nextjs";
 import colorPalette from "./color-palette.png";
 import { ThemeProvider } from '@/context/ThemeContext';
-// Load local fonts
+
 const excalifont = localFont({
   src: "./fonts/excalifont-Regular.woff2",
   display: "swap",
@@ -35,7 +34,6 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <ClerkProvider>
       <html lang="en">
         <head>
            <link rel="icon" href={colorPalette.src} type="image/png" />
@@ -46,6 +44,5 @@ export default function RootLayout({
         </ThemeProvider>
         </body>
       </html>
-    </ClerkProvider>
   );
 }
