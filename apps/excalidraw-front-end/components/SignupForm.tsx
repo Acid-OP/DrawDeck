@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { AlertCircle, ArrowRight, UserPlus, Loader2 } from "lucide-react";
 import { useErrorHandler } from "@/hooks/hooks";
@@ -54,13 +54,14 @@ const SignupForm: React.FC<SignupFormProps> = ({ isDark }) => {
     clearError();
 
     try {
-      const { data, error } = await supabase.auth.signInWithOAuth({
+      const { error } = await supabase.auth.signInWithOAuth({
         provider: provider,
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
+          redirectTo: `${window.location.origin}/api/auth/callback`,
           queryParams: {
             access_type: 'offline',
             prompt: 'consent',
+            next: "/"
           }
         }
       });
@@ -222,7 +223,7 @@ const SignupForm: React.FC<SignupFormProps> = ({ isDark }) => {
         <p
           className="text-xs font-medium cursor-pointer text-center hover:underline transition-all duration-200"
           style={{ color: "#6965db" }}
-          onClick={() => router.push("/auth/signin")}
+          onClick={() => router.push("/signin")}
           suppressHydrationWarning
         >
           Already have an account?

@@ -45,7 +45,7 @@ export const Header: React.FC<HeaderProps> = () => {
           <div className="w-full p-4">
             <LiveCollaborationButton onClick={() => setIsModalOpen(true)} />
             {isLoaded && !isSignedIn && (
-              <SignupButton onClick={() => router.push("/auth/signup")} />
+              <SignupButton onClick={() => router.push("/signup")} />
             )}
           </div>
         </div>

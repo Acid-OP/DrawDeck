@@ -222,7 +222,7 @@ const SignInForm: React.FC<SignInFormProps> = ({ isDark }) => {
         <p
           className="text-xs font-medium cursor-pointer text-center hover:underline transition-all duration-200"
           style={{ color: "#6965db" }}
-          onClick={() => router.push("/auth/signup")}
+          onClick={() => router.push("/signup")}
           suppressHydrationWarning
         >
           Don't have an account?
