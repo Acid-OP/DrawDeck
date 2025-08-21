@@ -1,10 +1,10 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AlertCircle, User, Loader2 } from "lucide-react";
 import { useErrorHandler } from "@/hooks/hooks";
 import type { ReactNode } from "react";
-import { createClient } from "@/utils/supabase/client";
+import { signIn, useSession } from "next-auth/react";
 
 interface SignInFormProps {
   isDark: boolean;
@@ -44,9 +44,15 @@ const getOAuthErrorMessage = (error: any): string => {
 const SignInForm: React.FC<SignInFormProps> = ({ isDark }) => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [loadingProvider, setLoadingProvider] = useState<OAuthProvider | null>(null);
-  const [supabase] = useState(() => createClient());
   const router = useRouter();
   const { error, handleError, clearError } = useErrorHandler();
+  const { data: session, status } = useSession();
+
+  useEffect(() => {
+    if (status === "authenticated") {
+      router.push("/");
+    }
+  }, [status, router]);
 
   const handleOAuth = async (provider: OAuthProvider) => {
     setIsLoading(true);
@@ -54,30 +60,23 @@ const SignInForm: React.FC<SignInFormProps> = ({ isDark }) => {
     clearError();
 
     try {
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: provider,
-        options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
-          queryParams: {
-            access_type: 'offline',
-            prompt: 'consent',
+        const result = await signIn(provider, {
+            redirect: false,
+            callbackUrl: '/'
+          });
+    
+          if (result?.error) {
+            handleError(getOAuthErrorMessage(result.error));
+            return;
           }
+        } catch (err: any) {
+          console.error("OAuth signin error:", err);
+          handleError(getOAuthErrorMessage(err));
+        } finally {
+          setIsLoading(false);
+          setLoadingProvider(null);
         }
-      });
-
-      if (error) {
-        console.error("OAuth error:", error);
-        handleError(getOAuthErrorMessage(error));
-        return;
-      }
-    } catch (err: any) {
-      console.error("OAuth signin error:", err);
-      handleError(getOAuthErrorMessage(err));
-    } finally {
-      setIsLoading(false);
-      setLoadingProvider(null);
-    }
-  };
+      };
 
   const renderOAuthButton = (
     provider: OAuthProvider,

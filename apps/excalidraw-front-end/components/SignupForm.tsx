@@ -1,10 +1,10 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { signIn, useSession } from "next-auth/react";
 import { AlertCircle, ArrowRight, UserPlus, Loader2 } from "lucide-react";
 import { useErrorHandler } from "@/hooks/hooks";
 import type { ReactNode } from "react";
-import { createClient } from "@/utils/supabase/client";
 
 interface SignupFormProps {
   isDark: boolean;
@@ -13,40 +13,53 @@ interface SignupFormProps {
 type OAuthProvider = "google" | "github" | "facebook";
 
 const getOAuthErrorMessage = (error: any): string => {
-  const errorMessage = error?.message || error?.error_description || error?.code;
+  const errorMessage = error?.message || error?.error_description || error?.code || error;
   
   switch (errorMessage) {
-    case 'Email not confirmed':
-      return "Please check your email and click the confirmation link before signing in.";
+    case 'OAuthCallback':
+    case 'CallbackRouteError':
+      return "Authentication callback failed. Please try again.";
     
-    case 'Invalid login credentials':
-      return "Invalid credentials. Please try again.";
-    
-    case 'User already registered':
-      return "An account with this email already exists. Try signing in instead.";
-    
-    case 'OAuth provider error':
+    case 'AccessDenied':
     case 'access_denied':
       return "Access was denied. Please try again or use a different sign-in method.";
     
-    case 'Network error':
-      return "Network error. Please check your connection and try again.";
+    case 'Configuration':
+      return "Authentication is misconfigured. Please contact support.";
+    
+    case 'Verification':
+      return "Verification failed. Please check your email or try again.";
+    
+    case 'OAuthAccountNotLinked':
+      return "Account not linked. Please sign in with the same provider you used before.";
+    
+    case 'OAuthCreateAccount':
+      return "Could not create account. Please try again.";
+    
+    case 'EmailCreateAccount':
+      return "Could not create account with email. Please try a different method.";
+    
+    case 'Signin':
+      return "Sign in failed. Please try again.";
+    
+    case 'OAuthSignin':
+      return "OAuth sign in failed. Please try again.";
     
     case 'popup_closed_by_user':
       return "Sign-in was cancelled. Please try again.";
     
     default:
       console.error('Unhandled OAuth error:', error);
-      return "Something went wrong. Please try again.";
+      return "Something went wrong during authentication. Please try again.";
   }
 };
 
 const SignupForm: React.FC<SignupFormProps> = ({ isDark }) => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [loadingProvider, setLoadingProvider] = useState<OAuthProvider | null>(null);
-  const [supabase] = useState(() => createClient());
   const router = useRouter();
   const { error, handleError, clearError } = useErrorHandler();
+  const { data: session, status } = useSession();
 
   const handleOAuth = async (provider: OAuthProvider) => {
     setIsLoading(true);
@@ -54,21 +67,13 @@ const SignupForm: React.FC<SignupFormProps> = ({ isDark }) => {
     clearError();
 
     try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: provider,
-        options: {
-          redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL!}/api/auth/callback`,
-          queryParams: {
-            access_type: 'offline',
-            prompt: 'consent',
-            next: "/"
-          }
-        }
+      const result = await signIn(provider, {
+        redirect: false,
+        callbackUrl: '/'
       });
 
-      if (error) {
-        console.error("OAuth error:", error);
-        handleError(getOAuthErrorMessage(error));
+      if (result?.error) {
+        handleError(getOAuthErrorMessage(result.error));
         return;
       }
     } catch (err: any) {
@@ -104,6 +109,40 @@ const SignupForm: React.FC<SignupFormProps> = ({ isDark }) => {
       </button>
     );
   };
+
+  if (status === "authenticated") {
+    return (
+      <div
+        className="w-full max-w-md p-8 rounded-2xl shadow-2xl backdrop-blur-sm text-center"
+        style={{
+          backgroundColor: isDark ? "rgba(255,255,255,0.1)" : "#fff0c9",
+        }}
+      >
+        <h2
+          className="text-xl font-bold mb-4"
+          style={{
+            color: isDark ? "#ced4da" : "#363c41",
+            fontFamily: "Comic Sans MS, cursive",
+          }}
+        >
+          Welcome, {session.user?.name}!
+        </h2>
+        <p
+          className="text-sm opacity-80 mb-4"
+          style={{ color: isDark ? "#ced4da" : "#363c41" }}
+        >
+          You're already signed in.
+        </p>
+        <button
+          onClick={() => router.push('/')}
+          className="px-4 py-2 rounded-md border border-black transition-all duration-300 hover:scale-[1.05]"
+          style={{ backgroundColor: "#fff0c9" }}
+        >
+          Continue to App
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div

@@ -1,29 +1,14 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { createClient } from "@/utils/supabase/client";
+import { useSession } from "next-auth/react";
 
 export function useAuthToast() {
-  const [supabase] = useState(() => createClient());
+  const { data: session, status } = useSession();
 
-  const [isLoaded, setIsLoaded] = useState(false);
-  const [isSignedIn, setIsSignedIn] = useState(false);
-  const [user, setUser] = useState<null | { created_at: string }>(null);
-
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setIsSignedIn(!!session);
-      setUser(session?.user ?? null);
-      setIsLoaded(true);
-    });
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_e, session) => {
-      setIsSignedIn(!!session);
-      setUser(session?.user ?? null);
-    });
-    return () => subscription.unsubscribe();
-  }, [supabase]);
+  const isLoaded = status !== "loading";
+  const isSignedIn = status === "authenticated";
+  const user = session?.user ?? null;
 
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const hasShownToast = useRef(false);
@@ -31,17 +16,16 @@ export function useAuthToast() {
   useEffect(() => {
     if (!isLoaded || !isSignedIn || !user || hasShownToast.current) return;
 
-    const userCreatedAt = new Date(user.created_at);
-    const now = new Date();
-    const isNewUser = now.getTime() - userCreatedAt.getTime() < 30_000;
+    const storedUser = sessionStorage.getItem("last_user_id");
+    const storedStart = sessionStorage.getItem("session_start_time");
 
-    const sessionStart = sessionStorage.getItem("session_start_time");
     const currentTime = Date.now().toString();
-
-    if (!sessionStart) {
+    if (!storedStart || storedUser !== user.email) {
       sessionStorage.setItem("session_start_time", currentTime);
-      setToastMessage(isNewUser ? "Successfully signed up!" : "Successfully signed in!");
+      sessionStorage.setItem("last_user_id", user.email ?? "");
+      setToastMessage("Successfully signed in!");
       hasShownToast.current = true;
+
       setTimeout(() => setToastMessage(null), 3_000);
     }
   }, [isLoaded, isSignedIn, user]);
