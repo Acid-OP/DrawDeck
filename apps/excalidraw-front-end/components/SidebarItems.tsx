@@ -12,7 +12,6 @@ import {
   Twitter,
   Linkedin,
 } from "lucide-react";
-import { createClient } from "@/utils/supabase/client";
 import { FeatureButton } from "./sidebar/FeatureButton";
 import { SocialButton } from "./sidebar/SocialButton";
 import { ThemeToggle } from "./sidebar/ThemeToggle";
@@ -22,6 +21,7 @@ import { useRouter } from "next/navigation";
 import { ConfirmModal } from "./modal/ConfirmModal";
 import { LiveCollabModal } from "./modal/LiveCollabModal";
 import { useTheme } from "@/context/ThemeContext";
+import { signOut, useSession } from "next-auth/react";
 
 interface SidebarItemsProps {
   onClearCanvas: () => void;
@@ -40,26 +40,13 @@ export const SidebarItems: React.FC<SidebarItemsProps> = ({
   roomType,
   isMobile = false,
 }) => {
-  const { theme } = useTheme();
   const router = useRouter();
   const [showShareModal, setShowShareModal] = useState(false);
   const [showLiveModal, setShowLiveModal] = useState(false);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const { status } = useSession();
+  const isSignedIn = status === "authenticated";
 
-  const [supabase] = useState(() => createClient());
-  const [isSignedIn, setIsSignedIn] = useState(false);
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setIsSignedIn(!!session);
-    });
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_e, session) => {
-      setIsSignedIn(!!session);
-    });
-    return () => subscription.unsubscribe();
-  }, [supabase]);
-  
   const handleShareClick = () => {
     if (isCollabMode && roomId && encryptionKey && roomType) {
       setShowShareModal(true);
@@ -70,9 +57,9 @@ export const SidebarItems: React.FC<SidebarItemsProps> = ({
 
   const handleAuthClick = async () => {
     if (isSignedIn) {
-      await supabase.auth.signOut();
+      await signOut({ callbackUrl: "/" });
     } else {
-      router.push("/auth/signup");
+      router.push("/signup");
     }
   };
 

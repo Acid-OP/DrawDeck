@@ -3,11 +3,11 @@ import React, { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Play, Users, Video } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/utils/supabase/client";
 import { generateRoomId } from "@/lib/generateRoomId";
 import { generateSecureKey } from "@/lib/crypto";
 import { MobileRestrictionModal } from "./MobileLiveCollabModal";
 import { useTheme } from "@/context/ThemeContext";
+import { useSession } from "next-auth/react";
 
 interface Props {
   onClose: () => void;
@@ -40,21 +40,8 @@ const DesktopCollabModal: React.FC<Props> = ({ onClose, source = "header" }) => 
   const router = useRouter();
   const modalRef = useRef<HTMLDivElement>(null);
   const { theme } = useTheme();
-
-  const [supabase] = useState(() => createClient());
-  const [isSignedIn, setIsSignedIn] = useState(false);
-
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setIsSignedIn(!!session);
-    });
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_e, session) => {
-      setIsSignedIn(!!session);
-    });
-    return () => subscription.unsubscribe();
-  }, [supabase]);
+   const { status } = useSession();
+  const isSignedIn = status === "authenticated";
 
   const [selectedRoomType, setSelectedRoomType] = useState<RoomType>("duo");
   const [isLoading, setIsLoading] = useState(false);
@@ -64,7 +51,7 @@ const DesktopCollabModal: React.FC<Props> = ({ onClose, source = "header" }) => 
 
   const handleStartSession = async () => {
     if (!isSignedIn) {
-      router.push("/auth/signin");
+      router.push("/signin");
       return;
     }
 

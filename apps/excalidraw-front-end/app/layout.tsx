@@ -3,7 +3,7 @@ import localFont from "next/font/local";
 import "./globals.css";
 import { Caveat } from "next/font/google";
 import colorPalette from "./color-palette.png";
-import { ThemeProvider } from '@/context/ThemeContext';
+import { Providers } from "@/components/providers";
 
 const excalifont = localFont({
   src: "./fonts/excalifont-Regular.woff2",
@@ -34,15 +34,17 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-      <html lang="en">
-        <head>
-           <link rel="icon" href={colorPalette.src} type="image/png" />
-        </head>
-        <body className={`${caveat.variable} ${excalifont.variable} ${virgil.variable} antialiased`}>
-          <ThemeProvider>
+    <html lang="en">
+      <head>
+        <link rel="icon" href={colorPalette.src} type="image/png" />
+      </head>
+      <body
+        className={`${caveat.variable} ${excalifont.variable} ${virgil.variable} antialiased`}
+      >
+        <Providers>
           {children}
-        </ThemeProvider>
-        </body>
-      </html>
+        </Providers>
+      </body>
+    </html>
   );
 }

@@ -1,10 +1,10 @@
 "use client";
 import { useEffect, useState } from "react";
-import { createClient } from "@/utils/supabase/client";
 import LoaderAnimation from "./Loader";
 import { ShareLinkModal } from "./modal/SharelinkModal";
 import { RoomCanvas } from "./RoomCanvas";
 import AuthModal from "./AuthModal";
+import { useSession } from "next-auth/react";
 
 interface AuthWrapperProps {
   roomId: string;
@@ -17,11 +17,9 @@ export function AuthWrapper({
   encryptionKey,
   roomType,
 }: AuthWrapperProps) {
-  const [supabase] = useState(() => createClient());
-
-  const [isSignedIn, setIsSignedIn] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
-
+  const {status} = useSession();
+  const isSignedIn = status === "authenticated";
   const [minTimeElapsed, setMinTimeElapsed] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
 
@@ -31,21 +29,9 @@ export function AuthWrapper({
   }, []);
 
   useEffect(() => {
-    supabase.auth
-      .getSession()
-      .then(({ data: { session } }) => {
-        setIsSignedIn(!!session);
-        setIsLoaded(true);
-      })
-      .catch(() => setIsLoaded(true));
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setIsSignedIn(!!session);
-    });
+    setIsLoaded(true);
+  }, []);
 
-    return () => subscription.unsubscribe();
-  }, [supabase]);
 
   useEffect(() => {
     if (isLoaded && minTimeElapsed && !isSignedIn) {
