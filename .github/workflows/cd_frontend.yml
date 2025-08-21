@@ -8,7 +8,7 @@ jobs:
     timeout-minutes: 30
     steps:
       - name: Checkout the code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Docker login
         uses: docker/login-action@v2
@@ -26,10 +26,10 @@ jobs:
             NEXT_PUBLIC_WS_URL=${{ secrets.NEXT_PUBLIC_WS_URL }}
             NEXT_PUBLIC_RTC_URL=${{ secrets.NEXT_PUBLIC_RTC_URL }}
             NEXT_PUBLIC_SITE_URL=${{secrets.NEXT_PUBLIC_SITE_URL}}
-            GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
-            GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
-            NEXTAUTH_URL: ${{ secrets.NEXTAUTH_URL }}
-            NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET }}
+            GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}
+            GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}
+            NEXTAUTH_URL=${{ secrets.NEXTAUTH_URL }}
+            NEXTAUTH_SECRET=${{ secrets.NEXTAUTH_SECRET }}
           push: true
           tags: acidop/excalidraw-frontend:${{ github.sha }}
 
