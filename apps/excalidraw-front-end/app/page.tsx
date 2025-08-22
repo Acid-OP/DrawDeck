@@ -9,29 +9,31 @@ import { useSession } from "next-auth/react";
 
 export default function HomePage() {
   const [isLoaded, setIsLoaded] = useState(false);
-  const MIN_LOADING_TIME = 2_300;
-  const [minTimeElapsed, setMinTimeElapsed] = useState(false);
-
-  const { data: session, status } = useSession();
+  const [loaderAnimationComplete, setLoaderAnimationComplete] = useState(false);
+  
+  const { status } = useSession();
   const isSignedIn = status === "authenticated";
 
-  // handle loading state
   useEffect(() => {
     if (status !== "loading") {
       setIsLoaded(true);
     }
   }, [status]);
 
-  // enforce minimum loader time
   useEffect(() => {
-    const t = setTimeout(() => setMinTimeElapsed(true), MIN_LOADING_TIME);
-    return () => clearTimeout(t);
+    const LOADER_DURATION = 1800;
+    
+    const timer = setTimeout(() => {
+      setLoaderAnimationComplete(true);
+    }, LOADER_DURATION);
+
+    return () => clearTimeout(timer);
   }, []);
 
   const { toastMessage } = useAuthToast();
   const isMobile = useIsMobile();
 
-  if (!isLoaded || !minTimeElapsed) {
+  if (!isLoaded || !loaderAnimationComplete) {
     return <LoaderAnimation />;
   }
 

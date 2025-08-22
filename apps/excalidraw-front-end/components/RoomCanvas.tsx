@@ -51,10 +51,9 @@ export function RoomCanvas({ slug, encryptionKey, roomType: propRoomType }: { sl
 
   const messageQueueRef = useRef<Array<{ message: string; timestamp: number; priority?: number }>>([]);
   const messageQueueTimerRef = useRef<NodeJS.Timeout | null>(null);
-
-  const roomTypeFromStorage = typeof window !== 'undefined' 
-    ? sessionStorage.getItem(`roomType-${slug}`) as 'duo' | 'group' | null
-    : null;
+  const getIsCreator = useCallback(() => {
+    return sessionStorage.getItem(`creator-${slug}`) === 'true';
+  }, [slug]);
   const wsUrl = process.env.NEXT_PUBLIC_WS_URL;
   const roomType = propRoomType;
   const shouldShowVideoCall = roomType === 'duo';
@@ -160,6 +159,37 @@ export function RoomCanvas({ slug, encryptionKey, roomType: propRoomType }: { sl
   }, [socket, checkClientRateLimit, rateLimitState.messagesRemaining]);
 
   useEffect(() => {
+    if (!socket) return;
+
+    const handleSocketMessage = (event: MessageEvent) => {
+      const data = JSON.parse(event.data);
+      if (data.type === 'creator_left') {
+        setCreatorLeftError(true);
+        setIsRoomAccessible(false);
+        setIsConnecting(false);
+      }
+    };
+
+    const handleSocketClose = (closeEvent: CloseEvent) => {
+    const isCreator = getIsCreator();
+    if (!isCreator && !creatorLeftError && !inactivityError && !roomFullError) {
+      if (closeEvent.code !== 1000 && closeEvent.code !== 4000) {
+        setCreatorLeftError(true);
+        setIsRoomAccessible(false);
+        setIsConnecting(false);
+      }
+    }
+  };
+  socket.addEventListener('message', handleSocketMessage);
+  socket.addEventListener('close', handleSocketClose);
+
+  return () => {
+    socket.removeEventListener('message', handleSocketMessage);
+    socket.removeEventListener('close', handleSocketClose);
+  };
+}, [socket, creatorLeftError, inactivityError, roomFullError, getIsCreator]);
+
+  useEffect(() => {
     if (messageQueueTimerRef.current) {
       clearInterval(messageQueueTimerRef.current);
     }
@@ -217,7 +247,7 @@ export function RoomCanvas({ slug, encryptionKey, roomType: propRoomType }: { sl
         setInactivityError(null); 
         setIsRoomAccessible(false);
 
-        const ws = new WebSocket(wsUrl ?? WS_URL);
+        const ws = new WebSocket( wsUrl ?? WS_URL);
 
         ws.onopen = () => {
           connectionAttemptsRef.current = 0;
@@ -326,9 +356,6 @@ export function RoomCanvas({ slug, encryptionKey, roomType: propRoomType }: { sl
               setCreatorLeftError(true);
               setIsRoomAccessible(false);
               setIsConnecting(false);
-              if (ws) {
-                ws.close();
-              }
               break;
 
             case 'user_joined':
@@ -524,7 +551,7 @@ export function RoomCanvas({ slug, encryptionKey, roomType: propRoomType }: { sl
         isRoomAccessible={isRoomAccessible}
       />
       {shouldShowVideoCall && ( 
-        <VideoCall roomId={slug} />
+        <VideoCall roomId={slug} isCreator={getIsCreator()} />
       )}
     </div>
   )};

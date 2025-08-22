@@ -70,12 +70,11 @@ const LoaderAnimation = () => {
         }));
         setStep("done");
       }
-    }, 600);
+    }, 500);
 
     return () => clearTimeout(timeout);
   }, [step, isClient]);
 
-  // Don't render anything until client-side JavaScript loads
   if (!isClient) {
     return (
       <div
@@ -181,7 +180,7 @@ const LoaderAnimation = () => {
           x: getX(index),
           y: type === "diamond" ? [0, sizes.diamondMove, sizes.diamondMove, 0] : [0, -sizes.otherMove, -sizes.otherMove, 0],
         }}
-        transition={{ duration: 0.9, ease: "easeInOut" }}
+        transition={{ duration: 0.6, ease: "easeInOut" }}
         style={{
           width: sizes.ballSize,
           height: sizes.ballSize,

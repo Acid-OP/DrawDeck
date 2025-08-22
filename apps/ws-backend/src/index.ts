@@ -279,39 +279,56 @@ function handleClientDisconnect(client: ClientInfo) {
     const room = rooms.get(roomId);
     if (room && room.participants.has(client.userId)) {
       const isCreator = roomCreators.get(roomId) === client.userId;
-      room.participants.delete(client.userId);
       
       if (isCreator && room.participants.size > 0) {
-        broadcastToRoom(roomId, {
+        const creatorLeftMessage = {
           type: "creator_left",
           roomId,
           message: "Room creator has left. This room is no longer accessible.",
           userId: client.userId,
           timestamp: new Date().toISOString(),
-        });
-      } else if (room.participants.size > 0) {
-        broadcastToRoom(roomId, {
-          type: "user_left",
-          roomId,
-          userId: client.userId,
-          participantCount: room.participants.size,
-          timestamp: new Date().toISOString(),
-        });
-      }
-
-      if (room.participants.size === 0 || isCreator) {
-        rooms.delete(roomId);
-        roomSecrets.delete(roomId);
-        roomTypes.delete(roomId);
-        roomCreators.delete(roomId);
-        roomLastActivity.delete(roomId);
+        };
+        broadcastToRoom(roomId, creatorLeftMessage);
+        
+        setTimeout(() => {
+          room.participants.forEach((participant, userId) => {
+            if (userId !== client.userId && participant.ws.readyState === participant.ws.OPEN) {
+              participant.ws.close(1000, 'Creator left');
+            }
+          });
+          
+          rooms.delete(roomId);
+          roomSecrets.delete(roomId);
+          roomTypes.delete(roomId);
+          roomCreators.delete(roomId);
+          roomLastActivity.delete(roomId);
+        }, 500);
+        
+      } else {
+        room.participants.delete(client.userId);
+        if (room.participants.size > 0) {
+          broadcastToRoom(roomId, {
+            type: "user_left",
+            roomId,
+            userId: client.userId,
+            participantCount: room.participants.size,
+            timestamp: new Date().toISOString(),
+          });
+        }
+        
+        if (room.participants.size === 0) {
+          rooms.delete(roomId);
+          roomSecrets.delete(roomId);
+          roomTypes.delete(roomId);
+          roomCreators.delete(roomId);
+          roomLastActivity.delete(roomId);
+        }
       }
     }
   });
   
   clients.delete(client);
 }
-
 wss.on("connection", (ws, request) => {
    const ip = rateLimiter.getClientIP(request);
   const dummyUserId = `user_${Math.floor(Math.random() * 10000)}`;

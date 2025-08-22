@@ -5,8 +5,8 @@ import { randomUUID } from "crypto";
 
 const allowedOrigins = [
   'https://drawdeck.xyz',
-  'https://www.drawdeck.xyz'
-  // 'http://localhost:3000' // For development only
+  'https://www.drawdeck.xyz',
+  // 'http://localhost:3000' 
 ];
 const wss = new WebSocketServer({port: 8081,
   verifyClient: (info: { origin: string; secure: boolean; req: IncomingMessage }) => {
@@ -81,14 +81,30 @@ wss.on("connection", (ws: WebSocket, request: IncomingMessage) => {
         broadcastToRoom(String(roomId), client, payload);
         break;
       }
-
+      case "user_disconnected_notify": {
+        const { roomId } = payload;
+        broadcastToRoom(String(roomId), client, { 
+          type: "user_disconnected",
+          message: "User has left the call" 
+        });
+        break;
+      }
       default: {
         console.warn("Unknown RTC message type:", type);
       }
     }
   });
-
+  
   ws.on("close", () => {
+    client.rooms.forEach(roomId => {
+      broadcastToRoom(String(roomId), client, { 
+        type: "user_disconnected",
+        userId: client.userId,
+        message: "User has disconnected"
+      });
+    });
+  
     rtcClients.delete(client);
+    console.log(`User ${client.userId} disconnected`);
   });
 });
