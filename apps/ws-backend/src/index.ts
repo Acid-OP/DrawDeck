@@ -192,7 +192,7 @@ const rateLimiter = new WebSocketRateLimiter({
 
 const allowedOrigins = [
   'https://drawdeck.xyz',
-  'https://www.drawdeck.xyz'
+  'https://www.drawdeck.xyz',
   // 'http://localhost:3000' 
 ];
 
@@ -226,6 +226,13 @@ const wss = new WebSocketServer({
     return true;
   }
 });
+
+const roomLastActivity: Map<string, number> = new Map();
+const ROOM_IDLE_TIMEOUT = 10 * 60 * 1000; //10 minutes for inactivity
+
+function updateRoomActivity(roomId: string) {
+  roomLastActivity.set(roomId, Date.now());
+}
 
 const HEARTBEAT_INTERVAL = 30000; 
 const CLIENT_TIMEOUT = 60000;
@@ -297,6 +304,7 @@ function handleClientDisconnect(client: ClientInfo) {
         roomSecrets.delete(roomId);
         roomTypes.delete(roomId);
         roomCreators.delete(roomId);
+        roomLastActivity.delete(roomId);
       }
     }
   });
@@ -362,6 +370,7 @@ wss.on("connection", (ws, request) => {
             roomId: newRoom,
             userId: client.userId,
           }));
+          updateRoomActivity(newRoom);
           break;
         }
 
@@ -468,6 +477,7 @@ wss.on("connection", (ws, request) => {
             shape,
             timestamp: new Date().toISOString(),
           }, client);
+          updateRoomActivity(roomId);
           break;
         }
 
@@ -491,6 +501,7 @@ wss.on("connection", (ws, request) => {
             shapeId,
             timestamp: new Date().toISOString(),
           }, client);
+          updateRoomActivity(roomId);
           break;
         }
         
@@ -513,7 +524,7 @@ wss.on("connection", (ws, request) => {
             shape: data.shape,  
             timestamp: new Date().toISOString(),
           }, client);
-  
+          updateRoomActivity(roomId);
           break;
         }
 
@@ -556,5 +567,60 @@ wss.on("connection", (ws, request) => {
     handleClientDisconnect(client);
   });
 });
+
+setInterval(() => {
+  const now = Date.now();
+  
+  for (const [roomId, lastActivity] of roomLastActivity.entries()) {
+    if (now - lastActivity > ROOM_IDLE_TIMEOUT) {
+      const room = rooms.get(roomId);
+      if (room) {
+        const idleMinutes = Math.floor((now - lastActivity) / 1000 / 60);        
+        const messageData = {
+          type: "session_ended_inactivity",
+          message: `Room was closed due to ${idleMinutes} minutes of no drawing activity.`,
+          roomId: roomId,
+          idleTime: idleMinutes,
+          reason: "no_drawing_activity"
+        };
+
+        const participants = Array.from(room.participants.values());
+        let messagesSent = 0;
+
+        participants.forEach((client, index) => {
+          if (client.ws.readyState === client.ws.OPEN) {
+            try {
+              client.ws.send(JSON.stringify(messageData));
+              messagesSent++;
+              console.log(`📤 Inactivity message sent to participant ${index + 1}/${participants.length}`);
+            } catch (error) {
+              console.error(`❌ Failed to send message to participant ${index + 1}:`, error);
+            }
+          } else {
+            console.warn(`⚠️ Participant ${index + 1} has closed connection`);
+          }
+        });
+        setTimeout(() => {
+          participants.forEach((client, index) => {
+            if (client.ws.readyState === client.ws.OPEN) {
+              try {
+                client.ws.close(4000, 'Room closed due to inactivity'); 
+                console.log(`🔌 Connection closed for participant ${index + 1}`);
+              } catch (error) {
+                console.error(`❌ Error closing connection for participant ${index + 1}:`, error);
+              }
+            }
+          });
+
+          rooms.delete(roomId);
+          roomSecrets.delete(roomId);
+          roomTypes.delete(roomId);
+          roomCreators.delete(roomId);
+          roomLastActivity.delete(roomId);
+        }, 3000); 
+      }
+    }
+  }
+}, 10 * 1000);
 
 console.log("✅ WebSocket server running at ws://localhost:8080");

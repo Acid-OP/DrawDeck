@@ -9,6 +9,7 @@ import { RoomConnecting } from './errors/RoomConnecting';
 import { ConnectionError } from './errors/ConnectionError';
 import { RoomFullError } from './errors/RoomFullError';
 import { CreatorLeftError } from './errors/CreatorLeftError';
+import { RoomInactivityModal } from './errors/RoomInactivity';
 interface RateLimitState {
   messagesRemaining: number;
   lastReset: number;
@@ -26,6 +27,11 @@ export function RoomCanvas({ slug, encryptionKey, roomType: propRoomType }: { sl
     message: string;
     maxCapacity: number;
     currentCount: number;
+  } | null>(null);
+  const [inactivityError, setInactivityError] = useState<{
+    message: string;
+    idleTime: number;
+    roomId: string;
   } | null>(null);
   const [creatorLeftError, setCreatorLeftError] = useState<boolean>(false);
   const [isRoomAccessible, setIsRoomAccessible] = useState(false); 
@@ -97,17 +103,18 @@ export function RoomCanvas({ slug, encryptionKey, roomType: propRoomType }: { sl
     }
   
     if (!checkClientRateLimit()) {
-    console.warn('⚠️ Client-side rate limit exceeded, message queued');
-    alert(`⚠️ You're drawing too fast!\n\nYour shapes are being saved automatically, but please slow down a bit.\n\nRefresh the page if drawings seem delayed.`);
+      console.warn('⚠️ Client-side rate limit exceeded, message queued');
+      alert(`⚠️ You're drawing too fast!\n\nYour shapes are being saved automatically, but please slow down a bit.\n\nRefresh the page if drawings seem delayed.`);
   
-    messageQueueRef.current.push({ 
-      message: JSON.stringify(message), 
-      timestamp: Date.now(),
-      priority
-    });
-    messageQueueRef.current.sort((a, b) => (b.priority || 0) - (a.priority || 0));
-    return false;
-  }
+      messageQueueRef.current.push({ 
+        message: JSON.stringify(message), 
+        timestamp: Date.now(),
+        priority
+      });
+      messageQueueRef.current.sort((a, b) => (b.priority || 0) - (a.priority || 0));
+      return false;
+    }
+    
     try {
       socket.send(JSON.stringify(message));
       setRateLimitState(prev => ({
@@ -207,6 +214,7 @@ export function RoomCanvas({ slug, encryptionKey, roomType: propRoomType }: { sl
         setConnectionError(null);
         setRoomFullError(null);
         setCreatorLeftError(false);
+        setInactivityError(null); 
         setIsRoomAccessible(false);
 
         const ws = new WebSocket(wsUrl ?? WS_URL);
@@ -274,6 +282,46 @@ export function RoomCanvas({ slug, encryptionKey, roomType: propRoomType }: { sl
               }
               break;
 
+            case 'session_ended_inactivity':
+              setInactivityError({
+                message: rest.message,
+                idleTime: rest.idleTime,
+                roomId: rest.roomId
+              });
+              
+              // Update other states
+              setIsRoomAccessible(false);
+              setIsConnecting(false);
+              
+              // Clear other error states to prevent conflicts
+              setConnectionError(null);
+              setRoomFullError(null);
+              setCreatorLeftError(false);
+              
+              // Close the WebSocket connection
+              if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.close(1000, 'Session ended due to inactivity');
+              }
+              break;
+
+            case 'session_limit_exceeded':
+              console.error(`🚫 Session limit exceeded: ${rest.message}`);
+              setIsRoomAccessible(false);
+              setIsConnecting(false);
+              
+              const sessionAlert = `🚫 Too Many Tabs Open!\n\n${rest.message}\n\nYou can have maximum ${rest.maxSessions || 3} tabs open at once.\n\nPlease close other DrawDeck tabs and try again.`;
+              alert(sessionAlert);
+              
+              setConnectionError(`Session limit exceeded: ${rest.message}`);
+              
+              if (ws) {
+                ws.close();
+              }
+              setTimeout(() => {
+                router.push('/');
+              }, 2000);
+              break;
+
             case 'creator_left':
               setCreatorLeftError(true);
               setIsRoomAccessible(false);
@@ -329,12 +377,34 @@ export function RoomCanvas({ slug, encryptionKey, roomType: propRoomType }: { sl
           setIsRoomAccessible(false);
         };
 
-        ws.onclose = (event) => {
+        
+        ws.onclose = (closeEvent) => {
+          console.log('🔌 WebSocket closed:', closeEvent.code, closeEvent.reason);
           setSocket(null);
+          
+          
+          if (closeEvent.code === 4000 || 
+              closeEvent.reason === 'Room closed due to inactivity' || 
+              closeEvent.reason === 'Session ended due to inactivity') {
+            setInactivityError({
+              message: closeEvent.reason || 'Room was closed due to inactivity.',
+              idleTime: 1, 
+              roomId: slug
+            });
+            
+            setConnectionError(null);
+            setRoomFullError(null);
+            setCreatorLeftError(false);
+            setIsConnecting(false);
+            setIsRoomAccessible(false);
+
+            return;
+          }
+
           setIsConnecting(false);
           setIsRoomAccessible(false);
           
-          if (event.code !== 1000 && !roomFullError && !creatorLeftError) {
+          if (closeEvent.code !== 1000 && !roomFullError && !creatorLeftError) {
             setConnectionError('Disconnected from room');
           }
         };
@@ -367,6 +437,7 @@ export function RoomCanvas({ slug, encryptionKey, roomType: propRoomType }: { sl
   const handleGoBack = () => {
     setRoomFullError(null);
     setCreatorLeftError(false);
+    setInactivityError(null); 
     router.push('/');
   };
 
@@ -374,6 +445,7 @@ export function RoomCanvas({ slug, encryptionKey, roomType: propRoomType }: { sl
     setRoomFullError(null);
     setConnectionError(null);
     setCreatorLeftError(false);
+    setInactivityError(null); 
     setIsRoomAccessible(false);
     setSocket(null);
 
@@ -391,6 +463,16 @@ export function RoomCanvas({ slug, encryptionKey, roomType: propRoomType }: { sl
     messageQueueRef.current = [];
     window.location.reload();
   };
+
+  if (inactivityError) {
+    return (
+      <RoomInactivityModal
+        message={inactivityError.message}
+        idleTime={inactivityError.idleTime}
+        roomId={inactivityError.roomId}
+      />
+    );
+  }
 
   if (creatorLeftError) {
     return <CreatorLeftError slug={slug} onGoBack={handleGoBack} />;
@@ -412,9 +494,11 @@ export function RoomCanvas({ slug, encryptionKey, roomType: propRoomType }: { sl
     return <ConnectionError error={connectionError}/>;
   }
   
-  if (!minDelayElapsed) return null;
+  if (!minDelayElapsed) {
+    return null;
+  }
   
-  if (!minDelayElapsed || isConnecting || !socket || !isRoomAccessible) {
+  if (isConnecting || !socket || !isRoomAccessible) {
     return (
       <>
         <div className="fade-in">
