@@ -9,6 +9,7 @@ interface IconButtonProps {
   activated: boolean;
   shortcutKey: number;
   isMobile?: boolean;
+  allowFillOnActive?: boolean; // 👈 new
 }
 
 export function IconButton({
@@ -16,14 +17,14 @@ export function IconButton({
   onClick,
   activated,
   shortcutKey,
-  isMobile = false
+  isMobile = false,
+  allowFillOnActive = true, // 👈 default true
 }: IconButtonProps) {
-  const {theme} = useTheme();
-  const isActiveLight = activated && theme === "light";
-  
+  const { theme } = useTheme();
+  const isActiveLight = activated && theme === "light" && allowFillOnActive; // 👈 only if allowed
+
   const styledIcon: Partial<LucideProps> = {
     size: isMobile ? 14 : (icon.props.size ?? 16),
-    
     color: activated
       ? theme === "light"
         ? "#000000"
@@ -31,24 +32,19 @@ export function IconButton({
       : theme === "light"
         ? "#666666"
         : "#e3e3e8",
-    fill: isActiveLight ? "#030064" : "none",
+    fill: isActiveLight ? "#030064" : "none", // 👈 fill only if allowed
   };
 
   const bgColor =
     activated && theme === "light"
       ? "#e0dfff"
       : activated && theme === "dark"
-        ? "#403e6a"
-        : "transparent";
-  const hoverBg = theme === "light"
-    ? "hover:bg-gray-100"
-    : "hover:bg-white/5";
+      ? "#403e6a"
+      : "transparent";
 
-  const shortcutColor = theme === "light"
-    ? "#4a4a4d"
-    : "#ffffff";
+  const hoverBg = theme === "light" ? "hover:bg-gray-100" : "hover:bg-white/5";
+  const shortcutColor = theme === "light" ? "#4a4a4d" : "#ffffff";
 
-  // Mobile responsive classes
   const buttonClasses = isMobile 
     ? "m-0.5 p-1.5 rounded-md flex items-center justify-center relative cursor-pointer transition-all"
     : "m-1 p-2 rounded-md flex items-center justify-center relative cursor-pointer transition-all";

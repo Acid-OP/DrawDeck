@@ -1,4 +1,4 @@
-name: Deploy the websocket
+name: Deploy the WebSocket
 on:
   push:
     branches: [ main ]
@@ -7,7 +7,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Docker login
         uses: docker/login-action@v2
@@ -21,7 +21,7 @@ jobs:
           context: .
           file: ./docker/Dockerfile.websocket
           push: true
-          tags: acidop/excalidraw-ws:${{ github.sha }}
+          tags: acidop/drawdeck-ws:${{ github.sha }}
           
       - name: Deploy to VM
         uses: appleboy/ssh-action@v1.1.0
@@ -30,11 +30,11 @@ jobs:
           username: ${{ secrets.VM_USERNAME }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
-            sudo docker pull acidop/excalidraw-ws:${{ github.sha }}
+            sudo docker pull acidop/drawdeck-ws:${{ github.sha }}
             sudo docker stop ws-server || true
             sudo docker rm ws-server || true
             sudo docker run -d \
               --name ws-server \
               --restart always \
               -p 8080:8080 \
-              acidop/excalidraw-ws:${{ github.sha }}
+              acidop/drawdeck-ws:${{ github.sha }}

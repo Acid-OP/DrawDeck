@@ -31,7 +31,7 @@ jobs:
             NEXTAUTH_URL=${{ secrets.NEXTAUTH_URL }}
             NEXTAUTH_SECRET=${{ secrets.NEXTAUTH_SECRET }}
           push: true
-          tags: acidop/excalidraw-frontend:${{ github.sha }}
+          tags: acidop/drawdeck-frontend:${{ github.sha }}
 
       - name: Deploy to VM
         uses: appleboy/ssh-action@v1.1.0
@@ -43,9 +43,9 @@ jobs:
           script: |
             sudo docker stop frontend-server || true
             sudo docker rm frontend-server || true
-            sudo docker pull acidop/excalidraw-frontend:${{ github.sha }}
+            sudo docker pull acidop/drawdeck-frontend:${{ github.sha }}
             sudo docker run -d \
               --name frontend-server \
               --restart always \
               -p 3000:3000 \
-              acidop/excalidraw-frontend:${{ github.sha }}          
+              acidop/drawdeck-frontend:${{ github.sha }}          

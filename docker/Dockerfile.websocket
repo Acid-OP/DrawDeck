@@ -15,7 +15,7 @@ COPY ./pnpm-workspace.yaml ./pnpm-workspace.yaml
 COPY ./turbo.json ./turbo.json
 
 # Copy the WebSocket backend application code
-COPY ./apps/ws-backend ./apps/ws-backend
+COPY ./apps/ws ./apps/ws
 
 # Install all dependencies across the monorepo
 RUN pnpm install

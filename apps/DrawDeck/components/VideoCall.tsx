@@ -49,7 +49,7 @@ export function VideoCall({roomId, isCreator }: VideoCallProps) {
   });
 
   useEffect(() => {
-    const rtc = new WebSocket(RTC_URL);
+    const rtc = new WebSocket(rtcUrl ?? RTC_URL);
     setRtcSocket(rtc);
 
     rtc.onopen = () => {
@@ -140,7 +140,6 @@ export function VideoCall({roomId, isCreator }: VideoCallProps) {
     };
 
     pc.onconnectionstatechange = () => {
-      console.log("Connection state:", pc.connectionState);
       if (pc.connectionState === 'disconnected' || pc.connectionState === 'failed' || pc.connectionState === 'closed') {
         handleRemoteUserDisconnected();
       }

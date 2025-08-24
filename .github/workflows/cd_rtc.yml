@@ -1,4 +1,4 @@
-name: Deploy the rtc
+name: Deploy the RTC
 on:
   push:
     branches: [ main ]
@@ -7,7 +7,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Docker login
         uses: docker/login-action@v2
@@ -21,7 +21,7 @@ jobs:
           context: .
           file: ./docker/Dockerfile.rtc
           push: true
-          tags: acidop/excalidraw-rtc:${{ github.sha }}
+          tags: acidop/drawdeck-rtc:${{ github.sha }}
           
       - name: Deploy to VM
         uses: appleboy/ssh-action@v1.1.0
@@ -30,11 +30,11 @@ jobs:
           username: ${{ secrets.VM_USERNAME }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
-            sudo docker pull acidop/excalidraw-rtc:${{ github.sha }}
+            sudo docker pull acidop/drawdeck-rtc:${{ github.sha }}
             sudo docker stop rtc-server || true
             sudo docker rm rtc-server || true
             sudo docker run -d \
               --name rtc-server \
               --restart always \
               -p 8081:8081 \
-              acidop/excalidraw-rtc:${{ github.sha }}
+              acidop/drawdeck-rtc:${{ github.sha }}

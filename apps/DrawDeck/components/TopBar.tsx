@@ -40,7 +40,7 @@ export function TopBar({ selectedTool, setSelectedTool }: TopBarProps) {
         ${theme === "dark" ? "bg-[#232329] border-[#232329]" : "bg-white border border-gray-200"}
       `}
     >
-      <IconButton activated={selectedTool === "hand"} icon={<Hand />} shortcutKey={1} onClick={() => setSelectedTool("hand")} isMobile={isMobile} />
+      <IconButton activated={selectedTool === "hand"} icon={<Hand />} shortcutKey={1} onClick={() => setSelectedTool("hand")} isMobile={isMobile} allowFillOnActive={false} />
       <IconButton activated={selectedTool === "select"} icon={<MousePointer />} shortcutKey={2} onClick={() => setSelectedTool("select")} isMobile={isMobile} />
       <IconButton activated={selectedTool === "rect"} icon={<Square />} shortcutKey={3} onClick={() => setSelectedTool("rect")} isMobile={isMobile} />
       <IconButton activated={selectedTool === "diamond"} icon={<Diamond />} shortcutKey={4} onClick={() => setSelectedTool("diamond")} isMobile={isMobile} />

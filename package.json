@@ -1,5 +1,5 @@
 {
-  "name": "excalidraw",
+  "name": "drawdeck",
   "private": true,
   "scripts": {
     "build": "turbo run build",
@@ -7,9 +7,9 @@
     "lint": "turbo run lint",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
     "check-types": "turbo run check-types",
-    "start:ws": "cd apps/ws-backend && pnpm run start",
+    "start:ws": "cd apps/ws && pnpm run start",
     "start:rtc": "cd apps/rtc && pnpm run start",
-    "start:client": "cd apps/excalidraw-front-end && pnpm run start"
+    "start:client": "cd apps/DrawDeck && pnpm run start"
   },
   "devDependencies": {
     "prettier": "^3.5.3",

@@ -151,10 +151,6 @@ export function RoomCanvas({ slug, encryptionKey, roomType: propRoomType }: { sl
           console.error('❌ Failed to send queued message:', error);
         }
       });
-
-      if (messagesToProcess.length > 0) {
-        console.log(`✅ Processed ${messagesToProcess.length} queued messages`);
-      }
     }
   }, [socket, checkClientRateLimit, rateLimitState.messagesRemaining]);
 
@@ -247,7 +243,7 @@ export function RoomCanvas({ slug, encryptionKey, roomType: propRoomType }: { sl
         setInactivityError(null); 
         setIsRoomAccessible(false);
 
-        const ws = new WebSocket(WS_URL);
+        const ws = new WebSocket(wsUrl ?? WS_URL);
 
         ws.onopen = () => {
           connectionAttemptsRef.current = 0;
@@ -319,16 +315,13 @@ export function RoomCanvas({ slug, encryptionKey, roomType: propRoomType }: { sl
                 roomId: rest.roomId
               });
               
-              // Update other states
               setIsRoomAccessible(false);
               setIsConnecting(false);
               
-              // Clear other error states to prevent conflicts
               setConnectionError(null);
               setRoomFullError(null);
               setCreatorLeftError(false);
               
-              // Close the WebSocket connection
               if (ws && ws.readyState === WebSocket.OPEN) {
                 ws.close(1000, 'Session ended due to inactivity');
               }
@@ -460,14 +453,15 @@ export function RoomCanvas({ slug, encryptionKey, roomType: propRoomType }: { sl
     const timer = setTimeout(() => setMinDelayElapsed(true), 150);
     return () => clearTimeout(timer);
   }, []);
-
+  
   const handleGoBack = () => {
     setRoomFullError(null);
     setCreatorLeftError(false);
-    setInactivityError(null); 
+    setInactivityError(null);
+    setIsConnecting(false);  
+    setIsRoomAccessible(true); 
     router.push('/');
   };
-
   const handleTryAgain = () => {
     setRoomFullError(null);
     setConnectionError(null);

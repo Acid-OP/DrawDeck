@@ -40,7 +40,6 @@ export const ShareLinkModal: React.FC<Props> = ({
     }
   };
 
-  // SIMPLE handleStopSession - just like closing tab
   const handleStopSession = async () => {
     if (isStoppingSession) return;
     setIsStoppingSession(true);
@@ -48,7 +47,6 @@ export const ShareLinkModal: React.FC<Props> = ({
     console.log('🛑 Stop Session clicked - sending leave message IMMEDIATELY');
     
     try {
-      // 🚨 SEND MESSAGE IMMEDIATELY - Just like closing tab
       if (socket && socket.readyState === WebSocket.OPEN) {
         console.log('📤 Sending leave_room message NOW');
         socket.send(JSON.stringify({ 
@@ -63,8 +61,6 @@ export const ShareLinkModal: React.FC<Props> = ({
     } catch (error) {
       console.error('❌ Error sending leave message:', error);
     }
-    
-    // Route to homepage immediately
     router.push('/');
   };
 
@@ -168,7 +164,6 @@ export const ShareLinkModal: React.FC<Props> = ({
           <p>🔒 Your session is end-to-end encrypted and private.</p>
         </div>
 
-        {/* Stop Session Button - SIMPLE VERSION */}
         <div className="flex justify-center">
           <button
             onClick={handleStopSession}
