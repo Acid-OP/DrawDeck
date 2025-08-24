@@ -538,94 +538,99 @@ wss.on("connection", (ws, request) => {
           updateRoomActivity(roomId);
           break;
         }
-        
-        case "leave_room": {
-          if (!roomId) return;
-          const encryptionKey = data.encryptionKey;
-          const expectedKey = roomSecrets.get(roomId);
+
+case "leave_room": {
+  if (!roomId) return;
+  const encryptionKey = data.encryptionKey;
+  const expectedKey = roomSecrets.get(roomId);
+
+  if (!expectedKey || encryptionKey !== expectedKey) {
+    ws.send(JSON.stringify({
+      type: "error",
+      message: "Invalid or missing encryption key.",
+    }));
+    return;
+  }
+
+  const room = rooms.get(roomId);
+  if (!room || !room.participants.has(client.userId)) {
+    ws.close(1000, 'Room not found');
+    return;
+  }
   
-          if (!expectedKey || encryptionKey !== expectedKey) {
-            ws.send(JSON.stringify({
-              type: "error",
-              message: "Invalid or missing encryption key.",
-            }));
-            return;
-          }
+  const isCreator = roomCreators.get(roomId) === client.userId;
+
+  if (isCreator) {
+    const creatorLeftMessage = {
+      type: "creator_left",
+      roomId,
+      message: "Room creator has left. This room is no longer accessible.",
+      userId: client.userId,
+      timestamp: new Date().toISOString(),
+    };
   
-          const room = rooms.get(roomId);
-          if (!room || !room.participants.has(client.userId)) {
-            ws.close(1000, 'Room not found');
-            return;
-          }
-          const isCreator = roomCreators.get(roomId) === client.userId;
-  
-          if (isCreator) {
-            const creatorLeftMessage = {
-              type: "creator_left",
-              roomId,
-              message: "Room creator has left. This room is no longer accessible.",
-              userId: client.userId,
-              timestamp: new Date().toISOString(),
-            };
-            let activeParticipants = 0;
-            room.participants.forEach((participant, userId) => {
-              if (userId !== client.userId && participant.ws.readyState === WSWebSocket.OPEN) {
-                activeParticipants++;
-              }
-            });
-            room.participants.forEach((participant, userId) => {
-              if (userId !== client.userId && participant.ws.readyState === WSWebSocket.OPEN) {
-                try {
-                  participant.ws.send(JSON.stringify(creatorLeftMessage));
-                } catch (error) {
-                  console.error(`❌ Failed to send creator_left to ${userId}:`, error);
-                }
-              }
-            });
-             setTimeout(() => {
-              room.participants.forEach((participant, userId) => {
-                if (userId !== client.userId && participant.ws.readyState === WSWebSocket.OPEN) {
-                  try {
-                    participant.ws.close(1000, 'Creator left');
-                  } catch (error) {
-                    console.error(`❌ Error closing connection for ${userId}:`, error);
-                  }
-                }
-              });
-              rooms.delete(roomId);
-              roomSecrets.delete(roomId);
-              roomTypes.delete(roomId);
-              roomCreators.delete(roomId);
-              roomLastActivity.delete(roomId);
-            }, 500);
-            setTimeout(() => {
-              if (ws.readyState === WSWebSocket.OPEN) {
-                ws.close(1000, 'Creator left room');
-              }
-            }, 100);
-          } else {
-            room.participants.delete(client.userId);
-            client.rooms.delete(roomId);
-            
-            if (room.participants.size > 0) {
-              broadcastToRoom(roomId, {
-                type: "user_left",
-                roomId,
-                userId: client.userId,
-                participantCount: room.participants.size,
-                timestamp: new Date().toISOString(),
-              });
-            } else {
-              rooms.delete(roomId);
-              roomSecrets.delete(roomId);
-              roomTypes.delete(roomId);
-              roomCreators.delete(roomId);
-              roomLastActivity.delete(roomId);
-            }
-            ws.close(1000, 'User left room');
-          }
-          break;
+    room.participants.forEach((participant, userId) => {
+      if (userId !== client.userId && participant.ws.readyState === WSWebSocket.OPEN) {
+        try {
+          participant.ws.send(JSON.stringify(creatorLeftMessage));
+        } catch (error) {
+          console.error(`❌ Failed to send creator_left to ${userId}:`, error);
         }
+      }
+    });
+    
+    // Then close their connections after a short delay
+    setTimeout(() => {
+      room.participants.forEach((participant, userId) => {
+        if (userId !== client.userId && participant.ws.readyState === WSWebSocket.OPEN) {
+          try {
+            participant.ws.close(1000, 'Creator left');
+          } catch (error) {
+            console.error(`❌ Error closing connection for ${userId}:`, error);
+          }
+        }
+      });
+      
+      // Clean up room data
+      rooms.delete(roomId);
+      roomSecrets.delete(roomId);
+      roomTypes.delete(roomId);
+      roomCreators.delete(roomId);
+      roomLastActivity.delete(roomId);
+    }, 500);
+    
+    // Close creator's connection after a brief delay
+    setTimeout(() => {
+      if (ws.readyState === WSWebSocket.OPEN) {
+        ws.close(1000, 'Creator left room');
+      }
+    }, 100);
+    
+  } else {
+    // Non-creator leaving
+    room.participants.delete(client.userId);
+    client.rooms.delete(roomId);
+    
+    if (room.participants.size > 0) {
+      broadcastToRoom(roomId, {
+        type: "user_left",
+        roomId,
+        userId: client.userId,
+        participantCount: room.participants.size,
+        timestamp: new Date().toISOString(),
+      });
+    } else {
+      // Last participant leaving, clean up room
+      rooms.delete(roomId);
+      roomSecrets.delete(roomId);
+      roomTypes.delete(roomId);
+      roomCreators.delete(roomId);
+      roomLastActivity.delete(roomId);
+    }
+    ws.close(1000, 'User left room');
+  }
+  break;
+}
         default:
           break;
         }

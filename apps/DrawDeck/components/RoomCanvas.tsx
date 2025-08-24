@@ -443,7 +443,7 @@ export function RoomCanvas({ slug, encryptionKey, roomType: propRoomType }: { sl
         clearInterval(messageQueueTimerRef.current);
       }
       if (socket?.readyState === WebSocket.OPEN) {
-        socket.send(JSON.stringify({ type: 'leave_room', roomId: slug }));
+        socket.send(JSON.stringify({ type: 'leave_room', roomId: slug, encryptionKey: encryptionKey  }));
         socket.close(1000, 'Component unmounting');
       }
     };

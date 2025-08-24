@@ -1,123 +1,257 @@
-🎨 DrawDeck | Hand-drawn look & feel • Collaborative • Secure • Video Calls
-DrawDeck is a web-based collaborative whiteboard where multiple users can draw, edit, brainstorm, and even talk face-to-face in real time. Whether solo or in a group session, the app offers a smooth, intuitive canvas experience with real-time sync, shape tools, editable text, built-in video calling, and privacy-focused end-to-end encryption — all without needing an account.
+# 🎨 DrawDeck
 
-✅ Core Features
-Canvas Drawing: Freehand, shapes, and editable text
+> A modern, privacy‑first, whiteboard with realtime collab, E2EE, and integrated video chat.
 
-Rough.js Support: Optional sketch-style drawing
+DrawDeck lets you sketch ideas, take notes, and collaborate live. It ships with three usage modes, strong client‑side encryption, and a lean, containerized monorepo you can self‑host in minutes.
 
-Perfect-freehand Support: Hand drawn feel
+---
 
-Eraser Tool: Remove individual shapes
+## ✨ Features
 
-Editable Text: Double-click to edit on canvas
+* **Three modes**
 
-Built-in Video Calls: Talk and collaborate with participants directly in the same session — no extra tools needed
+  * **Solo** — just open and draw. **End‑to‑end encrypted (E2EE)**; nothing leaves your device unencrypted.
+  * **Private (Duo)** — 1:1 collaboration with **peer‑to‑peer WebRTC** video/audio and a lightweight WebSocket control channel. **E2EE** drawing payloads.
+  * **Group** — many participants with live shape broadcast over WebSocket. Drawing payloads are encrypted with the room key and relayed by the server (see *Security Notes*).
+* **Privacy first** — client‑side room keys, ephemeral sessions, zero persistence by default.
+* **Fast Canvas** — a custom canvas engine with selection, shapes, pencil, text, arrows, eraser, and keyboard shortcuts.
+* **Rate limiting & queuing** — IP‑aware server limits + client‑side message queue with backoff to keep rooms smooth.
+* **Video calling** — built‑in WebRTC for Duo rooms.
+* **Authentication** — NextAuth with Google OAuth (optional for Solo, required for some org setups).
+* **Modern stack** — Next.js, TypeScript, Tailwind, shadcn/ui, native WebSocket (no Socket.IO), WebRTC, Docker.
+* **Monorepo** — `apps/DrawDeck` (frontend), `apps/ws` (WebSocket), `apps/rtc` (RTC signaling).
 
-🔗 Collaboration
-Real-time Sync: WebSocket-powered live drawing
+---
 
-Multi-Tab Awareness: No duplicate join/leave events
+## 📦 Monorepo layout
 
-Optimistic Updates: Instant feedback before server response
+```
+.
+├─ apps/
+│  ├─ DrawDeck/         # Next.js frontend (client + minimal server routes)
+│  ├─ ws/               # WebSocket server (rooms, shapes broadcast, rate limit)
+│  └─ rtc/              # RTC signaling server (for Duo video)
+├─ packages/            # Shared packages
+├─ docker/
+│  ├─ Dockerfile.frontend
+│  ├─ Dockerfile.websocket
+│  └─ Dockerfile.rtc
+├─ turbo.json           # Turborepo pipelines
+├─ pnpm-workspace.yaml
+└─ .github/workflows/   # CI/CD
+```
 
-Video Conferencing: Peer-to-peer or group calls inside the app to discuss and ideate without leaving the board
+---
 
-🔐 Privacy & End-to-End Encryption (E2EE)
-DrawDeck is built with privacy by design to ensure that no sensitive drawing or call data can be accessed by anyone other than the intended participants.
+## 🚀 Quick start (local dev)
 
-🔑 How It Works
-When a user creates or joins a room, the app generates a link like:
+**Prereqs**
 
-bash
-Copy
-Edit
-https://drawdeck.com#room=abc123,xyz456
-abc123: Unique room ID (used by the server)
+* Node 18+ (Node 20 recommended)
+* pnpm 9+
 
-xyz456: Encryption key (used only on the client)
+```bash
+pnpm install
+pnpm dev
+```
 
-🧠 Key Never Touches the Server
-The encryption key after the comma (xyz456) is part of the URL fragment (#...).
+By default this will run:
 
-This fragment is never sent in HTTP requests, meaning:
+* Frontend at **[http://localhost:3000](http://localhost:3000)**
+* WS server at **ws\://localhost:8080**
+* RTC signaling at **[http://localhost:8081](http://localhost:8081)**
 
-The server cannot see or store the encryption key.
+> You can also start services individually:
+>
+> ```bash
+> pnpm --filter @app/drawdeck dev     # or: cd apps/DrawDeck && pnpm dev
+> pnpm --filter @app/ws dev           # or: cd apps/ws && pnpm start
+> pnpm --filter @app/rtc dev          # or: cd apps/rtc && pnpm start
+> ```
 
-🔒 Client-Side Only Decryption
-All drawing data and call signaling messages are encrypted.
+---
 
-The decryption and rendering happen completely on the client-side using the key from the URL.
+## 🔧 Configuration
 
-Even if someone intercepts the WebSocket traffic, they cannot decrypt the data without the key.
+Environment variables are provided via `.env.local` in each app (never commit secrets). Keep a public template at `.env.example`.
 
-🛡️ Benefits
-No one — not even the server — can read or hear what’s shared in a room without the key.
+### Frontend (`apps/DrawDeck`)
 
-Ensures confidentiality for private brainstorming, teaching, or design sessions.
+```
+NEXT_PUBLIC_WS_URL=
+NEXT_PUBLIC_RTC_URL=
+NEXT_PUBLIC_SITE_URL=
 
-🧠 Reliability
-Message Queue: Stores unsent messages in memory/localStorage
+# NextAuth (optional locally)
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+NEXTAUTH_URL=
+NEXTAUTH_SECRET=
+```
 
-Auto Retry: Flushes queued messages on reconnect
+### WebSocket (`apps/ws`)
 
-🧭 Modes
-Standalone Mode: Offline/local drawing
+```
+PORT=
+# rate limiting, secrets, etc. (implementation-specific)
+```
 
-Room Mode: Collaborative sessions with optional video calls
+### RTC signaling (`apps/rtc`)
 
-⚙️ Tech Stack
-Frontend: React (Vite), TypeScript, Tailwind CSS
+```
+PORT=
+```
 
-Canvas: HTML Canvas API + Custom Engine
+## 🧱 Architecture overview (What makes DrawDeck different)
 
-Realtime: Native WebSocket (useWebSocket hook)
+```
+┌────────────┐     WebRTC (P2P media)     ┌────────────┐
+│  Client A  │◀──────────────────────────▶│  Client B  │
+│  (Duo)     │                            │  (Duo)     │
+└─────┬──────┘        Signaling (HTTP/WS) └─────┬──────┘
+      │                                         │
+      │   Shapes/events (WS, encrypted)         │
+      ▼                                         ▼
+           ┌───────────────────────────────────┐
+           │          WS Server (apps/ws)      │
+           │  - Rooms & membership             │
+           │  - Broadcast shapes/events        │
+           │  - Rate limit & IP cache          │
+           └───────────────────────────────────┘
 
-Security: Hash-based E2EE
+           ┌───────────────────────────────────┐
+           │          RTC Signaling            │
+           │          (apps/rtc)               │
+           └───────────────────────────────────┘
 
-Video Calls: WebRTC + Encrypted Peer Connections
+           ┌───────────────────────────────────┐
+           │        Next.js Frontend           │
+           │        (apps/DrawDeck)            │
+           └───────────────────────────────────┘
+```
 
-🌍 Open Source & Contributions
-I want DrawDeck to be open source so that other students and developers can explore and learn from it.
-If you'd like to contribute—whether it's improving the UI, optimizing performance, or adding new features—feel free to open an issue or submit a pull request!
+Next.js 15 Frontend-First — runs both client UI and lightweight server routes. Backend services (ws, rtc) are kept minimal.
 
-🧠 How to Contribute
-Fork the Repo and clone it locally
+No Mandatory Auth — anyone can instantly start drawing in Solo mode. Auth (Google OAuth via NextAuth) is only needed for collaboration or org setups.
 
-Run pnpm install and pnpm dev to start the dev server
+Local-Only Solo Mode — drawings are stored locally in the browser and never touch a server.
 
-Check the Issues tab for open tasks — especially those labeled good first issue
+Peer-to-Peer Collaboration — Duo sessions use WebRTC for direct audio/video and E2EE drawing sync.
 
-Follow the CONTRIBUTING.md (coming soon) for guidelines
+Group Mode with Secure Broadcast — multiple participants sync shapes over a WebSocket layer; payloads are encrypted with a room key.
 
-Submit a Pull Request — even small improvements matter!
+Ephemeral by Design — no canvas history is persisted unless you extend it. All sessions are temporary.
 
-💡 Ideas for Contribution:
+Encrypted Everywhere — all drawing data is encrypted client-side with room keys; servers only relay ciphertext.
 
-Add undo/redo support in standalone mode
+Hook-based WebSocket Client — a clean React abstraction for connecting, syncing shapes, and handling backpressure.
 
-Add support for duplicating a selected shape using Ctrl + D keyboard shortcut
+Rate Limiting + Queueing — IP-aware rate limiting server-side; client has a message queue with retry/backoff.
 
-Fix: Rounded corners not working for Diamond shape
+### Modes
 
-Improve video call UI with grid layout for multiple participants
+* **Solo** — local only; drawing payloads encrypted client‑side; nothing readable server‑side.
+* **Private (Duo)** — WebRTC for media (P2P), WebSocket for control/shapes; room key E2EE.
+* **Group** — many participants over WS; shapes encrypted with room key and relayed by server. See notes below.
 
-📄 Architecture Overview
-Next.js 15 for Fullstack: Frontend and backend handled together using server actions. No separate HTTP services.
+### Canvas core
 
-No Mandatory Auth for Canvas Use: Users can draw without logging in. Auth is only required for collaboration.
+* Primitive types: rectangle, diamond, circle, arrow, line, pencil, text, eraser, select, pan/hand.
+* Keyboard shortcuts: `1..0` map to tools (hand/select/shape…)
+* Message batching & prioritization when broadcasting.
 
-Server Actions Instead of REST APIs: Room creation, joining, and user management handled through server actions.
+---
 
-Standalone Mode with Local Storage: For solo drawing sessions, data is stored locally and never sent to a server.
+## 🔐 Security & privacy notes
 
-Interactive Room Collaboration Mode: Shows participant presence, names, and avatars in real-time sync.
+* **Room keys** are generated/handled client‑side and used to encrypt shape payloads.
+* **Solo & Duo** are **end‑to‑end encrypted**: payloads are unreadable by the server.
+* **Group**: payloads are encrypted with the room key and relayed by the WS server. If the server never sees decrypted content, this is *room‑key encryption with relay*. Depending on your threat model, treat this as *E2EE* if keys never leave clients; otherwise as *transport+payload encryption*.
+* **No persistence by default** — sessions are ephemeral; add storage if you need history.
+* **Auth** — NextAuth + Google OAuth when you want identity; Solo can be anonymous.
+---
 
-End-to-End Encrypted Collaboration & Video Calls: No drawn shapes, chat, or call streams are stored in any database.
+## 🚦 Rate limiting & backpressure
 
-Hookified WebSocket & WebRTC Layer: Abstracts connection logic with clean React patterns.
+* **Server‑side**: IP‑aware rate limiting; the server can return `rate_limit_exceeded` with `retryAfter`.
+* **Client‑side**: a token bucket (default \~50 msgs/min per client, configurable) + a priority queue. When over limit, DrawDeck queues messages and drains gradually (every \~2s) to avoid bursts.
+* **Connection attempts**: exponential backoff with temporary blocks after repeated failures.
 
-📄 License
-This project is licensed under a Custom Personal Use License — you may view and learn from the code, but commercial use, redistribution, or claiming authorship is strictly prohibited.
-See the full LICENSE for details.
+---
+
+## 🐳 Docker
+
+Build images (from repo root):
+
+```bash
+# Frontend
+docker build -f docker/Dockerfile.frontend -t acidop/drawdeck-frontend:dev .
+
+# WebSocket
+docker build -f docker/Dockerfile.websocket -t acidop/drawdeck-ws:dev .
+
+# RTC
+docker build -f docker/Dockerfile.rtc -t acidop/drawdeck-rtc:dev .
+```
+
+Run containers:
+
+```bash
+# Frontend (port 3000)
+docker run -d --name drawdeck-frontend -p port-machine:port-locally \
+  -e NEXT_PUBLIC_WS_URL=ws://your-host:port-ws \
+  -e NEXT_PUBLIC_RTC_URL=http://your-host:port-rtc \
+  -e NEXT_PUBLIC_SITE_URL=http://your-host:port \
+  -e GOOGLE_CLIENT_ID=... -e GOOGLE_CLIENT_SECRET=... \
+  -e NEXTAUTH_URL=http://your-host:port -e NEXTAUTH_SECRET=... \
+  acidop/drawdeck-frontend:dev
+
+# WebSocket (port )
+docker run -d --name drawdeck-ws -p machine-port:port-ws acidop/drawdeck-ws:dev
+
+# RTC (port 8081)
+docker run -d --name drawdeck-rtc -p machine-port:port-rtc acidop/drawdeck-rtc:dev
+```
+
+## ⚙️ CI/CD (GitHub Actions)
+
+* Each service has its own workflow (`frontend`, `ws`, `rtc`).
+* **Path filters** ensure we only build/deploy when files in that app change.
+* Images are tagged with commit SHA (and optionally `latest`).
+* VM deploy script stops the old container, pulls the new image, runs it, and prunes old images.
+
+---
+
+## 🧪 Scripts
+
+Common root scripts:
+
+* `pnpm build` — Turborepo build for all apps
+* `pnpm dev` — start dev servers
+* `pnpm lint` — lint all packages
+* `pnpm check-types` — typecheck
+* `pnpm start:client` — start frontend (production)
+* `pnpm start:ws` — start WebSocket server
+* `pnpm start:rtc` — start RTC signaling server
+
+---
+
+## 🤝 Contributing
+
+PRs and issues welcome! Please:
+
+1. Fork & branch from `main`.
+2. `pnpm install` and run `pnpm dev` to reproduce.
+3. Add or update tests if applicable.
+4. Open a PR with a clear description and screenshots/gifs.
+
+---
+
+## 📜 License
+
+MIT. See `LICENSE`.
+
+---
+
+## Acknowledgements
 
