@@ -1,14 +1,16 @@
 "use client";
 import React, { useState, useRef, useEffect } from "react";
 import { Copy, Check, X } from "lucide-react";
-import { useTheme } from "@/context/ThemeContext"; 
+import { useTheme } from "@/context/ThemeContext";
+import { useRouter } from "next/navigation";
 
 interface Props {
   roomId: string;
   encryptionKey: string;
   roomType: 'duo' | 'group';
   onClose?: () => void;
-  isManualTrigger?: boolean; 
+  isManualTrigger?: boolean;
+  socket?: WebSocket | null;
 }
 
 export const ShareLinkModal: React.FC<Props> = ({ 
@@ -16,11 +18,14 @@ export const ShareLinkModal: React.FC<Props> = ({
   encryptionKey, 
   roomType,
   onClose,
-  isManualTrigger = false
+  isManualTrigger = false,
+  socket
 }) => {
   const { theme } = useTheme(); 
+  const router = useRouter();
   const [isVisible, setIsVisible] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [isStoppingSession, setIsStoppingSession] = useState(false);
   const modalRef = useRef<HTMLDivElement>(null);
 
   const shareableLink = `${window.location.origin}/${roomId}?key=${encryptionKey}&type=${roomType}`;
@@ -33,6 +38,34 @@ export const ShareLinkModal: React.FC<Props> = ({
     } catch (err) {
       console.error("Failed to copy link:", err);
     }
+  };
+
+  // SIMPLE handleStopSession - just like closing tab
+  const handleStopSession = async () => {
+    if (isStoppingSession) return;
+    setIsStoppingSession(true);
+    
+    console.log('🛑 Stop Session clicked - sending leave message IMMEDIATELY');
+    
+    try {
+      // 🚨 SEND MESSAGE IMMEDIATELY - Just like closing tab
+      if (socket && socket.readyState === WebSocket.OPEN) {
+        console.log('📤 Sending leave_room message NOW');
+        socket.send(JSON.stringify({ 
+          type: 'leave_room', 
+          roomId,
+          encryptionKey,
+          reason: 'user_initiated_stop'
+        }));
+        
+        console.log('✅ Leave message sent - participants should see creator left modal NOW');
+      }
+    } catch (error) {
+      console.error('❌ Error sending leave message:', error);
+    }
+    
+    // Route to homepage immediately
+    router.push('/');
   };
 
   useEffect(() => {
@@ -130,9 +163,24 @@ export const ShareLinkModal: React.FC<Props> = ({
           </div>
         </div>
 
-        <div className={`text-xs space-y-1 ${modalText}`}>
+        <div className={`text-xs space-y-1 mb-6 ${modalText}`}>
           <p>💡 Anyone with this link can join your collaborative session.</p>
           <p>🔒 Your session is end-to-end encrypted and private.</p>
+        </div>
+
+        {/* Stop Session Button - SIMPLE VERSION */}
+        <div className="flex justify-center">
+          <button
+            onClick={handleStopSession}
+            disabled={isStoppingSession}
+            className={`${
+              isStoppingSession 
+                ? 'bg-red-400 cursor-not-allowed' 
+                : 'bg-red-500 hover:bg-red-600 active:bg-red-700 cursor-pointer'
+            } text-white px-6 py-2.5 rounded-lg font-semibold text-sm transition-colors flex items-center gap-2`}
+          >
+            {isStoppingSession ? 'Stopping Session...' : 'Stop Session'}
+          </button>
         </div>
       </div>
     </div>

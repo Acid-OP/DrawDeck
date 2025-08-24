@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Video, VideoOff, Mic, MicOff, Wifi, WifiOff } from "lucide-react";
 import { motion } from "framer-motion";
-import { RTC_URL } from "@/config";
+import { RTC_URL } from "@/utils/config";
 import Toast from "./Toast";
 import { useTheme } from "@/context/ThemeContext";
 
@@ -49,7 +49,7 @@ export function VideoCall({roomId, isCreator }: VideoCallProps) {
   });
 
   useEffect(() => {
-    const rtc = new WebSocket(rtcUrl ?? RTC_URL);
+    const rtc = new WebSocket(RTC_URL);
     setRtcSocket(rtc);
 
     rtc.onopen = () => {

@@ -232,7 +232,7 @@ private broadcastShape(shape: Shape) {
       const lines = shape.text.split('\n');
       const lineHeight = fontSize * 1.2;
   
-      this.ctx.font = `${fontSize}px Virgil, Segoe UI, sans-serif`;
+      this.ctx.font = `${fontSize}px Virgil`;
       let maxWidth = 0;
       lines.forEach(line => {
         const metrics = this.ctx.measureText(line);
@@ -504,7 +504,7 @@ if (shape.type === "text") {
   const lineHeight = fontSize * 1.2;
   
   // Calculate dimensions for all lines
-  this.ctx.font = `${fontSize}px Virgil, Segoe UI, sans-serif`;
+  this.ctx.font = `${fontSize}px Virgil`;
   let maxWidth = 0;
   lines.forEach(line => {
     const metrics = this.ctx.measureText(line);
@@ -828,7 +828,7 @@ private drawMultilineText(text: string, x: number, y: number, fontSize: number, 
   const lines = text.split('\n');
   const lineHeight = fontSize * 1.2; 
   
-  this.ctx.font = `${fontSize}px Virgil, Segoe UI, sans-serif`;
+  this.ctx.font = `${fontSize}px Virgil`;
   this.ctx.textBaseline = "top";
   this.ctx.fillStyle = fillStyle;
   
@@ -864,14 +864,15 @@ addTextShape(x: number, y: number, text: string) {
    this.isNewlyCreated = true;
    setTimeout(() => {
     this.isNewlyCreated = false;
-  }, 200);
+  }, 100);
 
-  this.selectedTool = "select";
-  if (this.onToolChange) this.onToolChange("select");
+  // this.selectedTool = "select";
+  // if (this.onToolChange) this.onToolChange("select");
   
   setTimeout(() => {
     this.clearCanvas();
-  }, 100);
+    this.ctx.font = `20px Virgil`;
+  }, 10);
 }
 
 getMousePos = (e: MouseEvent) => {
@@ -924,7 +925,7 @@ getMousePos = (e: MouseEvent) => {
       const totalHeight = lines.length * lineHeight;
   
   // Calculate max width of all lines
-      this.ctx.font = `${fontSize}px Virgil, Segoe UI, sans-serif`;
+      this.ctx.font = `${fontSize}px Virgil`;
       let maxWidth = 0;
       lines.forEach(line => {
         const metrics = this.ctx.measureText(line);
@@ -1127,7 +1128,9 @@ initHandlers() {
         const adaptedShape = this.adaptShapeToTheme(shape);
         this.existingShapes.push(adaptedShape);
         this.scheduleWriteAll();
-        this.clearCanvas();
+        if (!this.isNewlyCreated) {
+          this.clearCanvas();
+        }
         break;
       }
       
@@ -1360,6 +1363,8 @@ public deleteShapeByIndex(index: number) {
       } else if (shape.type === "text") {
         const fontSize = shape.fontSize || 20;
         const fillStyle = shape.strokeColor ?? (this.theme === "dark" ? "#fff" : "#000");
+        this.ctx.save();
+        this.ctx.font = `${fontSize}px Virgil`;
         this.drawMultilineText(shape.text, shape.x, shape.y, fontSize, fillStyle);
       }
       if (
@@ -1369,7 +1374,7 @@ public deleteShapeByIndex(index: number) {
       ) {
         this.drawSelectionBox(shape);
       }
-      this.ctx.restore(); // Restore previous state (clears lineDash etc.)
+      this.ctx.restore(); 
       });
       this.ctx.restore();
     }
@@ -1659,14 +1664,20 @@ if (this.selectedTool === "pencil") {
   }
   this.scheduleLocalSave();
 
-  this.selectedTool = "select";
-  this.selectedShapeIndex = this.existingShapes.length - 1; 
+  // this.selectedTool = "select";
+  // this.selectedShapeIndex = this.existingShapes.length - 1; 
   this.isNewlyCreated = true;
    setTimeout(() => {
     this.isNewlyCreated = false;
-  }, 200);
+  }, 100);
   if (this.onToolChange) this.onToolChange("select");
-  this.clearCanvas(); 
+  if (this.isSolo) {
+    this.clearCanvas();
+  } else {
+    setTimeout(() => {
+      this.clearCanvas();
+    }, 50);
+  }
 
   this.startX = null;
   this.startY = null;
@@ -1712,13 +1723,19 @@ if (distance < minDistance && toolsRequiringMovement.includes(this.selectedTool)
     this.scheduleLocalSave();
 
     this.selectedShapeIndex = this.existingShapes.length - 1;
-this.isNewlyCreated = true;
-  setTimeout(() => {
-    this.isNewlyCreated = false;
-  }, 200)
-    if (this.onToolChange) this.onToolChange("select");
-    this.selectedTool = "select";
-    this.clearCanvas();
+    this.isNewlyCreated = true;
+    setTimeout(() => {
+      this.isNewlyCreated = false;
+    }, 100)
+    // if (this.onToolChange) this.onToolChange("select");
+    // this.selectedTool = "select";
+    if (this.isSolo) {
+      this.clearCanvas();
+    } else {
+      setTimeout(() => {
+        this.clearCanvas();
+      }, 50);
+    }
     return;
   }
 
@@ -1817,10 +1834,16 @@ this.selectedShapeIndex = this.existingShapes.length - 1;
 this.isNewlyCreated = true;
 setTimeout(() => {
   this.isNewlyCreated = false;
-}, 200);
-this.selectedTool = "select";
-if (this.onToolChange) this.onToolChange("select");
-this.clearCanvas(); 
+}, 100);
+// this.selectedTool = "select";
+// if (this.onToolChange) this.onToolChange("select");
+if (this.isSolo) {
+  this.clearCanvas(); 
+} else {
+  setTimeout(() => {
+    this.clearCanvas();
+  }, 50);
+}
 
 this.startX = null;
 this.startY = null;
@@ -2078,56 +2101,50 @@ public getScreenCoordinates(logicalX: number, logicalY: number): { x: number; y:
       s.endY = p.y;
     }
   }  else if (s.type === "text") {
-  const h = this.activeHandle;
-  const fontSize = s.fontSize || 20;
-  this.ctx.font = `${fontSize}px Virgil, Segoe UI, sans-serif`;
-  const metrics = this.ctx.measureText(s.text);
-  const textWidth = metrics.width;
-  const textHeight = fontSize;
-  let scaleX = 1;
-  let scaleY = 1;
+    const h = this.activeHandle;
+    const fontSize = s.fontSize || 20;
+    this.ctx.font = `${fontSize}px Virgil`;
+    const metrics = this.ctx.measureText(s.text);
+    const textWidth = metrics.width;
+    const textHeight = fontSize;
+    let scaleX = 1;
+    let scaleY = 1;
 
-  if (h === "tl") {
-    const originalBottomRightX = s.x + textWidth;
-    const originalBottomRightY = s.y + textHeight;
-    scaleX = Math.max(0.5, (originalBottomRightX - p.x) / textWidth);
-    scaleY = Math.max(0.5, (originalBottomRightY - p.y) / textHeight);
-  } else if (h === "tr") {
-    const originalBottomLeftY = s.y + textHeight;
-    scaleX = Math.max(0.5, (p.x - s.x) / textWidth);
-    scaleY = Math.max(0.5, (originalBottomLeftY - p.y) / textHeight);
-  } else if (h === "bl") {
-    const originalTopRightX = s.x + textWidth;
-    scaleX = Math.max(0.5, (originalTopRightX - p.x) / textWidth);
-    scaleY = Math.max(0.5, (p.y - s.y) / textHeight);
-  } else if (h === "br") {
-    scaleX = Math.max(0.5, (p.x - s.x) / textWidth);
-    scaleY = Math.max(0.5, (p.y - s.y) / textHeight);
-  }
-  const avgScale = (scaleX + scaleY) / 2;
-  s.fontSize = Math.max(8, Math.min(100, fontSize * avgScale));
-}
+    if (h === "tl") {
+      const originalBottomRightX = s.x + textWidth;
+      const originalBottomRightY = s.y + textHeight;
+      scaleX = Math.max(0.5, (originalBottomRightX - p.x) / textWidth);
+      scaleY = Math.max(0.5, (originalBottomRightY - p.y) / textHeight);
+    } else if (h === "tr") {
+      const originalBottomLeftY = s.y + textHeight;
+      scaleX = Math.max(0.5, (p.x - s.x) / textWidth);
+      scaleY = Math.max(0.5, (originalBottomLeftY - p.y) / textHeight);
+    } else if (h === "bl") {
+      const originalTopRightX = s.x + textWidth;
+      scaleX = Math.max(0.5, (originalTopRightX - p.x) / textWidth);
+      scaleY = Math.max(0.5, (p.y - s.y) / textHeight);
+    } else if (h === "br") {
+      scaleX = Math.max(0.5, (p.x - s.x) / textWidth);
+      scaleY = Math.max(0.5, (p.y - s.y) / textHeight);
+    }
+    const avgScale = (scaleX + scaleY) / 2;
+    s.fontSize = Math.max(8, Math.min(100, fontSize * avgScale));
+  }}
+    this.clearCanvas();
+    if (this.isSolo) {
+    } else {
+        this.scheduleWrite(s);
+    }
+    return;
+    }
+    if (this.selectedTool === "eraser" && this.clicked) {
+      const logicalX = pos.x ;
+      const logicalY = pos.y;
 
-            }
-            this.clearCanvas();
-            if (this.isSolo) {
-          } else {
-            this.scheduleWrite(s);
-          }
-          return;
-        }
-        if (this.selectedTool === "eraser" && this.clicked) {
-          const logicalX = pos.x ;
-          const logicalY = pos.y;
-
-          for (let i = this.existingShapes.length - 1; i >= 0; i--) {
-            if (this.isPointInsideShape(logicalX, logicalY, this.existingShapes[i])) {
-              const shape = this.existingShapes[i];
-
-   
-              this.deleteShapeByIndex(i);
-
-      
+      for (let i = this.existingShapes.length - 1; i >= 0; i--) {
+        if (this.isPointInsideShape(logicalX, logicalY, this.existingShapes[i])) {
+          const shape = this.existingShapes[i];
+          this.deleteShapeByIndex(i);
       if (!this.isSolo && shape) {
         this.safeSend({
             type: "shape_delete",

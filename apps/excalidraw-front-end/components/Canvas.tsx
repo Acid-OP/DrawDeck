@@ -11,11 +11,11 @@ import { ShareLinkModal } from "./modal/SharelinkModal";
 import { ZoomBar } from "./ZoomBar";
 import { Header } from "./Header";
 import CurvedArrow from "./CurveArrow";
-import LocalSaveNotice from "./menuiconpointer";
 import ToolbarIcon from "./ToolBarIcon";
-import ToolIconPointer from "./toolbariconpointer";
 import { useTheme } from "@/context/ThemeContext";
 import { CanvasRateLimitNotification } from "./RateLimitlAlert";
+import { ToolIconPointer } from "./toolbariconpointer";
+import LocalSaveNotice from "./menuiconpointer";
 
 export type Tool =
   | "hand"
@@ -87,7 +87,8 @@ export function Canvas({ roomId, socket, isSolo = false, isUserAuthenticated = f
   const [zoom, setZoom] = useState(1);
   const [isMobile, setIsMobile] = useState(false);
 
-  const isCollabMode = !isSolo && roomType && encryptionKey;
+  // const isCollabMode = !isSolo && roomType && encryptionKey;
+  const isCollabMode = Boolean(!isSolo && roomType && encryptionKey);
 
   const getStrokeColors = (theme: "light" | "dark") => [
     theme === "dark" ? '#ffffff' : '#1e1e1e',
@@ -108,18 +109,17 @@ export function Canvas({ roomId, socket, isSolo = false, isUserAuthenticated = f
 
   const updateSize = useCallback(() => {
     if (typeof window === "undefined") return;
-    
+  
     const width = window.innerWidth;
     const height = window.innerHeight;
-    const mobile = width < 768;
-    
+    const mobile = width < 1024; 
+
     setDimensions({ width, height });
-    setIsMobile(mobile);
+    setIsMobile(mobile); 
   }, []);
 
 
   const clearCanvasAndShapes = useCallback(() => {
-    console.log('clearCanvasAndShapes called, game:', game);
     if (game) {
        console.log('Calling clearAllShapes');
       game.clearAllShapes();
@@ -424,10 +424,9 @@ useEffect(() => {
 
       {shouldShowWelcome &&
         <>
-          <div className="absolute top-20 left-1/2 transform -translate-x-1/2 ml-8 pointer-events-none z-40">
-           <ToolbarIcon />
-          </div>
-
+          <div className="absolute top-20 left-1/2 transform -translate-x-1/2 ml-8 md:ml-20 lg:ml-8 pointer-events-none z-40">
+  <ToolbarIcon />
+</div>
           <div className="absolute top-35 left-1/2 transform -translate-x-1/2 pointer-events-none z-40" style={{ marginLeft: '-3rem' }}>
            <ToolIconPointer />
           </div>
@@ -468,7 +467,7 @@ useEffect(() => {
         className="absolute bg-transparent px-0 py-0 m-0 border-none outline-none resize-none whitespace-pre-wrap break-words"
         style={{
           color: getStrokeColors(theme)[strokeIndex],
-          font: `${isMobile ? '16px' : '20px'} Virgil, Segoe UI, sans-serif`,
+          font: `${isMobile ? '16px' : '20px'} Virgil`,
           top: inputBox.y,
           left: inputBox.x,
           minWidth: "1ch",
@@ -509,7 +508,8 @@ useEffect(() => {
         encryptionKey={encryptionKey!}
         roomType={roomType!}
         onClose={handleCloseShareLinkModal}
-        isManualTrigger={false}
+        isManualTrigger={true}
+        socket={socket}
       />
       )}
     </div>

@@ -17,20 +17,23 @@ const ExcalidrawSignup: React.FC = () => {
 
   return (
     <div
-      className={`min-h-screen overflow-hidden transition-all duration-500 ${
+      className={`min-h-screen flex flex-col transition-all duration-500 ${
         isDark ? "bg-[#232329]" : "bg-[#fffbf0]"
       }`}
     >
       {/* <ThemeToggle isDark={isDark} toggleDarkMode={() => setIsDark(!isDark)} /> */}
-
+      
       <FloatingDoodles />
       <SignupHeader isDark={isDark} />
 
-      <div className="flex flex-col lg:flex-row items-center justify-around mt-28 max-w-screen-xl mx-auto px-4">
-        <div className="flex-shrink-0 w-[340px] lg:w-[380px]">
+      <div className="flex-1 flex flex-col lg:flex-row items-center justify-center lg:justify-around px-4 py-4 sm:py-6 lg:py-8">
+        {/* GraphicSection - Hidden on mobile, visible from tablet onwards */}
+        <div className="hidden md:flex flex-shrink-0 w-[340px] lg:w-[380px] mb-4 lg:mb-0">
           <GraphicSection isDark={isDark} />
         </div>
-        <div className="flex-shrink-0 w-[340px] lg:w-[380px] mt-4 lg:mt-0">
+        
+        {/* SignupForm - Always visible, centered on mobile */}
+        <div className="flex-shrink-0 w-full max-w-sm sm:max-w-md md:w-[340px] lg:w-[380px]">
           <SignupForm isDark={isDark} />
         </div>
       </div>

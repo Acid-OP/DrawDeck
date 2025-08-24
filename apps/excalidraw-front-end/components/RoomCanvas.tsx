@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { WS_URL } from '@/config';
 import { Canvas } from './Canvas';
 import { VideoCall } from './VideoCall';
 import { RoomConnecting } from './errors/RoomConnecting';
@@ -10,6 +9,7 @@ import { ConnectionError } from './errors/ConnectionError';
 import { RoomFullError } from './errors/RoomFullError';
 import { CreatorLeftError } from './errors/CreatorLeftError';
 import { RoomInactivityModal } from './errors/RoomInactivity';
+import { WS_URL } from '@/utils/config';
 interface RateLimitState {
   messagesRemaining: number;
   lastReset: number;
@@ -247,7 +247,7 @@ export function RoomCanvas({ slug, encryptionKey, roomType: propRoomType }: { sl
         setInactivityError(null); 
         setIsRoomAccessible(false);
 
-        const ws = new WebSocket( wsUrl ?? WS_URL);
+        const ws = new WebSocket(WS_URL);
 
         ws.onopen = () => {
           connectionAttemptsRef.current = 0;
@@ -554,4 +554,4 @@ export function RoomCanvas({ slug, encryptionKey, roomType: propRoomType }: { sl
         <VideoCall roomId={slug} isCreator={getIsCreator()} />
       )}
     </div>
-  )};
+  )}

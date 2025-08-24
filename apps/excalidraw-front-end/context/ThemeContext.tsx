@@ -20,9 +20,9 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
   const [theme, setTheme] = useState<Theme>(() => {
     if (typeof window !== "undefined") {
       const savedTheme = localStorage.getItem("canvas_theme");
-      return (savedTheme as Theme) || "dark"; 
+      return (savedTheme as Theme) || "light"; 
     }
-    return "dark";
+    return "light";
   });
 
   useEffect(() => {
