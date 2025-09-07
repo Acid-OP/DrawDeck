@@ -630,12 +630,20 @@ initTouchHandlers() {
 private getTouchPos = (e: TouchEvent): { x: number; y: number } => {
   const rect = this.canvas.getBoundingClientRect();
   const touch = e.touches[0] || e.changedTouches[0];
+  
+  // Convert screen coordinates to logical coordinates
+  const screenX = touch.clientX - rect.left;
+  const screenY = touch.clientY - rect.top;
+  
+  // Transform screen coordinates to logical coordinates accounting for pan and zoom
+  const logicalX = (screenX - this.panOffsetX) / this.zoom;
+  const logicalY = (screenY - this.panOffsetY) / this.zoom;
+  
   return {
-    x: (touch.clientX - rect.left) / this.zoom - this.panOffsetX / this.zoom,
-    y: (touch.clientY - rect.top) / this.zoom - this.panOffsetY / this.zoom,
+    x: logicalX,
+    y: logicalY,
   };
 };
-
 touchStartHandler = (e: TouchEvent) => {
   e.preventDefault();
   const touch = e.touches[0];
@@ -877,9 +885,17 @@ addTextShape(x: number, y: number, text: string) {
 
 getMousePos = (e: MouseEvent) => {
   const rect = this.canvas.getBoundingClientRect();
+  // Convert screen coordinates to logical coordinates
+  const screenX = e.clientX - rect.left;
+  const screenY = e.clientY - rect.top;
+  
+  // Transform screen coordinates to logical coordinates accounting for pan and zoom
+  const logicalX = (screenX - this.panOffsetX) / this.zoom;
+  const logicalY = (screenY - this.panOffsetY) / this.zoom;
+  
   return {
-    x: (e.clientX - rect.left) / this.zoom - this.panOffsetX / this.zoom,
-    y: (e.clientY - rect.top) / this.zoom - this.panOffsetY / this.zoom,
+    x: logicalX,
+    y: logicalY,
   };
 };
 
@@ -1631,18 +1647,12 @@ if (this.selectedTool === "pencil") {
   }
 
 
- const adjustedPoints = this.pencilPoints.map(p => ({
-    x: p.x,
-    y: p.y,
-  }));
+ const adjustedPoints = [...this.pencilPoints];
 
 
-  const last = adjustedPoints[adjustedPoints.length - 1];
+const last = adjustedPoints[adjustedPoints.length - 1];
   if (last.x !== pos.x || last.y !== pos.y) {
-    adjustedPoints.push({
-      x: pos.x,
-      y: pos.y
-    });
+    adjustedPoints.push(pos);
   }
 
   const pencilShape: Shape = {
@@ -1670,7 +1680,6 @@ if (this.selectedTool === "pencil") {
    setTimeout(() => {
     this.isNewlyCreated = false;
   }, 100);
-  if (this.onToolChange) this.onToolChange("select");
   if (this.isSolo) {
     this.clearCanvas();
   } else {
