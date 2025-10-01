@@ -9,11 +9,10 @@ import { useSession } from "next-auth/react";
 
 export default function HomePage() {
   const [isLoaded, setIsLoaded] = useState(false);
-  const [loaderAnimationComplete, setLoaderAnimationComplete] = useState(false);
-  
+  const [loaderAnimationComplete, setLoaderAnimationComplete] = useState(false);  
   const { status } = useSession();
   const isSignedIn = status === "authenticated";
-
+// update
   useEffect(() => {
     if (status !== "loading") {
       setIsLoaded(true);
