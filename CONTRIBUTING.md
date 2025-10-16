@@ -26,7 +26,7 @@ To get started with development, you'll need to have the following installed:
 Once you have those installed, you can clone the repository and install the dependencies:
 
 ```bash
-git clone https://github.com/your-username/DrawDeck.git
+git clone https://github.com/Acid-OP/DrawDeck.git
 cd DrawDeck
 pnpm install
 ```
