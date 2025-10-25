@@ -12,7 +12,7 @@ export default function HomePage() {
   const [loaderAnimationComplete, setLoaderAnimationComplete] = useState(false);  
   const { status } = useSession();
   const isSignedIn = status === "authenticated";
-// update
+
   useEffect(() => {
     if (status !== "loading") {
       setIsLoaded(true);
