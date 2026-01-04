@@ -138,7 +138,14 @@ export const ShareLinkModal: React.FC<Props> = ({
               readOnly
               value={shareableLink}
               className={`flex-1 rounded-lg px-3 py-2 text-xs font-mono cursor-default`}
-              style={{ backgroundColor: inputBg, border: `1px solid ${inputBorder}`, color: theme === "dark" ? "#fff" : "#000" }}
+              style={{ 
+                backgroundColor: inputBg, 
+                border: `1px solid ${inputBorder}`, 
+                color: theme === "dark" ? "#fff" : "#000",
+                whiteSpace: "nowrap",
+                overflow: "hidden",
+                textOverflow: "ellipsis"
+              }}
             />
             <button
               onClick={handleCopy}

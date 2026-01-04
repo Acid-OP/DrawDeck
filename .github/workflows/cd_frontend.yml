@@ -33,20 +33,21 @@ jobs:
           push: true
           tags: acidop/drawdeck-frontend:${{ github.sha }}
 
-      - name: Deploy to VM
-        uses: appleboy/ssh-action@v1.1.0
-        timeout-minutes: 15
-        with:
-          host: ${{ secrets.VM_HOST }}
-          username: ${{ secrets.VM_USERNAME }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          script: |
-            echo ${{ secrets.DOCKERHUB_TOKEN }} | sudo docker login -u ${{ secrets.DOCKERHUB_USERNAME }} --password-stdin
-            sudo docker stop frontend-server || true
-            sudo docker rm frontend-server || true
-            sudo docker pull acidop/drawdeck-frontend:${{ github.sha }}
-            sudo docker run -d \
-              --name frontend-server \
-              --restart always \
-              -p 3000:3000 \
-              acidop/drawdeck-frontend:${{ github.sha }}
+      # VM Deployment (Commented out)
+      # - name: Deploy to VM
+      #   uses: appleboy/ssh-action@v1.1.0
+      #   timeout-minutes: 15
+      #   with:
+      #     host: ${{ secrets.VM_HOST }}
+      #     username: ${{ secrets.VM_USERNAME }}
+      #     key: ${{ secrets.SSH_PRIVATE_KEY }}
+      #     script: |
+      #       echo ${{ secrets.DOCKERHUB_TOKEN }} | sudo docker login -u ${{ secrets.DOCKERHUB_USERNAME }} --password-stdin
+      #       sudo docker stop frontend-server || true
+      #       sudo docker rm frontend-server || true
+      #       sudo docker pull acidop/drawdeck-frontend:${{ github.sha }}
+      #       sudo docker run -d \
+      #         --name frontend-server \
+      #         --restart always \
+      #         -p 3000:3000 \
+      #         acidop/drawdeck-frontend:${{ github.sha }}

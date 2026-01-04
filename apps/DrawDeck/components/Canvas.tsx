@@ -291,6 +291,33 @@ useEffect(() => {
     }
   }, [zoom, game]);
 
+  // Keyboard shortcuts for zoom
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Check for Ctrl/Cmd key
+      if (e.ctrlKey || e.metaKey) {
+        // Ctrl + Plus or Ctrl + =
+        if (e.key === '+' || e.key === '=') {
+          e.preventDefault();
+          setZoom(z => Math.min(Number((z + 0.1).toFixed(2)), 4));
+        }
+        // Ctrl + Minus
+        else if (e.key === '-') {
+          e.preventDefault();
+          setZoom(z => Math.max(Number((z - 0.1).toFixed(2)), 0.2));
+        }
+        // Ctrl + 0 to reset zoom
+        else if (e.key === '0') {
+          e.preventDefault();
+          setZoom(1);
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   useEffect(() => {
     if (game) {
       game.setTheme(theme);

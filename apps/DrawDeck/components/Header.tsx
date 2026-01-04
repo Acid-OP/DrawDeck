@@ -26,8 +26,8 @@ export const Header: React.FC<HeaderProps> = () => {
     <div>
       <div className="flex flex-col items-center justify-center p-4 pointer-events-auto">
         <BrandTitle />
-        <span className="virgil text-lg text-[#7a7a7a] p-4">
-          All your data is saved locally in your browser
+        <span className="virgil text-lg text-[#7a7a7a] p-4 text-center">
+          Draw together with built-in video calls & end-to-end encryption
         </span>
 
         <div className="flex items-center justify-start w-full cursor-pointer">
