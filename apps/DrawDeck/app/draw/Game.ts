@@ -101,6 +101,15 @@ export class Game {
   public currentStrokeStyle: number = 0;
   public currentFillStyle: number = 0;
   private hoveredEndpoint: "start" | "end" | "mid" | null = null;
+  
+  // Undo/Redo history
+  private history: Shape[][] = [];
+  private historyIndex: number = -1;
+  private readonly MAX_HISTORY = 50;
+  private isUndoRedoAction: boolean = false;
+  
+  // Clipboard for copy/paste
+  private clipboard: Shape | null = null;
   private genId() {
     if (typeof crypto !== 'undefined' && crypto.randomUUID) {
       try {
@@ -128,6 +137,178 @@ public setTheme(theme: "light" | "dark") {
 
   public hasShapes(): boolean {
     return this.existingShapes.length > 0;
+  }
+
+  // History management for undo/redo
+  private saveToHistory() {
+    if (this.isUndoRedoAction) return;
+    
+    // Create a deep copy of current shapes
+    const snapshot = JSON.parse(JSON.stringify(this.existingShapes));
+    
+    // Remove any states after current index (when user makes new action after undo)
+    this.history = this.history.slice(0, this.historyIndex + 1);
+    
+    // Add new state
+    this.history.push(snapshot);
+    
+    // Limit history size
+    if (this.history.length > this.MAX_HISTORY) {
+      this.history.shift();
+    } else {
+      this.historyIndex++;
+    }
+  }
+
+  public undo() {
+    if (this.historyIndex <= 0) {
+      console.log('Nothing to undo');
+      return;
+    }
+    
+    this.isUndoRedoAction = true;
+    this.historyIndex--;
+    this.existingShapes = JSON.parse(JSON.stringify(this.history[this.historyIndex]));
+    this.saveToLocalStorage();
+    this.clearCanvas();
+    this.isUndoRedoAction = false;
+  }
+
+  public redo() {
+    if (this.historyIndex >= this.history.length - 1) {
+      console.log('Nothing to redo');
+      return;
+    }
+    
+    this.isUndoRedoAction = true;
+    this.historyIndex++;
+    this.existingShapes = JSON.parse(JSON.stringify(this.history[this.historyIndex]));
+    this.saveToLocalStorage();
+    this.clearCanvas();
+    this.isUndoRedoAction = false;
+  }
+
+  public canUndo(): boolean {
+    return this.historyIndex > 0;
+  }
+
+  public canRedo(): boolean {
+    return this.historyIndex < this.history.length - 1;
+  }
+
+  // Copy/Paste/Duplicate functionality
+  public copySelected() {
+    if (this.selectedShapeIndex === null) {
+      console.log('No shape selected to copy');
+      return;
+    }
+    
+    const shape = this.existingShapes[this.selectedShapeIndex];
+    if (shape) {
+      // Deep clone the shape
+      this.clipboard = JSON.parse(JSON.stringify(shape));
+      console.log('Shape copied to clipboard');
+    }
+  }
+
+  public pasteFromClipboard() {
+    if (!this.clipboard) {
+      console.log('Nothing to paste');
+      return;
+    }
+    
+    // Create a new shape from clipboard with new ID and offset position
+    const newShape = JSON.parse(JSON.stringify(this.clipboard));
+    newShape.id = this.genId();
+    
+    // Offset the pasted shape by 20px so it's visible
+    const offset = 20 / this.zoom;
+    
+    if (newShape.type === 'rect') {
+      newShape.x += offset;
+      newShape.y += offset;
+    } else if (newShape.type === 'circle') {
+      newShape.centerX += offset;
+      newShape.centerY += offset;
+    } else if (newShape.type === 'diamond') {
+      newShape.top.x += offset;
+      newShape.top.y += offset;
+      newShape.right.x += offset;
+      newShape.right.y += offset;
+      newShape.bottom.x += offset;
+      newShape.bottom.y += offset;
+      newShape.left.x += offset;
+      newShape.left.y += offset;
+    } else if (newShape.type === 'line' || newShape.type === 'arrow') {
+      newShape.startX += offset;
+      newShape.startY += offset;
+      newShape.endX += offset;
+      newShape.endY += offset;
+    } else if (newShape.type === 'pencil') {
+      newShape.points = newShape.points.map((p: { x: number; y: number }) => ({
+        x: p.x + offset,
+        y: p.y + offset
+      }));
+    } else if (newShape.type === 'text') {
+      newShape.x += offset;
+      newShape.y += offset;
+    }
+    
+    // Add the new shape
+    this.existingShapes.push(newShape);
+    this.saveToHistory();
+    this.selectedShapeIndex = this.existingShapes.length - 1;
+    
+    // Broadcast if not solo
+    if (!this.isSolo) {
+      this.safeSend({
+        type: "shape_add",
+        roomId: this.roomId?.toString(),
+        shape: newShape,
+      }, 2);
+    }
+    
+    this.scheduleLocalSave();
+    this.clearCanvas();
+    console.log('Shape pasted');
+  }
+
+  public duplicateSelected() {
+    if (this.selectedShapeIndex === null) {
+      console.log('No shape selected to duplicate');
+      return;
+    }
+    
+    // Copy then paste
+    this.copySelected();
+    this.pasteFromClipboard();
+  }
+
+  public deleteSelected() {
+    if (this.selectedShapeIndex === null) {
+      console.log('No shape selected to delete');
+      return;
+    }
+    
+    const shape = this.existingShapes[this.selectedShapeIndex];
+    if (!shape) return;
+    
+    // Delete the shape
+    this.deleteShapeByIndex(this.selectedShapeIndex);
+    
+    // Broadcast delete if not solo
+    if (!this.isSolo) {
+      this.safeSend({
+        type: "shape_delete",
+        roomId: this.roomId?.toString(),
+        shapeId: shape.id,
+      }, 2);
+    }
+    
+    // Deselect
+    this.selectedShapeIndex = null;
+    this.clearCanvas();
+    console.log('Shape deleted');
   }
   public zoomIn() {
   this.zoom = Math.min(this.zoom + 0.1, 5); 
@@ -187,10 +368,12 @@ private safeSend(payload: any, priority: number = 1) {
 private broadcastShape(shape: Shape) {
   if (this.isSolo) {
     this.existingShapes.push(shape);
+    this.saveToHistory(); // Save state for undo/redo
     this.scheduleLocalSave();
     return;
   }
   
+  this.saveToHistory(); // Save state for undo/redo
   this.scheduleWriteAll();
   
   // Use priority 2 for shape creation (important but not critical)
@@ -708,6 +891,11 @@ private forceRedraw() {
     this.panOffsetY = 0;
     this.loadPanOffset();
     this.clicked = false;
+    
+    // Initialize undo/redo history with empty state
+    this.history = [[]];
+    this.historyIndex = 0;
+    
     this.init();
     if (!this.isSolo && this.socket) {
     this.initHandlers(); 
@@ -1079,6 +1267,7 @@ setTool(tool: Tool) {
 public clearAllShapes() {
   if (this.isSolo) {
     this.existingShapes = [];
+    this.saveToHistory(); // Save state for undo/redo
     const key = this.getLocalStorageKey(); 
     localStorage.removeItem(key); 
     this.clearCanvas();
@@ -1221,6 +1410,7 @@ public deleteShapeByIndex(index: number) {
   if (!shape) return;
   
   this.existingShapes.splice(index, 1);
+  this.saveToHistory(); // Save state for undo/redo
 
   if (this.isSolo) {
     this.scheduleLocalSave();

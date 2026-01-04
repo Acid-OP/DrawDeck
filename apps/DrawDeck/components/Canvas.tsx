@@ -291,13 +291,63 @@ useEffect(() => {
     }
   }, [zoom, game]);
 
-  // Keyboard shortcuts for zoom
+  // Keyboard shortcuts for zoom, undo/redo, copy/paste/duplicate
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't trigger shortcuts when typing in textarea
+      if (e.target instanceof HTMLTextAreaElement || e.target instanceof HTMLInputElement) {
+        return;
+      }
+
+      // Delete key (without Ctrl)
+      if ((e.key === 'Delete' || e.key === 'Backspace') && !e.ctrlKey && !e.metaKey) {
+        e.preventDefault();
+        if (game) {
+          game.deleteSelected();
+        }
+        return;
+      }
+
       // Check for Ctrl/Cmd key
       if (e.ctrlKey || e.metaKey) {
+        // Copy: Ctrl + C
+        if (e.key === 'c' || e.key === 'C') {
+          e.preventDefault();
+          if (game) {
+            game.copySelected();
+          }
+        }
+        // Paste: Ctrl + V
+        else if (e.key === 'v' || e.key === 'V') {
+          e.preventDefault();
+          if (game) {
+            game.pasteFromClipboard();
+          }
+        }
+        // Duplicate: Ctrl + D
+        else if (e.key === 'd' || e.key === 'D') {
+          e.preventDefault();
+          if (game) {
+            game.duplicateSelected();
+          }
+        }
+        // Undo: Ctrl + Z
+        else if (e.key === 'z' || e.key === 'Z') {
+          if (!e.shiftKey) {
+            e.preventDefault();
+            if (game) {
+              game.undo();
+            }
+          }
+        }
+        else if (e.key === 'y' || e.key === 'Y' || (e.shiftKey && (e.key === 'z' || e.key === 'Z'))) {
+          e.preventDefault();
+          if (game) {
+            game.redo();
+          }
+        }
         // Ctrl + Plus or Ctrl + =
-        if (e.key === '+' || e.key === '=') {
+        else if (e.key === '+' || e.key === '=') {
           e.preventDefault();
           setZoom(z => Math.min(Number((z + 0.1).toFixed(2)), 4));
         }
@@ -316,7 +366,7 @@ useEffect(() => {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  }, [game]);
 
   useEffect(() => {
     if (game) {
