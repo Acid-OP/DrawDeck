@@ -9,8 +9,10 @@ const allowedOrigins = [
   // 'http://localhost:3000' 
 ];
 
+const PORT = Number(process.env.PORT) || 8081;
+
 const wss = new WebSocketServer({
-  port: 8081,
+  port: PORT,
   verifyClient: (info: { origin: string; secure: boolean; req: IncomingMessage }) => {
     if (!allowedOrigins.includes(info.origin)) {
       console.log(`🚫 RTC connection rejected - Invalid origin: ${info.origin}`);
@@ -21,7 +23,7 @@ const wss = new WebSocketServer({
 });
 
 wss.on("listening", () => {
-  console.log("🎥 WebRTC signaling server running on ws://localhost:8081");
+  console.log(`🎥 WebRTC signaling server running on port ${PORT}`);
 });
 
 interface RTCClient {

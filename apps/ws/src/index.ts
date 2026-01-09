@@ -195,8 +195,10 @@ const allowedOrigins = [
   // 'http://localhost:3000' 
 ];
 
+const PORT = Number(process.env.PORT) || 8080;
+
 const wss = new WebSocketServer({ 
-  port: 8080,
+  port: PORT,
   verifyClient: (info: { origin: string; secure: boolean; req: IncomingMessage }) => {
     const ip = rateLimiter.getClientIP(info.req);
     
@@ -724,4 +726,4 @@ setInterval(() => {
   }
 }, 10 * 1000);
 
-console.log("✅ WebSocket server running at ws://localhost:8080");
+console.log(`✅ WebSocket server running on port ${PORT}`);
