@@ -8,6 +8,7 @@ import { Menu } from "./Menu";
 import { ExcalidrawPropertiesPanel } from "./PropertiesPanel";
 import { LiveCollabModal } from "./modal/LiveCollabModal";
 import { ShareLinkModal } from "./modal/SharelinkModal";
+import { KeyboardShortcutsModal } from "./modal/KeyboardShortcutsModal";
 import { ZoomBar } from "./ZoomBar";
 import { Header } from "./Header";
 import CurvedArrow from "./CurveArrow";
@@ -78,6 +79,7 @@ export function Canvas({ roomId, socket, isSolo = false, isUserAuthenticated = f
   
   const [showLiveModal, setShowLiveModal] = useState(false);
   const [showShareLinkModal, setShowShareLinkModal] = useState(false);
+  const [showKeyboardShortcuts, setShowKeyboardShortcuts] = useState(false);
   const [strokeIndex, setStrokeIndex] = useState(0);
   const [backgroundIndex, setBackgroundIndex] = useState(0);
   const [strokeWidthIndex, setStrokeWidthIndex] = useState(1);
@@ -296,6 +298,13 @@ useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // Don't trigger shortcuts when typing in textarea
       if (e.target instanceof HTMLTextAreaElement || e.target instanceof HTMLInputElement) {
+        return;
+      }
+
+      // Show keyboard shortcuts help with "?"
+      if (e.key === '?' && !e.ctrlKey && !e.metaKey) {
+        e.preventDefault();
+        setShowKeyboardShortcuts(true);
         return;
       }
 
@@ -588,6 +597,10 @@ useEffect(() => {
         isManualTrigger={true}
         socket={socket}
       />
+      )}
+
+      {showKeyboardShortcuts && (
+        <KeyboardShortcutsModal onClose={() => setShowKeyboardShortcuts(false)} />
       )}
     </div>
   );
