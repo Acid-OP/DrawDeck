@@ -16,11 +16,8 @@
     "turbo": "^2.5.0",
     "typescript": "5.8.2"
   },
-  "workspaces": [
-    "apps/*",
-    "packages/*"
-  ],
+  "packageManager": "pnpm@9.0.0",
   "engines": {
-    "node": "20.x"
+    "node": ">=18"
   }
 }
