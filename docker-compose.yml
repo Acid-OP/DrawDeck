@@ -2,13 +2,13 @@ services:
   # WebSocket Server
   ws:
     build:
-      context: .                           # Build from repo root
-      dockerfile: docker/Dockerfile.websocket  # Path to Dockerfile
+      context: .                         
+      dockerfile: docker/Dockerfile.websocket  
     ports:
-      - "8080:8080"                        # host:container port mapping
+      - "8080:8080"                     
     environment:
-      - PORT=8080                          # Environment variables
-    restart: unless-stopped                # Auto-restart if crashes
+      - PORT=8080                         
+    restart: unless-stopped               
 
   # RTC Signaling Server  
   rtc:

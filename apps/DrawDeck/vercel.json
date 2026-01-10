@@ -1,6 +1,6 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "installCommand": "corepack enable && corepack prepare pnpm@9.15.0 --activate && cd ../.. && pnpm install",
+  "installCommand": "npm i -g pnpm@8.15.0 && cd ../.. && pnpm install",
   "buildCommand": "cd ../.. && pnpm turbo run build --filter=DrawDeck",
   "outputDirectory": ".next",
   "framework": "nextjs"
