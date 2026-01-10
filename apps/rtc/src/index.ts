@@ -15,7 +15,7 @@ const wss = new WebSocketServer({
   port: PORT,
   verifyClient: (info: { origin: string; secure: boolean; req: IncomingMessage }) => {
     if (!allowedOrigins.includes(info.origin)) {
-      console.log(`🚫 RTC connection rejected - Invalid origin: ${info.origin}`);
+      console.log(`RTC connection rejected - Invalid origin: ${info.origin}`);
       return false;
     }
     return true;
@@ -23,7 +23,7 @@ const wss = new WebSocketServer({
 });
 
 wss.on("listening", () => {
-  console.log(`🎥 WebRTC signaling server running on port ${PORT}`);
+  console.log(`WebRTC signaling server running on port ${PORT}`);
 });
 
 interface RTCClient {
@@ -51,7 +51,7 @@ function broadcastToRoom(roomId: string, sender: RTCClient, payload: any) {
           rtcClients.delete(client);
         }
       } catch (error) {
-        console.error('📤 Error broadcasting RTC message:', error);
+        console.error('Error broadcasting RTC message:', error);
         rtcClients.delete(client);
       }
     }
@@ -84,7 +84,7 @@ function cleanupRoom(roomId: string, reason: string = 'room_cleanup') {
       }
       
     } catch (error) {
-      console.error('❌ Error during RTC room cleanup:', error);
+      console.error('Error during RTC room cleanup:', error);
       rtcClients.delete(client);
     }
   });
@@ -105,7 +105,7 @@ wss.on("connection", (ws: WebSocket, request: IncomingMessage) => {
     try {
       payload = JSON.parse(raw.toString());
     } catch {
-      console.warn('⚠️ Invalid RTC message format');
+      console.warn('Invalid RTC message format');
       return;
     }
 
@@ -158,7 +158,7 @@ wss.on("connection", (ws: WebSocket, request: IncomingMessage) => {
       }
       case "cleanup_session": {
         const roomId = String(payload.roomId);
-        console.log(`🛑 RTC session cleanup requested for room ${roomId} by ${client.userId}`);
+        console.log(`RTC session cleanup requested for room ${roomId} by ${client.userId}`);
         
         broadcastToRoom(roomId, client, {
           type: "session_ended",
@@ -192,7 +192,7 @@ wss.on("connection", (ws: WebSocket, request: IncomingMessage) => {
       }
 
       default: {
-        console.warn("⚠️ Unknown RTC message type:", type);
+        console.warn("Unknown RTC message type:", type);
       }
     }
   });
@@ -227,7 +227,7 @@ wss.on("connection", (ws: WebSocket, request: IncomingMessage) => {
   });
   
   ws.on("error", (error) => {
-    console.error(`❌ RTC WebSocket error for client ${client.userId}:`, error);
+    console.error(`RTC WebSocket error for client ${client.userId}:`, error);
     rtcClients.delete(client);
   });
 });
@@ -246,4 +246,4 @@ setInterval(() => {
   });
 }, 30000); 
 
-console.log("✅ RTC WebSocket server setup complete");
+console.log("RTC WebSocket server setup complete");

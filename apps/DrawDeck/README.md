@@ -23,7 +23,7 @@ DrawDeck lets you sketch ideas, take notes, and collaborate live. It ships with 
 
 ---
 
-## 📦 Monorepo layout
+## Monorepo layout
 
 ```
 .
@@ -43,7 +43,7 @@ DrawDeck lets you sketch ideas, take notes, and collaborate live. It ships with 
 
 ---
 
-## 🚀 Quick start (local dev)
+## Quick start (local dev)
 
 **Prereqs**
 

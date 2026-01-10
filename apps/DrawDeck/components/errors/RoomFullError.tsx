@@ -89,7 +89,7 @@ export const RoomFullError: React.FC<RoomFullErrorProps> = ({
 
           <div className="bg-blue-500/10 border border-blue-500/20 rounded-md p-3 mb-6">
             <p className="text-xs text-blue-300 leading-relaxed">
-              💡 <span className="font-medium">Suggestion:</span>
+              <span className="font-medium">Suggestion:</span>
               {roomType === "duo"
                 ? " Wait for someone to leave or create a new duo room."
                 : " Try creating a new group room or wait for participants to leave."}

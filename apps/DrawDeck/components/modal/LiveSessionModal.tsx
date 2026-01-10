@@ -70,7 +70,7 @@ export const LiveSessionModal: React.FC<Props> = ({ onClose }) => {
         <hr className="border-t border-[#444] my-10" />
 
         <p className="text-base text-white/70 mb-10 leading-relaxed">
-          🔒 Don't worry, the session is end-to-end encrypted, and fully private. Not even our server can see what you draw.
+          Don't worry, the session is end-to-end encrypted, and fully private. Not even our server can see what you draw.
           <br /><br />
           Stopping the session will disconnect you from the room, but you'll be able to continue working with the scene locally. This won't affect others — they can continue collaborating.
         </p>

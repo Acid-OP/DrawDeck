@@ -44,11 +44,11 @@ export const ShareLinkModal: React.FC<Props> = ({
     if (isStoppingSession) return;
     setIsStoppingSession(true);
     
-    console.log('🛑 Stop Session clicked - sending leave message IMMEDIATELY');
+    console.log('Stop Session clicked - sending leave message IMMEDIATELY');
     
     try {
       if (socket && socket.readyState === WebSocket.OPEN) {
-        console.log('📤 Sending leave_room message NOW');
+        console.log('Sending leave_room message NOW');
         socket.send(JSON.stringify({ 
           type: 'leave_room', 
           roomId,
@@ -56,10 +56,10 @@ export const ShareLinkModal: React.FC<Props> = ({
           reason: 'user_initiated_stop'
         }));
         
-        console.log('✅ Leave message sent - participants should see creator left modal NOW');
+        console.log('Leave message sent - participants should see creator left modal NOW');
       }
     } catch (error) {
-      console.error('❌ Error sending leave message:', error);
+      console.error('Error sending leave message:', error);
     }
     router.push('/');
   };
@@ -167,8 +167,8 @@ export const ShareLinkModal: React.FC<Props> = ({
         </div>
 
         <div className={`text-xs space-y-1 mb-6 ${modalText}`}>
-          <p>💡 Anyone with this link can join your collaborative session.</p>
-          <p>🔒 Your session is end-to-end encrypted and private.</p>
+          <p>Anyone with this link can join your collaborative session.</p>
+          <p>Your session is end-to-end encrypted and private.</p>
         </div>
 
         <div className="flex justify-center">

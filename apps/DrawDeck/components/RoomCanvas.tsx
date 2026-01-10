@@ -91,7 +91,7 @@ export function RoomCanvas({ slug, encryptionKey, roomType: propRoomType }: { sl
   
   const sendMessage = useCallback((message: any, priority: number = 0): boolean => {
     if (!socket || socket.readyState !== WebSocket.OPEN) {
-      console.warn('⚠️ Socket not ready, message queued');
+      console.warn('Socket not ready, message queued');
       messageQueueRef.current.push({ 
         message: JSON.stringify(message), 
         timestamp: Date.now(),
@@ -102,8 +102,8 @@ export function RoomCanvas({ slug, encryptionKey, roomType: propRoomType }: { sl
     }
   
     if (!checkClientRateLimit()) {
-      console.warn('⚠️ Client-side rate limit exceeded, message queued');
-      alert(`⚠️ You're drawing too fast!\n\nYour shapes are being saved automatically, but please slow down a bit.\n\nRefresh the page if drawings seem delayed.`);
+      console.warn('Client-side rate limit exceeded, message queued');
+      alert(`You're drawing too fast!\n\nYour shapes are being saved automatically, but please slow down a bit.\n\nRefresh the page if drawings seem delayed.`);
   
       messageQueueRef.current.push({ 
         message: JSON.stringify(message), 
@@ -123,7 +123,7 @@ export function RoomCanvas({ slug, encryptionKey, roomType: propRoomType }: { sl
     
       return true;
     } catch (error) {
-      console.error('❌ Failed to send message:', error);
+      console.error('Failed to send message:', error);
       return false;
     }
   }, [socket, checkClientRateLimit]);
@@ -148,7 +148,7 @@ export function RoomCanvas({ slug, encryptionKey, roomType: propRoomType }: { sl
             messagesRemaining: Math.max(0, prev.messagesRemaining - 1)
           }));
         } catch (error) {
-          console.error('❌ Failed to send queued message:', error);
+          console.error('Failed to send queued message:', error);
         }
       });
     }
@@ -226,7 +226,7 @@ export function RoomCanvas({ slug, encryptionKey, roomType: propRoomType }: { sl
 
   useEffect(() => {
     if (!slug || !encryptionKey) {
-      console.error('❌ Missing slug or encryptionKey');
+      console.error('Missing slug or encryptionKey');
       setConnectionError('Missing room parameters');
       return;
     }
@@ -263,7 +263,7 @@ export function RoomCanvas({ slug, encryptionKey, roomType: propRoomType }: { sl
 
           switch (type) {
             case 'rate_limit_exceeded':
-              console.warn('⚠️ Server rate limit exceeded:', rest.message);
+              console.warn('Server rate limit exceeded:', rest.message);
               const retryAfter = (rest.retryAfter || 60) * 1000;
               setRateLimitState(prev => ({
                 ...prev,
@@ -295,7 +295,7 @@ export function RoomCanvas({ slug, encryptionKey, roomType: propRoomType }: { sl
               break;
 
             case 'room_full':
-              console.error(`🚫 Room is full: ${rest.message}`);
+              console.error(`Room is full: ${rest.message}`);
               setRoomFullError({
                 message: rest.message,
                 maxCapacity: rest.maxCapacity,
@@ -328,11 +328,11 @@ export function RoomCanvas({ slug, encryptionKey, roomType: propRoomType }: { sl
               break;
 
             case 'session_limit_exceeded':
-              console.error(`🚫 Session limit exceeded: ${rest.message}`);
+              console.error(`Session limit exceeded: ${rest.message}`);
               setIsRoomAccessible(false);
               setIsConnecting(false);
               
-              const sessionAlert = `🚫 Too Many Tabs Open!\n\n${rest.message}\n\nYou can have maximum ${rest.maxSessions || 3} tabs open at once.\n\nPlease close other DrawDeck tabs and try again.`;
+              const sessionAlert = `Too Many Tabs Open!\n\n${rest.message}\n\nYou can have maximum ${rest.maxSessions || 3} tabs open at once.\n\nPlease close other DrawDeck tabs and try again.`;
               alert(sessionAlert);
               
               setConnectionError(`Session limit exceeded: ${rest.message}`);
@@ -385,13 +385,13 @@ export function RoomCanvas({ slug, encryptionKey, roomType: propRoomType }: { sl
               break;
 
             default:
-              console.warn('⚠️ Unknown message type received:', type, rest);
+              console.warn('Unknown message type received:', type, rest);
               break;
           }
         };
 
         ws.onerror = (err) => {
-          console.error('❌ WebSocket error:', err);
+          console.error('WebSocket error:', err);
           setConnectionError('WebSocket connection failed');
           setIsConnecting(false);
           setIsRoomAccessible(false);
@@ -399,7 +399,7 @@ export function RoomCanvas({ slug, encryptionKey, roomType: propRoomType }: { sl
 
         
         ws.onclose = (closeEvent) => {
-          console.log('🔌 WebSocket closed:', closeEvent.code, closeEvent.reason);
+          console.log('WebSocket closed:', closeEvent.code, closeEvent.reason);
           setSocket(null);
           
           
@@ -429,7 +429,7 @@ export function RoomCanvas({ slug, encryptionKey, roomType: propRoomType }: { sl
           }
         };
       } catch (error) {
-        console.error('❌ Connection error:', error);
+        console.error('Connection error:', error);
         setConnectionError(error instanceof Error ? error.message : 'Connection failed');
         setIsConnecting(false);
         setIsRoomAccessible(false);

@@ -16,7 +16,7 @@ export const CanvasRateLimitNotification = ({
   });
   useEffect(() => {
     if (rateLimitState?.isBlocked && !localAlertShown.blocked) {
-      alert(`🚫 Rate Limited!\n\nToo many drawing actions. Please wait ${Math.ceil(rateLimitState.retryAfter / 1000)} seconds.\n\nYour drawings are being queued automatically.`);
+      alert(`Rate Limited!\n\nToo many drawing actions. Please wait ${Math.ceil(rateLimitState.retryAfter / 1000)} seconds.\n\nYour drawings are being queued automatically.`);
       setLocalAlertShown(prev => ({ ...prev, blocked: true }));
     }
 
@@ -30,7 +30,7 @@ export const CanvasRateLimitNotification = ({
     
     if (!rateLimitState?.isBlocked && remaining <= 1 && remaining > 0) {
       if (remaining !== localAlertShown.lastWarningCount) {
-        alert(`⚠️ Drawing Rate Limit!\n\n${remaining} action remaining.\n\nNext drawing will be queued!`);
+        alert(`Drawing Rate Limit!\n\n${remaining} action remaining.\n\nNext drawing will be queued!`);
         setLocalAlertShown(prev => ({ 
           ...prev, 
           warning: true, 

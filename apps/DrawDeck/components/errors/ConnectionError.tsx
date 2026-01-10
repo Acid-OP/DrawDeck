@@ -25,7 +25,7 @@ export const ConnectionError: React.FC<ConnectionErrorProps> = ({ error }) => {
 
           <div className="bg-red-500/10 border border-red-500/20 rounded-md p-3 mb-6">
             <p className="text-xs text-red-300 leading-relaxed">
-              💡 <span className="font-medium">Tip:</span> Check your internet connection and try again.
+              <span className="font-medium">Tip:</span> Check your internet connection and try again.
               If the problem persists, the server might be temporarily unavailable.
             </p>
           </div>

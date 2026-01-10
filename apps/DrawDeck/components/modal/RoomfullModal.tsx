@@ -91,7 +91,7 @@ export const RoomFullModal: React.FC<RoomFullModalProps> = ({
 
           <div className="bg-[#9e9aea]/10 border border-[#9e9aea]/20 rounded-lg p-4 mb-8">
             <p className="text-sm text-white/70 leading-relaxed">
-              💡 <span className="font-medium">Tip:</span> Try creating a new duo room or wait for someone to leave this one. 
+              <span className="font-medium">Tip:</span> Try creating a new duo room or wait for someone to leave this one. 
               You can also switch to a group session for unlimited participants.
             </p>
           </div>

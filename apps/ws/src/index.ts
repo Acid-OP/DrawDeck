@@ -576,7 +576,7 @@ case "leave_room": {
         try {
           participant.ws.send(JSON.stringify(creatorLeftMessage));
         } catch (error) {
-          console.error(`❌ Failed to send creator_left to ${userId}:`, error);
+          console.error(`Failed to send creator_left to ${userId}:`, error);
         }
       }
     });
@@ -588,7 +588,7 @@ case "leave_room": {
           try {
             participant.ws.close(1000, 'Creator left');
           } catch (error) {
-            console.error(`❌ Error closing connection for ${userId}:`, error);
+            console.error(`Error closing connection for ${userId}:`, error);
           }
         }
       });
@@ -698,10 +698,10 @@ setInterval(() => {
               client.ws.send(JSON.stringify(messageData));
               messagesSent++;
             } catch (error) {
-              console.error(`❌ Failed to send message to participant ${index + 1}:`, error);
+              console.error(`Failed to send message to participant ${index + 1}:`, error);
             }
           } else {
-            console.warn(`⚠️ Participant ${index + 1} has closed connection`);
+            console.warn(`Participant ${index + 1} has closed connection`);
           }
         });
         setTimeout(() => {
@@ -710,7 +710,7 @@ setInterval(() => {
               try {
                 client.ws.close(4000, 'Room closed due to inactivity'); 
               } catch (error) {
-                console.error(`❌ Error closing connection for participant ${index + 1}:`, error);
+                console.error(`Error closing connection for participant ${index + 1}:`, error);
               }
             }
           });
@@ -726,4 +726,4 @@ setInterval(() => {
   }
 }, 10 * 1000);
 
-console.log(`✅ WebSocket server running on port ${PORT}`);
+console.log(`WebSocket server running on port ${PORT}`);

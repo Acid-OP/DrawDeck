@@ -351,7 +351,7 @@ private safeSend(payload: any, priority: number = 1) {
     if (this.sendMessage) {
       const sent = this.sendMessage(payload, priority);
       if (!sent) {
-        console.warn('⚠️ [CLIENT] Message rate limited, queued:', payload.type);
+        console.warn('[CLIENT] Message rate limited, queued:', payload.type);
       }
       return sent;
     } else {
@@ -360,7 +360,7 @@ private safeSend(payload: any, priority: number = 1) {
       return true;
     }
   } catch (error) {
-    console.error('❌ [CLIENT] WS send failed:', error);
+    console.error('[CLIENT] WS send failed:', error);
     return false;
   }
 }
@@ -1218,7 +1218,7 @@ setTool(tool: Tool) {
   this.selectedTool = tool;
   this.hoveredForErase = [];
 
-  // ✅ ADD: Cursor management for hand tool
+  // Cursor management for hand tool
   if (tool === "hand") {
     this.canvas.style.cursor = "grab";
   } else if (tool === "select") {
@@ -1384,7 +1384,7 @@ private broadcastShapeUpdate(shape: Shape) {
   
   const localIndex = this.existingShapes.findIndex(s => s.id === shape.id);
   if (localIndex === -1) {
-    console.error('❌ Attempted to update non-existent shape:', shape.id);
+    console.error('Attempted to update non-existent shape:', shape.id);
     return;
   }
   
