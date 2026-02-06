@@ -192,7 +192,7 @@ const rateLimiter = new WebSocketRateLimiter({
 const allowedOrigins = [
   'https://drawdeck.xyz',
   'https://www.drawdeck.xyz',
-  // 'http://localhost:3000' 
+  'http://localhost:3000'
 ];
 
 const PORT = Number(process.env.PORT) || 8080;

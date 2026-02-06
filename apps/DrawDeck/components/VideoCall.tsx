@@ -16,6 +16,7 @@ export function VideoCall({roomId, isCreator }: VideoCallProps) {
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
   const [rtcSocket, setRtcSocket] = useState<WebSocket | null>(null);
+  const [isRtcSocketOpen, setIsRtcSocketOpen] = useState(false);
   const peerRef = useRef<RTCPeerConnection | null>(null);
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
   const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'connected' | 'disconnected' | 'error'>('connecting');
@@ -53,6 +54,7 @@ export function VideoCall({roomId, isCreator }: VideoCallProps) {
     setRtcSocket(rtc);
 
     rtc.onopen = () => {
+      setIsRtcSocketOpen(true);
       rtc.send(JSON.stringify({ type: "join_room", roomId }));
     };
 
@@ -112,7 +114,7 @@ export function VideoCall({roomId, isCreator }: VideoCallProps) {
   }, [roomId]);
 
   useEffect(() => {
-    if (!rtcSocket) return;
+    if (!rtcSocket || !isRtcSocketOpen) return;
     const pc = new RTCPeerConnection({
       iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
     });
@@ -172,7 +174,7 @@ export function VideoCall({roomId, isCreator }: VideoCallProps) {
       pc.close();
       cleanupAudioAnalysis();
     };
-  }, [rtcSocket]);
+  }, [rtcSocket, isRtcSocketOpen]);
   
   const handleRemoteUserDisconnected = () => {
     setIsRemoteUserConnected(false);
