@@ -868,15 +868,19 @@ private forceRedraw() {
   // Clear the entire canvas
   this.ctx.save();
   this.ctx.setTransform(1, 0, 0, 1, 0, 0);
-  this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+  const dpr = window.devicePixelRatio || 1;
+  this.ctx.scale(dpr, dpr);  // Reapply DPR scaling
+  this.ctx.clearRect(0, 0, this.canvas.width / dpr, this.canvas.height / dpr);
   this.ctx.restore();
-  
+
   // Redraw everything
   this.clearCanvas();
 }
   constructor(canvas: HTMLCanvasElement, roomId: string | null, socket: WebSocket | null , isSolo:boolean=false , theme: "light" | "dark" , encryptionKey: string | null = null , sendMessage?: (message: any, priority?: number) => boolean) {
     this.canvas = canvas;
     this.ctx = canvas.getContext("2d")!;
+    const dpr = window.devicePixelRatio || 1;
+    this.ctx.scale(dpr, dpr);
     this.existingShapes = [];
     this.isSolo = isSolo;
     if (!roomId) throw new Error("roomId is required");
@@ -1455,9 +1459,11 @@ public deleteShapeByIndex(index: number) {
       if (style === 2 || style === "dotted") return [2, 6];
       return [];
     }
-    this.ctx.save();                          
-    this.ctx.setTransform(1, 0, 0, 1, 0, 0);     
-    this.ctx.translate(this.panOffsetX, this.panOffsetY); 
+    this.ctx.save();
+    this.ctx.setTransform(1, 0, 0, 1, 0, 0);
+    const dpr = window.devicePixelRatio || 1;
+    this.ctx.scale(dpr, dpr);  // Reapply DPR scaling
+    this.ctx.translate(this.panOffsetX, this.panOffsetY);
     this.ctx.scale(this.zoom, this.zoom);         
     this.existingShapes.forEach((shape , idx) => {
       const isHovered = this.selectedTool === "eraser" &&
@@ -2378,13 +2384,15 @@ if (this.selectedTool === "pencil" && this.clicked) {
   this.clearCanvas();
   this.ctx.save();
   this.ctx.setTransform(1, 0, 0, 1, 0, 0);
+  const dpr = window.devicePixelRatio || 1;
+  this.ctx.scale(dpr, dpr);  // Reapply DPR scaling
   this.ctx.translate(this.panOffsetX, this.panOffsetY);
   this.ctx.scale(this.zoom, this.zoom);
-  
+
   this.ctx.strokeStyle = this.currentStrokeColor;
   this.ctx.lineWidth = this.currentStrokeWidth;
   this.ctx.setLineDash(this.getDashArray(this.currentStrokeStyle));
-  
+
   this.drawPencilPath(this.pencilPoints);
   this.ctx.restore();
 }
@@ -2433,9 +2441,6 @@ if (this.selectedTool === "rect") {
   );
   this.ctx.fill();
   this.ctx.stroke();
-  this.ctx.restore();
-
-
   this.ctx.restore();
 } else if (this.selectedTool === "diamond") {
   const cx = this.startX + width / 2;

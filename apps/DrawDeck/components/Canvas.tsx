@@ -415,16 +415,22 @@ useEffect(() => {
   const shouldShowPropertiesPanel = ["rect", "diamond", "circle", "arrow", "line", "pencil", "text"].includes(selectedTool);
   
   const shouldShowWelcome = game && !hasInteracted && !game.hasShapes() && isSolo;
-  
+
+  const dpr = typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1;
+
   return (
     <div className={`w-screen h-screen overflow-hidden relative ${theme === "dark" ? "bg-[#121212]" : "bg-white"} ${className || ''}`}>
       <CanvasRateLimitNotification rateLimitState={rateLimitState} />
       <canvas
         ref={canvasRef}
-        width={dimensions.width}
-        height={dimensions.height}
-        className="" 
-        style={{ backgroundColor: theme === "dark" ? "#121212" : "#ffffff" }}
+        width={dimensions.width * dpr}
+        height={dimensions.height * dpr}
+        className=""
+        style={{
+          width: `${dimensions.width}px`,
+          height: `${dimensions.height}px`,
+          backgroundColor: theme === "dark" ? "#121212" : "#ffffff"
+        }}
       />
       
       {shouldShowWelcome && (
