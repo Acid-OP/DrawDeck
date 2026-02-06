@@ -10,6 +10,19 @@ jobs:
       - name: Checkout the code
         uses: actions/checkout@v4
 
+      - name: Log Environment Variables
+        run: |
+          echo "=== ENVIRONMENT VARIABLES ==="
+          echo "NEXT_PUBLIC_WS_URL=${{ secrets.NEXT_PUBLIC_WS_URL }}"
+          echo "NEXT_PUBLIC_RTC_URL=${{ secrets.NEXT_PUBLIC_RTC_URL }}"
+          echo "NEXT_PUBLIC_SITE_URL=${{ secrets.NEXT_PUBLIC_SITE_URL }}"
+          echo "GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}"
+          echo "GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}"
+          echo "NEXTAUTH_URL=${{ secrets.NEXTAUTH_URL }}"
+          echo "NEXTAUTH_SECRET=${{ secrets.NEXTAUTH_SECRET }}"
+          echo "DOCKERHUB_USERNAME=${{ secrets.DOCKERHUB_USERNAME }}"
+          echo "================================"
+
       - name: Docker login
         uses: docker/login-action@v2
         with:
