@@ -82,8 +82,10 @@ export class Game {
   private isLocalUpdate = false;
   private pencilPoints: { x: number; y: number }[] = [];
   public onTextInsert?: (x: number, y: number) => void;
+  public onTextEdit?: (shape: Shape & { type: "text" }) => void;
   public onToolChange?: (tool: Tool) => void;
   private selectedShapeIndex: number | null = null;
+  private editingTextShapeId: string | null = null;
   private hoveredForErase: number[] = [];
   socket?: WebSocket | null;
   encryptionKey? : string | null;
@@ -91,6 +93,9 @@ export class Game {
   private activeHandle: "tl" | "tr" | "bl" | "br" | "start" | "end" | null = null;
   private offsetX = 0;
   private offsetY = 0;
+  private resizeStartX = 0;
+  private resizeStartY = 0;
+  private readonly RESIZE_DAMPING = 0.6; // Lower = less sensitive (0.5 = half speed)
   public zoom: number = 1;
   private readonly MAX_CORNER_RADIUS = 10;
   private isSolo: boolean;
@@ -1075,6 +1080,36 @@ addTextShape(x: number, y: number, text: string) {
   }, 10);
 }
 
+updateTextShape(id: string, newText: string) {
+  const shapeIndex = this.existingShapes.findIndex(s => s.id === id);
+  if (shapeIndex === -1) return;
+
+  const shape = this.existingShapes[shapeIndex];
+  if (shape.type !== "text") return;
+
+  // Update the text
+  shape.text = newText;
+
+  // Clear editing state
+  this.editingTextShapeId = null;
+
+  // Handle broadcasting/saving
+  if (this.isSolo) {
+    this.scheduleLocalSave();
+  } else {
+    this.broadcastShapeUpdate(shape);
+  }
+
+  // Redraw canvas with updated text
+  this.clearCanvas();
+}
+
+// Method to cancel text editing (called from Canvas when textarea is closed without saving)
+clearTextEditingState() {
+  this.editingTextShapeId = null;
+  this.clearCanvas();
+}
+
 getMousePos = (e: MouseEvent) => {
   const rect = this.canvas.getBoundingClientRect();
   // Convert screen coordinates to logical coordinates
@@ -1211,6 +1246,7 @@ getMousePos = (e: MouseEvent) => {
     this.canvas.removeEventListener("mousedown", this.mouseDownHandler);
     this.canvas.removeEventListener("mouseup", this.mouseUpHandler);
     this.canvas.removeEventListener("mousemove", this.mouseMoveHandler);
+    this.canvas.removeEventListener("dblclick", this.dblClickHandler);
 
       this.canvas.removeEventListener("touchstart", this.touchStartHandler);
   this.canvas.removeEventListener("touchend", this.touchEndHandler);
@@ -1573,6 +1609,10 @@ public deleteShapeByIndex(index: number) {
 
         }
       } else if (shape.type === "text") {
+        // Skip rendering if this text shape is currently being edited
+        if (this.editingTextShapeId === shape.id) {
+          return;
+        }
         const fontSize = shape.fontSize || 20;
         const fillStyle = shape.strokeColor ?? (this.theme === "dark" ? "#fff" : "#000");
         this.ctx.save();
@@ -1606,6 +1646,30 @@ public deleteShapeByIndex(index: number) {
   this.selectedShapeIndex = null;
   this.clearCanvas();
 }
+
+  dblClickHandler = (e: MouseEvent) => {
+    const pos = this.getMousePos(e);
+
+    // Check if we double-clicked on a text shape
+    for (let i = this.existingShapes.length - 1; i >= 0; i--) {
+      const shape = this.existingShapes[i];
+      if (shape.type === "text" && this.isPointInsideShape(pos.x, pos.y, shape)) {
+        // Deselect shape before editing to avoid selection box conflict
+        this.selectedShapeIndex = null;
+
+        // Mark this shape as being edited so we don't render it
+        this.editingTextShapeId = shape.id;
+
+        // Trigger text edit mode
+        if (this.onTextEdit) {
+          this.onTextEdit(shape);
+        }
+        e.preventDefault();
+        this.clearCanvas();
+        return;
+      }
+    }
+  };
 
   mouseDownHandler = (e: MouseEvent) => {
     const pos = this.getMousePos(e);
@@ -1641,6 +1705,8 @@ public deleteShapeByIndex(index: number) {
       if (hoverStart) {
         this.dragMode = "resize";
         this.activeHandle = "start";
+        this.resizeStartX = pos.x;
+        this.resizeStartY = pos.y;
         e.preventDefault();
         return;
       }else if (hoverMid) {
@@ -1652,6 +1718,8 @@ public deleteShapeByIndex(index: number) {
       }else if (hoverEnd) {
         this.dragMode = "resize";
         this.activeHandle = "end";
+        this.resizeStartX = pos.x;
+        this.resizeStartY = pos.y;
         e.preventDefault();
         return;
       }} else {
@@ -1659,6 +1727,8 @@ public deleteShapeByIndex(index: number) {
       if (h) {
         this.dragMode = "resize";
         this.activeHandle = h;
+        this.resizeStartX = pos.x;
+        this.resizeStartY = pos.y;
         e.preventDefault();
         return;
       }
@@ -1669,6 +1739,8 @@ public deleteShapeByIndex(index: number) {
       {
         this.dragMode = "resize";
         this.activeHandle = null;
+        this.resizeStartX = pos.x;
+        this.resizeStartY = pos.y;
         e.preventDefault();
         return;
       }
@@ -1686,6 +1758,8 @@ public deleteShapeByIndex(index: number) {
         if (this.isPointInsideShape(pos.x, pos.y, this.existingShapes[i])) {
           this.selectedShapeIndex = i;
           this.dragMode = "resize";
+          this.resizeStartX = pos.x;
+          this.resizeStartY = pos.y;
           this.clearCanvas();
           return;
         }
@@ -2230,25 +2304,32 @@ public getScreenCoordinates(logicalX: number, logicalY: number): { x: number; y:
             }
           }
           else if (this.dragMode === "resize" && this.activeHandle) {
+            // Apply damping to resize for less sensitivity
+            const rawDeltaX = p.x - this.resizeStartX;
+            const rawDeltaY = p.y - this.resizeStartY;
+            const dampedDeltaX = rawDeltaX * this.RESIZE_DAMPING;
+            const dampedDeltaY = rawDeltaY * this.RESIZE_DAMPING;
+            const dampedX = this.resizeStartX + dampedDeltaX;
+            const dampedY = this.resizeStartY + dampedDeltaY;
 
             if (s.type === "rect") {
               const h = this.activeHandle;
               if (h === "tl" || h === "bl") {
-                const newW = s.x + s.width - p.x;
-                s.x = p.x;
+                const newW = s.x + s.width - dampedX;
+                s.x = dampedX;
                 s.width = newW;
               }
               if (h === "tl" || h === "tr") {
-                const newH = s.y + s.height - p.y;
-                s.y = p.y;
+                const newH = s.y + s.height - dampedY;
+                s.y = dampedY;
                 s.height = newH;
               }
-              if (h === "tr" || h === "br") s.width  = p.x - s.x;
-              if (h === "bl" || h === "br") s.height = p.y - s.y;
+              if (h === "tr" || h === "br") s.width  = dampedX - s.x;
+              if (h === "bl" || h === "br") s.height = dampedY - s.y;
 
             } else if (s.type === "circle") {
-              s.rx = Math.abs(p.x - s.centerX);
-              s.ry = Math.abs(p.y - s.centerY);
+              s.rx = Math.abs(dampedX - s.centerX);
+              s.ry = Math.abs(dampedY - s.centerY);
 
             }  else if (s.type === "diamond") {
               const currentCenterX = (s.top.x + s.bottom.x) / 2;
@@ -2262,27 +2343,27 @@ public getScreenCoordinates(logicalX: number, logicalY: number): { x: number; y:
               let newCenterY = currentCenterY;
 
               const h = this.activeHandle;
-  
+
               if (h === "tl") {
-                newCenterX = (p.x + s.right.x) / 2;
-                newCenterY = (p.y + s.bottom.y) / 2;
-                newWidth = Math.abs(s.right.x - p.x);
-                newHeight = Math.abs(s.bottom.y - p.y);
+                newCenterX = (dampedX + s.right.x) / 2;
+                newCenterY = (dampedY + s.bottom.y) / 2;
+                newWidth = Math.abs(s.right.x - dampedX);
+                newHeight = Math.abs(s.bottom.y - dampedY);
               } else if (h === "tr") {
-                newCenterX = (s.left.x + p.x) / 2;
-                newCenterY = (p.y + s.bottom.y) / 2;
-                newWidth = Math.abs(p.x - s.left.x);
-                newHeight = Math.abs(s.bottom.y - p.y);
+                newCenterX = (s.left.x + dampedX) / 2;
+                newCenterY = (dampedY + s.bottom.y) / 2;
+                newWidth = Math.abs(dampedX - s.left.x);
+                newHeight = Math.abs(s.bottom.y - dampedY);
               } else if (h === "bl") {
-                newCenterX = (p.x + s.right.x) / 2;
-                newCenterY = (s.top.y + p.y) / 2;
-                newWidth = Math.abs(s.right.x - p.x);
-                newHeight = Math.abs(p.y - s.top.y);
+                newCenterX = (dampedX + s.right.x) / 2;
+                newCenterY = (s.top.y + dampedY) / 2;
+                newWidth = Math.abs(s.right.x - dampedX);
+                newHeight = Math.abs(dampedY - s.top.y);
               } else if (h === "br") {
-                newCenterX = (s.left.x + p.x) / 2;
-                newCenterY = (s.top.y + p.y) / 2;
-                newWidth = Math.abs(p.x - s.left.x);
-                newHeight = Math.abs(p.y - s.top.y);
+                newCenterX = (s.left.x + dampedX) / 2;
+                newCenterY = (s.top.y + dampedY) / 2;
+                newWidth = Math.abs(dampedX - s.left.x);
+                newHeight = Math.abs(dampedY - s.top.y);
               }
 
               s.top.x = newCenterX;
@@ -2299,11 +2380,11 @@ public getScreenCoordinates(logicalX: number, logicalY: number): { x: number; y:
 
             }  else if ((s.type === "line" || s.type === "arrow") && this.activeHandle) {
               if (this.activeHandle === "start") {
-      s.startX = p.x;
-      s.startY = p.y;
+      s.startX = dampedX;
+      s.startY = dampedY;
     } else if (this.activeHandle === "end") {
-      s.endX = p.x;
-      s.endY = p.y;
+      s.endX = dampedX;
+      s.endY = dampedY;
     }
   }  else if (s.type === "text") {
     const h = this.activeHandle;
@@ -2318,23 +2399,28 @@ public getScreenCoordinates(logicalX: number, logicalY: number): { x: number; y:
     if (h === "tl") {
       const originalBottomRightX = s.x + textWidth;
       const originalBottomRightY = s.y + textHeight;
-      scaleX = Math.max(0.5, (originalBottomRightX - p.x) / textWidth);
-      scaleY = Math.max(0.5, (originalBottomRightY - p.y) / textHeight);
+      scaleX = Math.max(0.5, (originalBottomRightX - dampedX) / textWidth);
+      scaleY = Math.max(0.5, (originalBottomRightY - dampedY) / textHeight);
     } else if (h === "tr") {
       const originalBottomLeftY = s.y + textHeight;
-      scaleX = Math.max(0.5, (p.x - s.x) / textWidth);
-      scaleY = Math.max(0.5, (originalBottomLeftY - p.y) / textHeight);
+      scaleX = Math.max(0.5, (dampedX - s.x) / textWidth);
+      scaleY = Math.max(0.5, (originalBottomLeftY - dampedY) / textHeight);
     } else if (h === "bl") {
       const originalTopRightX = s.x + textWidth;
-      scaleX = Math.max(0.5, (originalTopRightX - p.x) / textWidth);
-      scaleY = Math.max(0.5, (p.y - s.y) / textHeight);
+      scaleX = Math.max(0.5, (originalTopRightX - dampedX) / textWidth);
+      scaleY = Math.max(0.5, (dampedY - s.y) / textHeight);
     } else if (h === "br") {
-      scaleX = Math.max(0.5, (p.x - s.x) / textWidth);
-      scaleY = Math.max(0.5, (p.y - s.y) / textHeight);
+      scaleX = Math.max(0.5, (dampedX - s.x) / textWidth);
+      scaleY = Math.max(0.5, (dampedY - s.y) / textHeight);
     }
     const avgScale = (scaleX + scaleY) / 2;
     s.fontSize = Math.max(8, Math.min(100, fontSize * avgScale));
-  }}
+  }
+
+            // Update resize start position for next frame (incremental damping)
+            this.resizeStartX = p.x;
+            this.resizeStartY = p.y;
+          }
     this.clearCanvas();
     if (this.isSolo) {
     } else {
@@ -2522,5 +2608,6 @@ if (this.selectedTool === "rect") {
     this.canvas.addEventListener("mousedown", this.mouseDownHandler);
     this.canvas.addEventListener("mouseup", this.mouseUpHandler);
     this.canvas.addEventListener("mousemove", this.mouseMoveHandler);
+    this.canvas.addEventListener("dblclick", this.dblClickHandler);
   };
 }

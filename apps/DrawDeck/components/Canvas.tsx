@@ -66,12 +66,14 @@ export function Canvas({ roomId, socket, isSolo = false, isUserAuthenticated = f
   const { theme, toggleTheme } = useTheme();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const [inputBox, setInputBox] = useState<{ 
-    x: number; 
-    y: number; 
-    logicalX: number; 
-    logicalY: number; 
+  const [inputBox, setInputBox] = useState<{
+    x: number;
+    y: number;
+    logicalX: number;
+    logicalY: number;
   } | null>(null);
+  const [editingTextShapeId, setEditingTextShapeId] = useState<string | null>(null);
+  const [editingTextValue, setEditingTextValue] = useState<string>("");
   const [dimensions, setDimensions] = useState<{ width: number; height: number }>({
     width: 0,
     height: 0,
@@ -404,9 +406,19 @@ useEffect(() => {
       const screenX = logicalX * g.zoom + g.panOffsetX;
       const screenY = logicalY * g.zoom + g.panOffsetY;
       setInputBox({ x: screenX, y: screenY, logicalX, logicalY });
+      setEditingTextShapeId(null);
+      setEditingTextValue("");
+    };
+    g.onTextEdit = (shape) => {
+      if ((window as any).justBlurredTextInput) return;
+      const screenX = shape.x * g.zoom + g.panOffsetX;
+      const screenY = shape.y * g.zoom + g.panOffsetY;
+      setInputBox({ x: screenX, y: screenY, logicalX: shape.x, logicalY: shape.y });
+      setEditingTextShapeId(shape.id);
+      setEditingTextValue(shape.text);
     };
     g.initTouchHandlers();
-    
+
     setGame(g);
     return () => g.destroy();
   }
@@ -556,10 +568,12 @@ useEffect(() => {
         <textarea
         ref={textareaRef}
         rows={textareaRows}
+        defaultValue={editingTextValue}
         className="absolute bg-transparent px-0 py-0 m-0 border-none outline-none resize-none whitespace-pre-wrap break-words"
         style={{
           color: getStrokeColors(theme)[strokeIndex],
           font: `${isMobile ? '16px' : '20px'} Virgil`,
+          lineHeight: '1.2',
           top: inputBox.y,
           left: inputBox.x,
           minWidth: "1ch",
@@ -576,13 +590,26 @@ useEffect(() => {
             e.currentTarget.focus();
           }
         }}
-        onBlur={(e: React.FocusEvent<HTMLTextAreaElement>) => {  
+        onBlur={(e: React.FocusEvent<HTMLTextAreaElement>) => {
           if (game && e.target.value.trim()) {
-            game.addTextShape(inputBox.logicalX, inputBox.logicalY, e.target.value);
+            if (editingTextShapeId) {
+              // Update existing text
+              game.updateTextShape(editingTextShapeId, e.target.value);
+            } else {
+              // Create new text
+              game.addTextShape(inputBox.logicalX, inputBox.logicalY, e.target.value);
+            }
+          } else {
+            // If empty or canceled, clear the editing state
+            if (game) {
+              game.clearTextEditingState();
+            }
           }
           (window as any).justBlurredTextInput = true;
           setInputBox(null);
           setTextareaRows(1);
+          setEditingTextShapeId(null);
+          setEditingTextValue("");
           setTimeout(() => {
             (window as any).justBlurredTextInput = false;
           }, 300);
