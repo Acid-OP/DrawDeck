@@ -192,8 +192,14 @@ const rateLimiter = new WebSocketRateLimiter({
 const allowedOrigins = [
   'https://drawdeck.xyz',
   'https://www.drawdeck.xyz',
-  'http://localhost:3000'
+  'http://localhost:3000',
 ];
+
+function isAllowedOrigin(origin: string): boolean {
+  if (allowedOrigins.includes(origin)) return true;
+  if (origin && origin.endsWith('.up.railway.app')) return true;
+  return false;
+}
 
 const PORT = Number(process.env.PORT) || 8080;
 
@@ -216,7 +222,7 @@ const wss = new WebSocketServer({
       return false;
     }
 
-    if (!allowedOrigins.includes(info.origin)) {
+    if (!isAllowedOrigin(info.origin)) {
       return false;
     }
     

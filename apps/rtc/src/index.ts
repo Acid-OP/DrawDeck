@@ -6,15 +6,21 @@ import { randomUUID } from "crypto";
 const allowedOrigins = [
   'https://drawdeck.xyz',
   'https://www.drawdeck.xyz',
-  'http://localhost:3000'
+  'http://localhost:3000',
 ];
+
+function isAllowedOrigin(origin: string): boolean {
+  if (allowedOrigins.includes(origin)) return true;
+  if (origin && origin.endsWith('.up.railway.app')) return true;
+  return false;
+}
 
 const PORT = Number(process.env.PORT) || 8081;
 
 const wss = new WebSocketServer({
   port: PORT,
   verifyClient: (info: { origin: string; secure: boolean; req: IncomingMessage }) => {
-    if (!allowedOrigins.includes(info.origin)) {
+    if (!isAllowedOrigin(info.origin)) {
       console.log(`RTC connection rejected - Invalid origin: ${info.origin}`);
       return false;
     }
