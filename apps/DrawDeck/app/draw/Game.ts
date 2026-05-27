@@ -31,6 +31,8 @@ type Shape =
       startY: number;
       endX: number;
       endY: number;
+      controlX?: number;
+      controlY?: number;
     })
   | (BaseShape & StyleFields & {
       type: "arrow";
@@ -38,6 +40,8 @@ type Shape =
       startY: number;
       endX: number;
       endY: number;
+      controlX?: number;
+      controlY?: number;
     })
   | (BaseShape & StyleFields & {
       type: "pencil";
@@ -89,7 +93,7 @@ export class Game {
   private hoveredForErase: number[] = [];
   socket?: WebSocket | null;
   encryptionKey? : string | null;
-  private dragMode: "none" | "move" | "resize" | "rotate" = "none";
+  private dragMode: "none" | "move" | "resize" | "rotate" | "bend" = "none";
   private activeHandle: "tl" | "tr" | "bl" | "br" | "start" | "end" | null = null;
   private offsetX = 0;
   private offsetY = 0;
@@ -251,6 +255,10 @@ public setTheme(theme: "light" | "dark") {
       newShape.startY += offset;
       newShape.endX += offset;
       newShape.endY += offset;
+      if (newShape.controlX != null && newShape.controlY != null) {
+        newShape.controlX += offset;
+        newShape.controlY += offset;
+      }
     } else if (newShape.type === 'pencil') {
       newShape.points = newShape.points.map((p: { x: number; y: number }) => ({
         x: p.x + offset,
@@ -527,8 +535,9 @@ private drawLineHandles(
   const startCy = startY - uy * r;
   const endCx   = endX   + ux * r;
   const endCy   = endY   + uy * r;
-  const midCx   = (startX + endX) / 2;
-  const midCy   = (startY + endY) / 2;
+  const mid = this.getCurveMidpoint(shape);
+  const midCx   = mid.x;
+  const midCy   = mid.y;
 
   this.drawCircleHandle(startCx, startCy, false, r, this.hoveredEndpoint === "start");
   this.drawCircleHandle(endCx, endCy, false, r, this.hoveredEndpoint === "end");
@@ -1204,6 +1213,22 @@ getMousePos = (e: MouseEvent) => {
     }
 
     if (shape.type === "line" || shape.type === "arrow") {
+      if (shape.controlX != null && shape.controlY != null) {
+        // Sample the quadratic curve and test each segment
+        const steps = 16;
+        let prevX = shape.startX;
+        let prevY = shape.startY;
+        for (let i = 1; i <= steps; i++) {
+          const t = i / steps;
+          const mt = 1 - t;
+          const cx = mt * mt * shape.startX + 2 * mt * t * shape.controlX + t * t * shape.endX;
+          const cy = mt * mt * shape.startY + 2 * mt * t * shape.controlY + t * t * shape.endY;
+          if (this.isPointNearLineSegment(x, y, prevX, prevY, cx, cy, pad)) return true;
+          prevX = cx;
+          prevY = cy;
+        }
+        return false;
+      }
       return this.isPointNearLineSegment(
         x,
         y,
@@ -1578,6 +1603,50 @@ public deleteShapeByIndex(index: number) {
     this.ctx.stroke();
     this.ctx.restore();
   }
+
+  // ─── Curved line/arrow helpers ─────────────────────────
+  // Point on the line/arrow at t=0.5. For a curved (quadratic) shape this is
+  // the point on the curve; for a straight one it's the geometric midpoint.
+  private getCurveMidpoint(shape: Extract<Shape, { type: "line" | "arrow" }>): { x: number; y: number } {
+    if (shape.controlX != null && shape.controlY != null) {
+      return {
+        x: 0.25 * shape.startX + 0.5 * shape.controlX + 0.25 * shape.endX,
+        y: 0.25 * shape.startY + 0.5 * shape.controlY + 0.25 * shape.endY,
+      };
+    }
+    return { x: (shape.startX + shape.endX) / 2, y: (shape.startY + shape.endY) / 2 };
+  }
+
+  // Draws only the arrowhead at the tip, pointing away from (fromX, fromY).
+  // Used so a curved arrow's head follows the curve's tangent at the end.
+  private drawArrowHead(
+    ctx: CanvasRenderingContext2D,
+    tipX: number,
+    tipY: number,
+    fromX: number,
+    fromY: number,
+    strokeStyle: string,
+    lineWidth: number = 2
+  ): void {
+    const headLength = 10;
+    const angle = Math.atan2(tipY - fromY, tipX - fromX);
+    const leftX = tipX - headLength * Math.cos(angle - Math.PI / 6);
+    const leftY = tipY - headLength * Math.sin(angle - Math.PI / 6);
+    const rightX = tipX - headLength * Math.cos(angle + Math.PI / 6);
+    const rightY = tipY - headLength * Math.sin(angle + Math.PI / 6);
+    ctx.save();
+    ctx.strokeStyle = strokeStyle;
+    ctx.fillStyle = strokeStyle;
+    ctx.lineWidth = lineWidth;
+    ctx.beginPath();
+    ctx.moveTo(tipX, tipY);
+    ctx.lineTo(leftX, leftY);
+    ctx.lineTo(rightX, rightY);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    ctx.restore();
+  }
   private adaptShapeToTheme(shape: Shape): Shape {
     const lightDefault = '#1e1e1e';
     const darkDefault = '#ffffff';
@@ -1697,20 +1766,20 @@ public deleteShapeByIndex(index: number) {
       } else if (shape.type === "line" || shape.type === "arrow") {
         this.ctx.strokeStyle = strokeCol;
         this.ctx.fillStyle = fillCol;
+        const curved = shape.controlX != null && shape.controlY != null;
         this.ctx.beginPath();
         this.ctx.moveTo(shape.startX , shape.startY );
-        this.ctx.lineTo(shape.endX , shape.endY );
+        if (curved) {
+          this.ctx.quadraticCurveTo(shape.controlX!, shape.controlY!, shape.endX, shape.endY);
+        } else {
+          this.ctx.lineTo(shape.endX , shape.endY );
+        }
         this.ctx.stroke();
         this.ctx.closePath();
         if (shape.type === "arrow") {
-          this.drawArrow(
-            this.ctx,
-            shape.startX ,
-            shape.startY ,
-            shape.endX ,
-            shape.endY ,
-            strokeCol
-          );
+          const fromX = curved ? shape.controlX! : shape.startX;
+          const fromY = curved ? shape.controlY! : shape.startY;
+          this.drawArrowHead(this.ctx, shape.endX, shape.endY, fromX, fromY, strokeCol, lineWidth);
         }
         if (
           this.selectedTool === "select" &&
@@ -1826,9 +1895,8 @@ public deleteShapeByIndex(index: number) {
       const handleRadius = 8;
       const hoverStart = dist(pos.x, pos.y, shape.startX, shape.startY) < handleRadius;
       const hoverEnd = dist(pos.x, pos.y, shape.endX, shape.endY) < handleRadius;
-      const midX = (shape.startX + shape.endX) / 2;
-      const midY = (shape.startY + shape.endY) / 2;
-      const hoverMid = dist(pos.x, pos.y, midX, midY) < handleRadius;
+      const mid = this.getCurveMidpoint(shape);
+      const hoverMid = dist(pos.x, pos.y, mid.x, mid.y) < handleRadius;
       if (hoverStart) {
         this.dragMode = "resize";
         this.activeHandle = "start";
@@ -1836,17 +1904,25 @@ public deleteShapeByIndex(index: number) {
         this.resizeStartY = pos.y;
         e.preventDefault();
         return;
-      }else if (hoverMid) {
-        this.dragMode = "move";
-        this.offsetX = pos.x;
-        this.offsetY = pos.y;
-        e.preventDefault();
-        return;
       }else if (hoverEnd) {
         this.dragMode = "resize";
         this.activeHandle = "end";
         this.resizeStartX = pos.x;
         this.resizeStartY = pos.y;
+        e.preventDefault();
+        return;
+      }else if (hoverMid) {
+        // Drag the middle to bend the line/arrow into a curve
+        this.dragMode = "bend";
+        this.offsetX = pos.x;
+        this.offsetY = pos.y;
+        e.preventDefault();
+        return;
+      }else if (this.isPointInsideShape(pos.x, pos.y, shape)) {
+        // Drag the body to move the whole shape
+        this.dragMode = "move";
+        this.offsetX = pos.x;
+        this.offsetY = pos.y;
         e.preventDefault();
         return;
       }} else {
@@ -2353,9 +2429,8 @@ public getScreenCoordinates(logicalX: number, logicalY: number): { x: number; y:
           const hoverStart = dist(mouseX, mouseY, x1, y1) < handleRadius + 2;
           const hoverEnd = dist(mouseX, mouseY, x2, y2) < handleRadius + 2;
 
-          const midX = (x1 + x2) / 2;
-          const midY = (y1 + y2) / 2;
-          const hoverMid = dist(mouseX, mouseY, midX, midY) < handleRadius + 2;
+          const mid = this.getCurveMidpoint(shape);
+          const hoverMid = dist(mouseX, mouseY, mid.x, mid.y) < handleRadius + 2;
 
           let newHover: "start" | "end" | "mid" | null = null;
           if (hoverStart) newHover = "start";
@@ -2426,6 +2501,9 @@ public getScreenCoordinates(logicalX: number, logicalY: number): { x: number; y:
             case "arrow":
               s.startX += dx; s.startY += dy;
               s.endX += dx;   s.endY += dy;
+              if (s.controlX != null && s.controlY != null) {
+                s.controlX += dx; s.controlY += dy;
+              }
               break;
             case "pencil":
               s.points = s.points.map((pt) => ({
@@ -2560,6 +2638,13 @@ public getScreenCoordinates(logicalX: number, logicalY: number): { x: number; y:
           else if (this.dragMode === "rotate") {
             const center = this.getShapeCenter(s);
             s.rotation = Math.atan2(p.y - center.y, p.x - center.x) + this.rotateGrabOffset;
+            this.hasDragged = true;
+          }
+          else if (this.dragMode === "bend" && (s.type === "line" || s.type === "arrow")) {
+            // Make the curve's midpoint follow the cursor by solving for the
+            // quadratic control point: M = 0.25*S + 0.5*C + 0.25*E
+            s.controlX = 2 * p.x - (s.startX + s.endX) / 2;
+            s.controlY = 2 * p.y - (s.startY + s.endY) / 2;
             this.hasDragged = true;
           }
     this.clearCanvas();
