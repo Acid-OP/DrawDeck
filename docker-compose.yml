@@ -5,9 +5,9 @@ services:
       context: .                         
       dockerfile: docker/Dockerfile.websocket  
     ports:
-      - "8080:8080"                     
+      - "8082:8082"                     
     environment:
-      - PORT=8080                         
+      - PORT=8082                         
     restart: unless-stopped               
 
   # RTC Signaling Server  
@@ -27,7 +27,7 @@ services:
       context: .
       dockerfile: docker/Dockerfile.frontend
       args:                            
-        - NEXT_PUBLIC_WS_URL=ws://localhost:8080
+        - NEXT_PUBLIC_WS_URL=ws://localhost:8082
         - NEXT_PUBLIC_RTC_URL=ws://localhost:8081
         - NEXT_PUBLIC_SITE_URL=http://localhost:3000
         - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}

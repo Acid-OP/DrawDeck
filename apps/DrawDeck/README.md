@@ -58,7 +58,7 @@ pnpm dev
 By default this will run:
 
 * Frontend at **[http://localhost:3000](http://localhost:3000)**
-* WS server at **ws\://localhost:8080**
+* WS server at **ws\://localhost:8082**
 * RTC signaling at **[http://localhost:8081](http://localhost:8081)**
 
 > You can also start services individually:

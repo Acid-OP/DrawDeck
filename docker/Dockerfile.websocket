@@ -23,8 +23,8 @@ RUN pnpm install
 # Build the WebSocket backend app
 RUN pnpm run build
 
-# Expose port 8080 to allow traffic to the WebSocket service
-EXPOSE 8080
+# Expose port 8082 to allow traffic to the WebSocket service
+EXPOSE 8082
 
 # Start the WebSocket backend service
 CMD ["pnpm","run","start:ws"]
