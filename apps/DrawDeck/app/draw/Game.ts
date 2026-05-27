@@ -1,6 +1,6 @@
 import { Tool } from "@/components/Canvas";
 
-type BaseShape = { readonly id: string };
+type BaseShape = { readonly id: string; rotation?: number };
 
 type Shape =
   | (BaseShape & StyleFields & {
@@ -89,7 +89,7 @@ export class Game {
   private hoveredForErase: number[] = [];
   socket?: WebSocket | null;
   encryptionKey? : string | null;
-  private dragMode: "none" | "move" | "resize" = "none";
+  private dragMode: "none" | "move" | "resize" | "rotate" = "none";
   private activeHandle: "tl" | "tr" | "bl" | "br" | "start" | "end" | null = null;
   private offsetX = 0;
   private offsetY = 0;
@@ -106,7 +106,9 @@ export class Game {
   public currentStrokeStyle: number = 0;
   public currentFillStyle: number = 0;
   private hoveredEndpoint: "start" | "end" | "mid" | null = null;
-  
+  private rotateGrabOffset = 0;
+  private readonly ROTATION_HANDLE_DISTANCE = 24;
+
   // Undo/Redo history
   private history: Shape[][] = [];
   private historyIndex: number = -1;
@@ -1474,6 +1476,108 @@ public deleteShapeByIndex(index: number) {
     if (style === 2 || style === "dotted") return [2, 6];
     return [];
   }
+
+  // ─── Rotation helpers ──────────────────────────────────
+  private getShapeBBox(shape: Shape): { minX: number; minY: number; maxX: number; maxY: number } {
+    if (shape.type === "rect") {
+      return {
+        minX: Math.min(shape.x, shape.x + shape.width),
+        minY: Math.min(shape.y, shape.y + shape.height),
+        maxX: Math.max(shape.x, shape.x + shape.width),
+        maxY: Math.max(shape.y, shape.y + shape.height),
+      };
+    }
+    if (shape.type === "circle") {
+      return {
+        minX: shape.centerX - shape.rx,
+        minY: shape.centerY - shape.ry,
+        maxX: shape.centerX + shape.rx,
+        maxY: shape.centerY + shape.ry,
+      };
+    }
+    if (shape.type === "diamond") {
+      const xs = [shape.top.x, shape.right.x, shape.bottom.x, shape.left.x];
+      const ys = [shape.top.y, shape.right.y, shape.bottom.y, shape.left.y];
+      return { minX: Math.min(...xs), minY: Math.min(...ys), maxX: Math.max(...xs), maxY: Math.max(...ys) };
+    }
+    if (shape.type === "text") {
+      const fontSize = shape.fontSize || 20;
+      const lines = shape.text.split("\n");
+      const lineHeight = fontSize * 1.2;
+      this.ctx.font = `${fontSize}px Virgil`;
+      let maxWidth = 0;
+      lines.forEach((line) => {
+        maxWidth = Math.max(maxWidth, this.ctx.measureText(line).width);
+      });
+      return { minX: shape.x, minY: shape.y, maxX: shape.x + maxWidth, maxY: shape.y + lines.length * lineHeight };
+    }
+    if (shape.type === "pencil") {
+      const xs = shape.points.map((p) => p.x);
+      const ys = shape.points.map((p) => p.y);
+      return { minX: Math.min(...xs), minY: Math.min(...ys), maxX: Math.max(...xs), maxY: Math.max(...ys) };
+    }
+    return {
+      minX: Math.min(shape.startX, shape.endX),
+      minY: Math.min(shape.startY, shape.endY),
+      maxX: Math.max(shape.startX, shape.endX),
+      maxY: Math.max(shape.startY, shape.endY),
+    };
+  }
+
+  private getShapeCenter(shape: Shape): { x: number; y: number } {
+    const b = this.getShapeBBox(shape);
+    return { x: (b.minX + b.maxX) / 2, y: (b.minY + b.maxY) / 2 };
+  }
+
+  private rotatePoint(px: number, py: number, cx: number, cy: number, angle: number): { x: number; y: number } {
+    const dx = px - cx;
+    const dy = py - cy;
+    const cos = Math.cos(angle);
+    const sin = Math.sin(angle);
+    return { x: cx + dx * cos - dy * sin, y: cy + dx * sin + dy * cos };
+  }
+
+  // Inverse-rotate a world point into the shape's local (unrotated) space
+  // so existing axis-aligned hit-test / resize math keeps working.
+  private toLocalPoint(shape: Shape, x: number, y: number): { x: number; y: number } {
+    const rot = shape.rotation || 0;
+    if (!rot) return { x, y };
+    const c = this.getShapeCenter(shape);
+    return this.rotatePoint(x, y, c.x, c.y, -rot);
+  }
+
+  private canRotate(shape: Shape): boolean {
+    return shape.type !== "line" && shape.type !== "arrow";
+  }
+
+  // World-space position of the rotation handle (accounts for current rotation)
+  private getRotationHandlePos(shape: Shape): { x: number; y: number } {
+    const b = this.getShapeBBox(shape);
+    const cx = (b.minX + b.maxX) / 2;
+    return this.rotatePoint(cx, b.minY - this.ROTATION_HANDLE_DISTANCE, cx, (b.minY + b.maxY) / 2, shape.rotation || 0);
+  }
+
+  // Drawn inside the already-rotated canvas context, so it uses local coords.
+  private drawRotationHandle(shape: Shape) {
+    if (!this.canRotate(shape)) return;
+    const b = this.getShapeBBox(shape);
+    const cx = (b.minX + b.maxX) / 2;
+    const handleY = b.minY - this.ROTATION_HANDLE_DISTANCE;
+    this.ctx.save();
+    this.ctx.strokeStyle = "#9b7bff";
+    this.ctx.fillStyle = this.theme === "dark" ? "#121212" : "#ffffff";
+    this.ctx.lineWidth = 1.5;
+    this.ctx.setLineDash([]);
+    this.ctx.beginPath();
+    this.ctx.moveTo(cx, b.minY - 8);
+    this.ctx.lineTo(cx, handleY);
+    this.ctx.stroke();
+    this.ctx.beginPath();
+    this.ctx.arc(cx, handleY, 5, 0, Math.PI * 2);
+    this.ctx.fill();
+    this.ctx.stroke();
+    this.ctx.restore();
+  }
   private adaptShapeToTheme(shape: Shape): Shape {
     const lightDefault = '#1e1e1e';
     const darkDefault = '#ffffff';
@@ -1511,6 +1615,13 @@ public deleteShapeByIndex(index: number) {
       const lineWidth = (shape as any).strokeWidth ?? 2;
       const dashArray = getDashArray((shape as any).strokeStyle);
       this.ctx.save();
+      const rotation = shape.rotation || 0;
+      if (rotation) {
+        const center = this.getShapeCenter(shape);
+        this.ctx.translate(center.x, center.y);
+        this.ctx.rotate(rotation);
+        this.ctx.translate(-center.x, -center.y);
+      }
       this.ctx.strokeStyle = strokeCol;
       this.ctx.fillStyle = fillCol;
       this.ctx.lineWidth = lineWidth;
@@ -1609,15 +1720,15 @@ public deleteShapeByIndex(index: number) {
 
         }
       } else if (shape.type === "text") {
-        // Skip rendering if this text shape is currently being edited
-        if (this.editingTextShapeId === shape.id) {
-          return;
+        // Skip rendering if this text shape is currently being edited.
+        // Use a conditional (not early return) so the per-shape save/restore
+        // stays balanced — otherwise the rotation transform leaks to other shapes.
+        if (this.editingTextShapeId !== shape.id) {
+          const fontSize = shape.fontSize || 20;
+          const fillStyle = shape.strokeColor ?? (this.theme === "dark" ? "#fff" : "#000");
+          this.ctx.font = `${fontSize}px Virgil`;
+          this.drawMultilineText(shape.text, shape.x, shape.y, fontSize, fillStyle);
         }
-        const fontSize = shape.fontSize || 20;
-        const fillStyle = shape.strokeColor ?? (this.theme === "dark" ? "#fff" : "#000");
-        this.ctx.save();
-        this.ctx.font = `${fontSize}px Virgil`;
-        this.drawMultilineText(shape.text, shape.x, shape.y, fontSize, fillStyle);
       }
       if (
         this.selectedTool === "select" &&
@@ -1625,8 +1736,9 @@ public deleteShapeByIndex(index: number) {
         this.existingShapes[this.selectedShapeIndex] === shape
       ) {
         this.drawSelectionBox(shape);
+        this.drawRotationHandle(shape);
       }
-      this.ctx.restore(); 
+      this.ctx.restore();
       });
       this.ctx.restore();
     }
@@ -1653,7 +1765,8 @@ public deleteShapeByIndex(index: number) {
     // Check if we double-clicked on a text shape
     for (let i = this.existingShapes.length - 1; i >= 0; i--) {
       const shape = this.existingShapes[i];
-      if (shape.type === "text" && this.isPointInsideShape(pos.x, pos.y, shape)) {
+      const tlp = this.toLocalPoint(shape, pos.x, pos.y);
+      if (shape.type === "text" && this.isPointInsideShape(tlp.x, tlp.y, shape)) {
         // Deselect shape before editing to avoid selection box conflict
         this.selectedShapeIndex = null;
 
@@ -1692,7 +1805,21 @@ public deleteShapeByIndex(index: number) {
     
     if (this.selectedTool==="select" && this.selectedShapeIndex!=null){
       const shape=this.existingShapes[this.selectedShapeIndex];
-      if (!shape) return; 
+      if (!shape) return;
+      // Rotation handle takes priority over move/resize
+      if (this.canRotate(shape)) {
+        const rp = this.getRotationHandlePos(shape);
+        if (Math.hypot(pos.x - rp.x, pos.y - rp.y) < 10) {
+          this.dragMode = "rotate";
+          const center = this.getShapeCenter(shape);
+          this.rotateGrabOffset = (shape.rotation || 0) - Math.atan2(pos.y - center.y, pos.x - center.x);
+          this.dragStartPos = { x: pos.x, y: pos.y };
+          this.hasDragged = true;
+          e.preventDefault();
+          return;
+        }
+      }
+      const lp = this.toLocalPoint(shape, pos.x, pos.y);
       if (shape.type === "line" || shape.type === "arrow") {
       const dist = (x1: number, y1: number, x2: number, y2: number) =>
         Math.hypot(x2 - x1, y2 - y1);
@@ -1723,29 +1850,29 @@ public deleteShapeByIndex(index: number) {
         e.preventDefault();
         return;
       }} else {
-      const h = this.hitTestShapeHandle(shape, pos.x, pos.y);
+      const h = this.hitTestShapeHandle(shape, lp.x, lp.y);
       if (h) {
         this.dragMode = "resize";
         this.activeHandle = h;
-        this.resizeStartX = pos.x;
-        this.resizeStartY = pos.y;
+        this.resizeStartX = lp.x;
+        this.resizeStartY = lp.y;
         e.preventDefault();
         return;
       }
       if (
-        this.isPointInsideSelectionBox(shape, pos.x, pos.y) &&
-        !this.isPointInsideShape(pos.x, pos.y, shape)
+        this.isPointInsideSelectionBox(shape, lp.x, lp.y) &&
+        !this.isPointInsideShape(lp.x, lp.y, shape)
       )
       {
         this.dragMode = "resize";
         this.activeHandle = null;
-        this.resizeStartX = pos.x;
-        this.resizeStartY = pos.y;
+        this.resizeStartX = lp.x;
+        this.resizeStartY = lp.y;
         e.preventDefault();
         return;
       }
-      
-      if (this.isPointInsideShape(pos.x, pos.y, shape)) {
+
+      if (this.isPointInsideShape(lp.x, lp.y, shape)) {
         this.dragMode = "move";
         this.offsetX = pos.x;
         this.offsetY = pos.y;
@@ -1755,11 +1882,13 @@ public deleteShapeByIndex(index: number) {
     }
     if (this.selectedTool === "select") {
       for (let i = this.existingShapes.length - 1; i >= 0; i--) {
-        if (this.isPointInsideShape(pos.x, pos.y, this.existingShapes[i])) {
+        const candidate = this.existingShapes[i];
+        const clp = this.toLocalPoint(candidate, pos.x, pos.y);
+        if (this.isPointInsideShape(clp.x, clp.y, candidate)) {
           this.selectedShapeIndex = i;
           this.dragMode = "resize";
-          this.resizeStartX = pos.x;
-          this.resizeStartY = pos.y;
+          this.resizeStartX = clp.x;
+          this.resizeStartY = clp.y;
           this.clearCanvas();
           return;
         }
@@ -1774,7 +1903,9 @@ public deleteShapeByIndex(index: number) {
   let deletedShape: Shape | null = null;
 
   for (let i = this.existingShapes.length - 1; i >= 0; i--) {
-    if (this.isPointInsideShape(pos.x, pos.y, this.existingShapes[i])) {
+    const eshape = this.existingShapes[i];
+    const elp = this.toLocalPoint(eshape, pos.x, pos.y);
+    if (this.isPointInsideShape(elp.x, elp.y, eshape)) {
       deletedShape = this.existingShapes[i];
       this.deleteShapeByIndex(i); // Removes from array, redraws, handles solo/collab storage
       deleted = true;
@@ -2248,8 +2379,12 @@ public getScreenCoordinates(logicalX: number, logicalY: number): { x: number; y:
           this.canvas.style.cursor = "default";
         }
         if (this.selectedShapeIndex != null && shape.type !== "line" && shape.type !== "arrow") {
-          const h = this.hitTestShapeHandle(shape, pos.x, pos.y);
-          if (h) {
+          const hlp = this.toLocalPoint(shape, pos.x, pos.y);
+          const rp = this.canRotate(shape) ? this.getRotationHandlePos(shape) : null;
+          const h = this.hitTestShapeHandle(shape, hlp.x, hlp.y);
+          if (rp && Math.hypot(pos.x - rp.x, pos.y - rp.y) < 10) {
+            this.canvas.style.cursor = "grab";
+          } else if (h) {
             const cursorMap: Record<"tl" | "tr" | "bl" | "br", string> = {
               tl: "nwse-resize",
               br: "nwse-resize",
@@ -2259,7 +2394,7 @@ public getScreenCoordinates(logicalX: number, logicalY: number): { x: number; y:
             this.canvas.style.cursor = cursorMap[h];
             this.activeHandle = h;
             this.clearCanvas();
-          } else if (this.isPointInsideShape(pos.x, pos.y, shape)) {
+          } else if (this.isPointInsideShape(hlp.x, hlp.y, shape)) {
             this.canvas.style.cursor = "move";
           } else {
             this.canvas.style.cursor = "default";
@@ -2268,8 +2403,9 @@ public getScreenCoordinates(logicalX: number, logicalY: number): { x: number; y:
       }
       if (this.dragMode !== "none" && this.selectedShapeIndex != null) {
         const p = this.getMousePos(e);
-        
+
         const s = this.existingShapes[this.selectedShapeIndex];
+        const lp = this.toLocalPoint(s, p.x, p.y);
         if (this.dragMode === "move") {
             const dx = p.x - this.offsetX;
       const dy = p.y - this.offsetY;
@@ -2305,8 +2441,8 @@ public getScreenCoordinates(logicalX: number, logicalY: number): { x: number; y:
           }
           else if (this.dragMode === "resize" && this.activeHandle) {
             // Apply damping to resize for less sensitivity
-            const rawDeltaX = p.x - this.resizeStartX;
-            const rawDeltaY = p.y - this.resizeStartY;
+            const rawDeltaX = lp.x - this.resizeStartX;
+            const rawDeltaY = lp.y - this.resizeStartY;
             const dampedDeltaX = rawDeltaX * this.RESIZE_DAMPING;
             const dampedDeltaY = rawDeltaY * this.RESIZE_DAMPING;
             const dampedX = this.resizeStartX + dampedDeltaX;
@@ -2418,8 +2554,13 @@ public getScreenCoordinates(logicalX: number, logicalY: number): { x: number; y:
   }
 
             // Update resize start position for next frame (incremental damping)
-            this.resizeStartX = p.x;
-            this.resizeStartY = p.y;
+            this.resizeStartX = lp.x;
+            this.resizeStartY = lp.y;
+          }
+          else if (this.dragMode === "rotate") {
+            const center = this.getShapeCenter(s);
+            s.rotation = Math.atan2(p.y - center.y, p.x - center.x) + this.rotateGrabOffset;
+            this.hasDragged = true;
           }
     this.clearCanvas();
     if (this.isSolo) {
@@ -2433,7 +2574,8 @@ public getScreenCoordinates(logicalX: number, logicalY: number): { x: number; y:
       const logicalY = pos.y;
 
       for (let i = this.existingShapes.length - 1; i >= 0; i--) {
-        if (this.isPointInsideShape(logicalX, logicalY, this.existingShapes[i])) {
+        const elp = this.toLocalPoint(this.existingShapes[i], logicalX, logicalY);
+        if (this.isPointInsideShape(elp.x, elp.y, this.existingShapes[i])) {
           const shape = this.existingShapes[i];
           this.deleteShapeByIndex(i);
       if (!this.isSolo && shape) {
